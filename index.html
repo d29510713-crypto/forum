@@ -34,7 +34,6 @@
 
 <h1>Welcome to Toasty!</h1>
 
-<!-- MEMBER COUNT -->
 <div id="memberCount" style="text-align:center; margin-bottom:20px; font-weight:bold;"></div>
 
 <!-- REGISTER -->
@@ -61,12 +60,11 @@
 <!-- ADMIN PANEL (OWNER ONLY) -->
 <div id="adminBox" style="display:none;">
     <h3>Owner Panel</h3>
-    <p>Assign Admin / Mod / Ban Users / Delete Messages</p>
+    <p>Assign Admin / Mod / Ban Users</p>
     <input id="adminUser" placeholder="Username">
     <button onclick="makeAdmin()">Make Admin</button>
     <button onclick="makeMod()">Make Mod</button>
     <button onclick="banUser()">Ban User</button>
-    <button onclick="deleteMessages()">Delete Messages</button>
     <h4>Banned Users</h4>
     <div id="bannedList"></div>
 </div>
@@ -76,23 +74,19 @@
     <h2>Hello, <span id="currentUser"></span>!</h2>
     <button onclick="logout()">Logout</button>
 
-    <!-- Change Username -->
     <h3>Change Username</h3>
     <input id="newUsername" placeholder="New username">
     <button onclick="changeUsername()">Change</button>
     <p id="usernameMsg" style="color:red;"></p>
 
-    <!-- Updates Section -->
     <h3>Updates</h3>
     <div id="updates"></div>
 
-    <!-- Post Update (Admin/Owner only) -->
     <div id="updateBox" style="display:none;">
         <input id="updateInput" placeholder="Write an update..." style="margin-top:10px;">
         <button onclick="addUpdate()">Post Update</button>
     </div>
 
-    <!-- Create Topic -->
     <h3>Create Topic</h3>
     <input id="topicTitle" placeholder="Topic title"><br>
     <textarea id="topicContent" placeholder="Topic content" style="height:60px;"></textarea><br>
@@ -108,7 +102,7 @@
 </div>
 
 <script>
-let censoredWords = ["nigger","bitch","fuck","n!gger", "idiot", "shit", "dumbass", "nigga", "cum", "cock", "penis", "cunt", "faggot"];
+let censoredWords = ["nigger","bitch","fuck","n!gger","idiot","shit","dumbass","nigga","cum","cock","penis","cunt","faggot"];
 let accounts = JSON.parse(localStorage.getItem("toasty_accounts") || "{}");
 let posts = JSON.parse(localStorage.getItem("toasty_posts") || "[]");
 let bannedUsers = JSON.parse(localStorage.getItem("toasty_banned") || "[]");
@@ -117,7 +111,6 @@ let updates = JSON.parse(localStorage.getItem("toasty_updates") || "[]");
 let lastUsernameChange = JSON.parse(localStorage.getItem("toasty_lastUsernameChange") || "{}");
 let currentUser = localStorage.getItem("toasty_currentUser") || null;
 
-// Save functions
 function saveAccounts(){ localStorage.setItem("toasty_accounts", JSON.stringify(accounts)); updateMemberCount(); }
 function savePosts(){ localStorage.setItem("toasty_posts", JSON.stringify(posts)); }
 function saveTopics(){ localStorage.setItem("toasty_topics", JSON.stringify(topics)); }
@@ -126,26 +119,21 @@ function saveLastUsernameChange(){ localStorage.setItem("toasty_lastUsernameChan
 function saveCurrentUser(){ localStorage.setItem("toasty_currentUser", currentUser); }
 function saveBanned(){ localStorage.setItem("toasty_banned", JSON.stringify(bannedUsers)); updateBannedList(); }
 
-// MEMBER COUNT
 function updateMemberCount(){
     const count = Object.keys(accounts).length;
     document.getElementById("memberCount").innerText = `Members: ${count}`;
 }
 
-// BANNED LIST
 function updateBannedList(){
     const box = document.getElementById("bannedList");
     box.innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users";
 }
 
-// Show login/register switching
 function showRegister(){ loginBox.style.display="none"; registerBox.style.display="block"; }
 function showLogin(){ registerBox.style.display="none"; loginBox.style.display="block"; }
 
-// Hash password
 function hashPass(str){ return btoa(str); }
 
-// Mention notification helper
 function notifyMentions(text){
     const mentionedUsers = [...text.matchAll(/@(\w+)/g)].map(m=>m[1]);
     mentionedUsers.forEach(u=>{
@@ -155,11 +143,11 @@ function notifyMentions(text){
     });
 }
 
-// ---------------- REGISTER ----------------
+// REGISTER
 function register(){
     const user = regUser.value.trim();
     const pass = regPass.value.trim();
-    let role = regRole.value; // now always "user"
+    let role = regRole.value;
     if(!user||!pass){ regError.innerText="Fill all fields"; return;}
     if(accounts[user]){ regError.innerText="Username taken"; return;}
     if(role==="owner"){
@@ -176,7 +164,7 @@ function register(){
     showLogin();
 }
 
-// ---------------- LOGIN ----------------
+// LOGIN
 function login(){
     const user = loginUser.value.trim();
     const pass = loginPass.value.trim();
@@ -186,7 +174,7 @@ function login(){
     currentUser=user; saveCurrentUser(); openForum();
 }
 
-// ---------------- FORUM ----------------
+// FORUM
 function openForum(){
     loginBox.style.display="none"; registerBox.style.display="none"; forumBox.style.display="block";
     document.getElementById("currentUser").innerText = currentUser + " (" + accounts[currentUser].role + ")";
@@ -200,10 +188,10 @@ function openForum(){
     if(accounts[currentUser].role==="owner"){ adminBox.style.display="block"; } else { adminBox.style.display="none"; }
 }
 
-// ---------------- LOGOUT ----------------
+// LOGOUT
 function logout(){ currentUser=null; saveCurrentUser(); forumBox.style.display="none"; loginBox.style.display="block"; }
 
-// ---------------- UTILITY ----------------
+// UTILITY
 function filterBadWords(text){ 
     censoredWords.forEach(w=>{ text=text.replace(new RegExp(w,"gi"),"***"); });
     text = text.replace(/@(\w+)/g, (match, name)=>{
@@ -212,7 +200,7 @@ function filterBadWords(text){
     return text;
 }
 
-// ---------------- POSTS ----------------
+// POSTS
 function addPost(){
     if(!currentUser || bannedUsers.includes(currentUser)) return;
     let text = postInput.value.trim(); if(!text) return;
@@ -221,17 +209,28 @@ function addPost(){
     posts.push({user:currentUser, role:accounts[currentUser].role, text:text});
     savePosts(); displayPosts(); postInput.value="";
 }
+
 function displayPosts(){
-    let box = document.getElementById("posts"); box.innerHTML="";
-    posts.forEach(p=>{
+    let box = document.getElementById("posts"); 
+    box.innerHTML="";
+    posts.forEach((p, index)=>{
         if(bannedUsers.includes(p.user)) return;
-        let div=document.createElement("div"); div.className="post";
+        let div = document.createElement("div"); 
+        div.className="post";
         div.innerHTML=`<strong class="role-${p.role}">${p.user} (${p.role})</strong><br>${p.text}`;
+        
+        if(currentUser === p.user || accounts[currentUser].role === "owner"){
+            const delBtn = document.createElement("button");
+            delBtn.style.background="#ff4c4c"; delBtn.style.marginLeft="10px"; delBtn.innerText="Delete";
+            delBtn.onclick = () => { posts.splice(index,1); savePosts(); displayPosts(); };
+            div.appendChild(delBtn);
+        }
+
         box.appendChild(div);
     });
 }
 
-// ---------------- TOPICS & COMMENTS ----------------
+// TOPICS & COMMENTS
 function addTopic(){
     if(!currentUser || bannedUsers.includes(currentUser)) return;
     const title = topicTitle.value.trim();
@@ -245,17 +244,33 @@ function addTopic(){
 
 function displayTopics(){
     const box=document.getElementById("topics"); box.innerHTML="";
-    topics.forEach(t=>{
+    topics.forEach((t, tIndex)=>{
         if(bannedUsers.includes(t.user)) return;
         let div=document.createElement("div"); div.className="post";
         div.innerHTML=`<strong class="role-${t.role}">${t.user} (${t.role})</strong> - <em>${filterBadWords(t.title)}</em><br>${filterBadWords(t.content)}<br>`;
-        t.comments.forEach(c=>{
+        
+        if(currentUser === t.user || accounts[currentUser].role === "owner"){
+            const delBtn = document.createElement("button");
+            delBtn.style.background="#ff4c4c"; delBtn.style.marginLeft="10px"; delBtn.innerText="Delete";
+            delBtn.onclick = () => { topics.splice(tIndex,1); saveTopics(); displayTopics(); };
+            div.appendChild(delBtn);
+        }
+
+        t.comments.forEach((c, cIndex)=>{
             if(bannedUsers.includes(c.user)) return;
-            let cDiv=document.createElement("div");
-            cDiv.className="post"; cDiv.style.marginLeft="20px"; cDiv.style.background="#fff0d9";
+            let cDiv=document.createElement("div"); cDiv.className="post"; cDiv.style.marginLeft="20px"; cDiv.style.background="#fff0d9";
             cDiv.innerHTML=`<strong class="role-${c.role}">${c.user} (${c.role})</strong>: ${filterBadWords(c.text)}`;
+
+            if(currentUser === c.user || accounts[currentUser].role === "owner"){
+                const delBtn = document.createElement("button");
+                delBtn.style.background="#ff4c4c"; delBtn.style.marginLeft="10px"; delBtn.innerText="Delete";
+                delBtn.onclick = () => { t.comments.splice(cIndex,1); saveTopics(); displayTopics(); };
+                cDiv.appendChild(delBtn);
+            }
+
             div.appendChild(cDiv);
         });
+
         const input=document.createElement("input"); input.placeholder="Comment...";
         const btn=document.createElement("button"); btn.innerText="Post";
         btn.onclick=()=>{
@@ -270,7 +285,7 @@ function displayTopics(){
     });
 }
 
-// ---------------- UPDATES ----------------
+// UPDATES
 function addUpdate(){
     if(!currentUser) return;
     const text = document.getElementById("updateInput").value.trim();
@@ -281,6 +296,7 @@ function addUpdate(){
     displayUpdates();
     document.getElementById("updateInput").value = "";
 }
+
 function displayUpdates(){
     const box = document.getElementById("updates");
     box.innerHTML = "";
@@ -294,7 +310,7 @@ function displayUpdates(){
     });
 }
 
-// ---------------- CHANGE USERNAME ----------------
+// CHANGE USERNAME
 function changeUsername(){
     const newName = document.getElementById("newUsername").value.trim();
     const msg = document.getElementById("usernameMsg");
@@ -323,7 +339,7 @@ function changeUsername(){
     msg.style.color = "green"; msg.innerText = "Username changed successfully!";
 }
 
-// ---------------- OWNER FUNCTIONS ----------------
+// OWNER FUNCTIONS
 function makeAdmin(){
     const u = adminUser.value.trim();
     if(!u||!accounts[u]){ alert("User does not exist"); return; }
@@ -349,21 +365,6 @@ function banUser(){
     topics = topics.filter(t => t.user !== u); saveTopics();
     alert(u+" has been banned and their messages removed!");
     if(currentUser) displayPosts(), displayTopics();
-}
-
-// ---------------- DELETE MESSAGES ----------------
-function deleteMessages(){
-    const u = adminUser.value.trim();
-    if(!u || !accounts[u]) { alert("User does not exist"); return; }
-   
-
-    posts = posts.filter(p => p.user !== u); 
-    topics.forEach(t=>{ t.comments = t.comments.filter(c => c.user !== u); });
-    topics = topics.filter(t => t.user !== u);
-    savePosts(); saveTopics();
-
-    alert("All messages from " + u + " have been deleted!");
-    displayPosts(); displayTopics();
 }
 
 // Auto-login
