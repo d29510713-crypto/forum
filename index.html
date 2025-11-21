@@ -61,11 +61,12 @@
 <!-- ADMIN PANEL (OWNER ONLY) -->
 <div id="adminBox" style="display:none;">
     <h3>Owner Panel</h3>
-    <p>Assign Admin / Mod / Ban Users</p>
+    <p>Assign Admin / Mod / Ban Users / Delete Messages</p>
     <input id="adminUser" placeholder="Username">
     <button onclick="makeAdmin()">Make Admin</button>
     <button onclick="makeMod()">Make Mod</button>
     <button onclick="banUser()">Ban User</button>
+    <button onclick="deleteMessages()">Delete Messages</button>
     <h4>Banned Users</h4>
     <div id="bannedList"></div>
 </div>
@@ -348,6 +349,21 @@ function banUser(){
     topics = topics.filter(t => t.user !== u); saveTopics();
     alert(u+" has been banned and their messages removed!");
     if(currentUser) displayPosts(), displayTopics();
+}
+
+// ---------------- DELETE MESSAGES ----------------
+function deleteMessages(){
+    const u = adminUser.value.trim();
+    if(!u || !accounts[u]) { alert("User does not exist"); return; }
+    if(accounts[u].role==="owner"){ alert("Cannot delete owner's messages"); return; }
+
+    posts = posts.filter(p => p.user !== u); 
+    topics.forEach(t=>{ t.comments = t.comments.filter(c => c.user !== u); });
+    topics = topics.filter(t => t.user !== u);
+    savePosts(); saveTopics();
+
+    alert("All messages from " + u + " have been deleted!");
+    displayPosts(); displayTopics();
 }
 
 // Auto-login
