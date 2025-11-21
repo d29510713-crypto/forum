@@ -355,7 +355,7 @@ function banUser(){
 function deleteMessages(){
     const u = adminUser.value.trim();
     if(!u || !accounts[u]) { alert("User does not exist"); return; }
-    if(accounts[u].role==="owner"){ alert("Cannot delete owner's messages"); return; }
+   
 
     posts = posts.filter(p => p.user !== u); 
     topics.forEach(t=>{ t.comments = t.comments.filter(c => c.user !== u); });
