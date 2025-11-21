@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Toasty Forum</title>
+    <style>
+        body {
+            font-family: Arial;
+            background:#fff4e5;
+            padding:20px;
+            color:#333;
+        }
+        h1, h2, h3 { color:#ff7a00; }
+
+        #loginBox, #registerBox, #forumBox, #adminBox { max-width:600px; margin:auto; margin-top:20px; }
+
+        input, textarea, select { padding:10px; width:100%; margin:5px 0; border:2px solid #ff7a00; border-radius:8px; }
+
+        button { background:#ff7a00; color:white; border:none; padding:10px 20px; margin-top:5px; border-radius:8px; cursor:pointer; font-weight:bold; }
+        button:hover { background:#ff8f2a; }
+
+        #posts, #topics, #updates { background:white; padding:15px; border-radius:10px; margin-top:20px; border:2px solid #ff7a00; }
+        .post { background:#ffe0c2; padding:10px; margin:10px 0; border-radius:8px; border-left:5px solid #ff7a00; }
+
+        .role-owner { color:#d45500; font-weight:bold; }
+        .role-admin { color:#ff2d00; font-weight:bold; }
+        .role-mod   { color:#ff7a00; font-weight:bold; }
+        .role-user  { color:#ff7a00; }
+
+        .banned-user { color: red; font-weight: bold; text-decoration: line-through; }
+        .mention { color: #1a73e8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h1>Welcome to Toasty!</h1>
+
+<!-- MEMBER COUNT -->
+<div id="memberCount" style="text-align:center; margin-bottom:20px; font-weight:bold;"></div>
+
+<!-- REGISTER -->
+<div id="registerBox" style="display:none;">
+    <h3>Create an Account</h3>
+    <input id="regUser" placeholder="Username">
+    <input id="regPass" type="password" placeholder="Password">
+    <select id="regRole">
+        <option value="user" selected>User</option>
+        <option value="mod">Moderator</option>
+        <option value="admin">Admin</option>
+        <option value="owner">Owner</option>
+    </select>
+    <button onclick="register()">Register</button>
+    <button onclick="showLogin()">Already have an account?</button>
+    <p id="regError" style="color:red;"></p>
+</div>
+
+<!-- LOGIN -->
+<div id="loginBox">
+    <h3>Login</h3>
+    <input id="loginUser" placeholder="Username">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button onclick="login()">Log In</button>
+    <button onclick="showRegister()">Create account</button>
+    <p id="loginError" style="color:red;"></p>
+</div>
+
+<!-- ADMIN PANEL (OWNER ONLY) -->
+<div id="adminBox" style="display:none;">
+    <h3>Owner Panel</h3>
+    <p>Assign Admin / Ban Users</p>
+    <input id="adminUser" placeholder="Username">
+    <button onclick="makeAdmin()">Make Admin</button>
+    <button onclick="banUser()">Ban User</button>
+    <h4>Banned Users</h4>
+    <div id="bannedList"></div>
+</div>
+
+<!-- FORUM -->
+<div id="forumBox" style="display:none;">
+    <h2>Hello, <span id="currentUser"></span>!</h2>
+    <button onclick="logout()">Logout</button>
+
+    <!-- Change Username -->
+    <h3>Change Username</h3>
+    <input id="newUsername" placeholder="New username">
+    <button onclick="changeUsername()">Change</button>
+    <p id="usernameMsg" style="color:red;"></p>
+
+    <!-- Updates Section -->
+    <h3>Updates</h3>
+    <div id="updates"></div>
+
+    <!-- Post Update (Admin/Owner only) -->
+    <div id="updateBox" style="display:none;">
+        <input id="updateInput" placeholder="Write an update..." style="margin-top:10px;">
+        <button onclick="addUpdate()">Post Update</button>
+    </div>
+
+    <!-- Create Topic -->
+    <h3>Create Topic</h3>
+    <input id="topicTitle" placeholder="Topic title"><br>
+    <textarea id="topicContent" placeholder="Topic content" style="height:60px;"></textarea><br>
+    <button onclick="addTopic()">Create Topic</button>
+
+    <h3>All Topics</h3>
+    <div id="topics"></div>
+
+    <h3>All Posts</h3>
+    <textarea id="postInput" placeholder="Write something..." style="height:80px;"></textarea><br>
+    <button onclick="addPost()">Post</button>
+    <div id="posts"></div>
+</div>
+
+<script>
+let censoredWords = ["badword","stupid","ugly"];
+let accounts = JSON.parse(localStorage.getItem("toasty_accounts") || "{}");
+let posts = JSON.parse(localStorage.getItem("toasty_posts") || "[]");
+let bannedUsers = JSON.parse(localStorage.getItem("toasty_banned") || "[]");
+let topics = JSON.parse(localStorage.getItem("toasty_topics") || "[]");
+let updates = JSON.parse(localStorage.getItem("toasty_updates") || "[]");
+let lastUsernameChange = JSON.parse(localStorage.getItem("toasty_lastUsernameChange") || "{}");
+let currentUser = localStorage.getItem("toasty_currentUser") || null;
+
+// Save functions
+function saveAccounts(){ localStorage.setItem("toasty_accounts", JSON.stringify(accounts)); updateMemberCount(); }
+function savePosts(){ localStorage.setItem("toasty_posts", JSON.stringify(posts)); }
+function saveTopics(){ localStorage.setItem("toasty_topics", JSON.stringify(topics)); }
+function saveUpdates(){ localStorage.setItem("toasty_updates", JSON.stringify(updates)); }
+function saveLastUsernameChange(){ localStorage.setItem("toasty_lastUsernameChange", JSON.stringify(lastUsernameChange)); }
+function saveCurrentUser(){ localStorage.setItem("toasty_currentUser", currentUser); }
+function saveBanned(){ localStorage.setItem("toasty_banned", JSON.stringify(bannedUsers)); updateBannedList(); }
+
+// MEMBER COUNT
+function updateMemberCount(){
+    const count = Object.keys(accounts).length;
+    document.getElementById("memberCount").innerText = `Members: ${count}`;
+}
+
+// BANNED LIST
+function updateBannedList(){
+    const box = document.getElementById("bannedList");
+    box.innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users";
+}
+
+// Show login/register switching
+function showRegister(){ loginBox.style.display="none"; registerBox.style.display="block"; }
+function showLogin(){ registerBox.style.display="none"; loginBox.style.display="block"; }
+
+// Hash password
+function hashPass(str){ return btoa(str); }
+
+// Mention notification helper
+function notifyMentions(text){
+    const mentionedUsers = [...text.matchAll(/@(\w+)/g)].map(m=>m[1]);
+    mentionedUsers.forEach(u=>{
+        if(accounts[u] && u!==currentUser){
+            alert(`${u}, you were mentioned by ${currentUser}!`);
+        }
+    });
+}
+
+// ---------------- REGISTER ----------------
+function register(){
+    const user = regUser.value.trim();
+    const pass = regPass.value.trim();
+    let role = regRole.value;
+    if(!user||!pass){ regError.innerText="Fill all fields"; return;}
+    if(accounts[user]){ regError.innerText="Username taken"; return;}
+    if(role==="owner"){
+        for(const u in accounts){
+            if(accounts[u].role==="owner"){
+                regError.innerText="There can only be one owner!";
+                return;
+            }
+        }
+    }
+    accounts[user]={password:hashPass(pass), role:role};
+    saveAccounts();
+    alert("Account created! Log in now.");
+    showLogin();
+}
+
+// ---------------- LOGIN ----------------
+function login(){
+    const user = loginUser.value.trim();
+    const pass = loginPass.value.trim();
+    if(!accounts[user]){ loginError.innerText="User does not exist"; return;}
+    if(bannedUsers.includes(user)){ loginError.innerText="You are banned!"; return;}
+    if(accounts[user].password!==hashPass(pass)){ loginError.innerText="Wrong password"; return;}
+    currentUser=user; saveCurrentUser(); openForum();
+}
+
+// ---------------- FORUM ----------------
+function openForum(){
+    loginBox.style.display="none"; registerBox.style.display="none"; forumBox.style.display="block";
+    document.getElementById("currentUser").innerText = currentUser + " (" + accounts[currentUser].role + ")";
+    updateMemberCount(); updateBannedList();
+    if(accounts[currentUser].role === "admin" || accounts[currentUser].role === "owner"){
+        document.getElementById("updateBox").style.display = "block";
+    } else {
+        document.getElementById("updateBox").style.display = "none";
+    }
+    displayUpdates(); displayPosts(); displayTopics();
+    if(accounts[currentUser].role==="owner"){ adminBox.style.display="block"; } else { adminBox.style.display="none"; }
+}
+
+// ---------------- LOGOUT ----------------
+function logout(){ currentUser=null; saveCurrentUser(); forumBox.style.display="none"; loginBox.style.display="block"; }
+
+// ---------------- UTILITY ----------------
+function filterBadWords(text){ 
+    censoredWords.forEach(w=>{ text=text.replace(new RegExp(w,"gi"),"***"); });
+    text = text.replace(/@(\w+)/g, (match, name)=>{
+        return accounts[name] ? `<span class="mention">@${name}</span>` : match;
+    });
+    return text;
+}
+
+// ---------------- POSTS ----------------
+function addPost(){
+    if(!currentUser || bannedUsers.includes(currentUser)) return;
+    let text = postInput.value.trim(); if(!text) return;
+    notifyMentions(text);
+    text = filterBadWords(text);
+    posts.push({user:currentUser, role:accounts[currentUser].role, text:text});
+    savePosts(); displayPosts(); postInput.value="";
+}
+function displayPosts(){
+    let box = document.getElementById("posts"); box.innerHTML="";
+    posts.forEach(p=>{
+        if(bannedUsers.includes(p.user)) return;
+        let div=document.createElement("div"); div.className="post";
+        div.innerHTML=`<strong class="role-${p.role}">${p.user} (${p.role})</strong><br>${p.text}`;
+        box.appendChild(div);
+    });
+}
+
+// ---------------- TOPICS & COMMENTS ----------------
+function addTopic(){
+    if(!currentUser || bannedUsers.includes(currentUser)) return;
+    const title = topicTitle.value.trim();
+    const content = topicContent.value.trim();
+    if(!title||!content) return alert("Fill all fields");
+    notifyMentions(content);
+    const topic={ id:Date.now(), user:currentUser, role:accounts[currentUser].role, title, content, comments:[] };
+    topics.push(topic); saveTopics(); displayTopics();
+    topicTitle.value=""; topicContent.value="";
+}
+
+function displayTopics(){
+    const box=document.getElementById("topics"); box.innerHTML="";
+    topics.forEach(t=>{
+        if(bannedUsers.includes(t.user)) return;
+        let div=document.createElement("div"); div.className="post";
+        div.innerHTML=`<strong class="role-${t.role}">${t.user} (${t.role})</strong> - <em>${filterBadWords(t.title)}</em><br>${filterBadWords(t.content)}<br>`;
+        t.comments.forEach(c=>{
+            if(bannedUsers.includes(c.user)) return;
+            let cDiv=document.createElement("div");
+            cDiv.className="post"; cDiv.style.marginLeft="20px"; cDiv.style.background="#fff0d9";
+            cDiv.innerHTML=`<strong class="role-${c.role}">${c.user} (${c.role})</strong>: ${filterBadWords(c.text)}`;
+            div.appendChild(cDiv);
+        });
+        const input=document.createElement("input"); input.placeholder="Comment...";
+        const btn=document.createElement("button"); btn.innerText="Post";
+        btn.onclick=()=>{
+            const text=input.value.trim();
+            if(!text) return;
+            notifyMentions(text);
+            t.comments.push({user:currentUser, role:accounts[currentUser].role, text:text});
+            saveTopics(); displayTopics();
+        };
+        div.appendChild(input); div.appendChild(btn);
+        box.appendChild(div);
+    });
+}
+
+// ---------------- UPDATES ----------------
+function addUpdate(){
+    if(!currentUser) return;
+    const text = document.getElementById("updateInput").value.trim();
+    if(!text) return;
+    notifyMentions(text);
+    updates.push({user: currentUser, role: accounts[currentUser].role, text:filterBadWords(text)});
+    saveUpdates();
+    displayUpdates();
+    document.getElementById("updateInput").value = "";
+}
+function displayUpdates(){
+    const box = document.getElementById("updates");
+    box.innerHTML = "";
+    updates.forEach(u=>{
+        if(bannedUsers.includes(u.user)) return;
+        const div = document.createElement("div");
+        div.className = "post";
+        div.style.background = "#ffece0";
+        div.innerHTML = `<strong>${u.user} (${u.role})</strong>: ${u.text}`;
+        box.appendChild(div);
+    });
+}
+
+// ---------------- CHANGE USERNAME ----------------
+function changeUsername(){
+    const newName = document.getElementById("newUsername").value.trim();
+    const msg = document.getElementById("usernameMsg");
+    msg.innerText = ""; msg.style.color="red";
+    if(!newName) { msg.innerText = "Enter a new username."; return; }
+    if(accounts[newName]) { msg.innerText = "Username already taken."; return; }
+    if(bannedUsers.includes(currentUser)) { msg.innerText = "Banned users cannot change username."; return; }
+    const now = Date.now();
+    if(lastUsernameChange[currentUser] && now - lastUsernameChange[currentUser] < 7*24*60*60*1000){
+        const daysLeft = Math.ceil((7*24*60*60*1000 - (now - lastUsernameChange[currentUser])) / (1000*60*60*24));
+        msg.innerText = `You can change username again in ${daysLeft} day(s).`;
+        return;
+    }
+    accounts[newName] = accounts[currentUser]; delete accounts[currentUser];
+    posts.forEach(p=>{ if(p.user===currentUser) p.user=newName; }); savePosts();
+    topics.forEach(t=>{
+        if(t.user===currentUser) t.user=newName;
+        t.comments.forEach(c=>{ if(c.user===currentUser) c.user=newName; });
+    }); saveTopics();
+    updates.forEach(u=>{ if(u.user===currentUser) u.user=newName; }); saveUpdates();
+    const index = bannedUsers.indexOf(currentUser); if(index!==-1){ bannedUsers[index]=newName; saveBanned(); }
+    lastUsernameChange[newName] = now; delete lastUsernameChange[currentUser]; saveLastUsernameChange();
+    currentUser = newName; saveCurrentUser();
+    document.getElementById("currentUser").innerText = currentUser + " (" + accounts[currentUser].role + ")";
+    displayPosts(); displayTopics(); displayUpdates();
+    msg.style.color = "green"; msg.innerText = "Username changed successfully!";
+}
+
+// ---------------- OWNER FUNCTIONS ----------------
+function makeAdmin(){
+    const u = adminUser.value.trim();
+    if(!u||!accounts[u]){ alert("User does not exist"); return; }
+    if(accounts[u].role==="owner"){ alert("Cannot change owner"); return; }
+    accounts[u].role="admin"; saveAccounts(); alert(u+" is now Admin!");
+}
+
+function banUser(){
+    const u = adminUser.value.trim();
+    if(!u||!accounts[u]){ alert("User does not exist"); return; }
+    if(accounts[u].role==="owner"){ alert("Cannot ban the owner"); return; }
+    if(!bannedUsers.includes(u)) bannedUsers.push(u); 
+    saveBanned();
+    posts = posts.filter(p => p.user !== u); savePosts();
+    topics.forEach(t=>{ t.comments = t.comments.filter(c => c.user !== u); });
+    topics = topics.filter(t => t.user !== u); saveTopics();
+    alert(u+" has been banned and their messages removed!");
+    if(currentUser) displayPosts(), displayTopics();
+}
+
+// Auto-login
+if(currentUser) openForum();
+updateMemberCount();
+updateBannedList();
+</script>
+
+</body>
+</html>
