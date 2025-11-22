@@ -1,780 +1,601 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title>Toasty Forum — Dark</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-        :root{
-            --bg:#0f1113;
-            --card:#181a1c;
-            --muted:#a9b0b6;
-            --accent:#ff7a00;
-            --accent-2:#ff8f2a;
-            --danger:#ff4c4c;
-            --glass: rgba(255,255,255,0.03);
-        }
-        html,body{height:100%; margin:0; background:var(--bg); color:#e6e7e8; font-family:Inter,ui-sans-serif,system-ui,Arial; -webkit-font-smoothing:antialiased;}
-        main{max-width:1100px; margin:28px auto; padding:18px;}
-        header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-        h1{color:var(--accent); margin:0; font-size:1.6rem;}
-        .sub { color:var(--muted); font-size:0.95rem; }
-
-        /* Panels */
-        .panel{background:var(--card); border-radius:12px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); margin-bottom:14px; border:1px solid rgba(255,255,255,0.03);}
-        .row{display:flex; gap:12px; align-items:center;}
-        .col{display:flex; flex-direction:column; gap:8px;}
-
-        input, textarea, select {
-            background:var(--glass); border:1px solid rgba(255,255,255,0.05); color:#fff; padding:10px; border-radius:8px; outline:none;
-            width:100%; box-sizing:border-box;
-        }
-        textarea{min-height:80px; resize:vertical;}
-
-        button {
-            background:var(--accent); color:#0b0b0b; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer;
-        }
-        button.ghost{background:transparent; color:var(--accent); border:1px solid rgba(255,127,0,0.14);}
-        button.danger{background:var(--danger); color:#fff;}
-        button.small{padding:6px 8px; font-size:0.9rem;}
-        .muted{ color:var(--muted); }
-
-        /* forum areas */
-        #topics, #posts, #updates { margin-top:10px; display:flex; flex-direction:column; gap:10px; }
-        .topic, .post-card, .update-card { background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
-        .meta{ color:var(--muted); font-size:0.9rem; margin-top:6px; display:flex; gap:8px; align-items:center;}
-        .role-badge{ padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--accent); font-weight:700; font-size:0.85rem;}
-        .role-owner{ color:#ffd9b8; }
-        .role-admin{ color:#ffb4a6; }
-        .role-mod{ color:#ffd1a1; }
-        .role-user{ color:#ffd1a1; }
-
-        .controls{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-        .small-muted{ font-size:0.85rem; color:var(--muted); }
-
-        /* admin layout */
-        #adminPanel { display:none; margin-top:10px; }
-        table { width:100%; border-collapse:collapse; color:#fff; }
-        th,td { padding:8px 6px; text-align:left; border-bottom:1px dashed rgba(255,255,255,0.03); font-size:0.95rem; }
-        th { color:var(--muted); font-weight:700; font-size:0.85rem; }
-
-        /* responsive */
-        @media (max-width:720px){
-            .row{flex-direction:column;}
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Toasty Forum — Realtime</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1113; --card:#161719; --muted:#9aa1a8; --accent:#ff7a00; --accent-2:#ff8f2a; --danger:#ff4c4c;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:#e6e7e8; font-family:Inter,Arial,Helvetica; -webkit-font-smoothing:antialiased;}
+    main{max-width:1100px; margin:28px auto; padding:18px;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    h1{color:var(--accent); margin:0; font-size:1.6rem;}
+    .sub { color:var(--muted); font-size:0.95rem; }
+    .panel{background:var(--card); border-radius:12px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); margin-bottom:14px; border:1px solid rgba(255,255,255,0.03);}
+    input, textarea, select { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:#fff; padding:10px; border-radius:8px; width:100%; box-sizing:border-box; }
+    button { background:var(--accent); color:#0b0b0b; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; }
+    button.ghost{ background:transparent; color:var(--accent); border:1px solid rgba(255,127,0,0.12); }
+    button.danger{ background:var(--danger); color:#fff; }
+    .small{ font-size:0.9rem; padding:6px 10px; }
+    .muted{ color:var(--muted); }
+    #topics,#posts,#updates{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+    .topic,.post-card,.update-card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
+    .meta{ color:var(--muted); font-size:0.9rem; margin-top:6px; display:flex; gap:8px; align-items:center; }
+    .role-badge{ padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--accent); font-weight:700; font-size:0.85rem;}
+    .controls{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .commentBox{ margin-left:18px; background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; }
+    table{ width:100%; border-collapse:collapse; color:#fff; }
+    th,td{ padding:8px 6px; text-align:left; border-bottom:1px dashed rgba(255,255,255,0.03); font-size:0.95rem; }
+    @media (max-width:720px){ .row{flex-direction:column;} }
+  </style>
 </head>
 <body>
 <main>
-    <header>
-        <div>
-            <h1>Toasty Forum</h1>
-            <div class="sub">Dark theme · Roles: member, contributor, admin, owner (1)</div>
+  <header>
+    <div>
+      <h1>Toasty Forum</h1>
+      <div class="sub">Dark theme · Realtime (Firebase Realtime Database)</div>
+    </div>
+    <div id="memberCount" class="sub"></div>
+  </header>
+
+  <!-- LOGIN PANEL -->
+  <section id="loginPanel" class="panel">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1">
+        <label class="muted">Username</label><input id="loginUser" placeholder="Username">
+      </div>
+      <div style="width:220px">
+        <label class="muted">Password</label><input id="loginPass" type="password" placeholder="Password">
+      </div>
+      <div style="width:160px;display:flex;flex-direction:column;gap:8px">
+        <div style="flex:1"></div>
+        <button onclick="login()">Log in</button>
+        <button class="ghost" onclick="showRegister()">Register</button>
+      </div>
+    </div>
+    <div id="loginError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
+  </section>
+
+  <!-- REGISTER PANEL -->
+  <section id="registerPanel" class="panel" style="display:none">
+    <h3 style="margin-top:0">Create account</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1"><label class="muted">Username</label><input id="regUser" placeholder="Choose a username"></div>
+      <div style="width:220px"><label class="muted">Password</label><input id="regPass" type="password" placeholder="Password"></div>
+      <div style="width:220px"><label class="muted">Role</label><select id="regRole"></select></div>
+      <div style="width:120px;display:flex;align-items:end"><button onclick="register()">Create</button></div>
+    </div>
+    <div id="regError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
+    <div style="margin-top:8px" class="muted">Owner option shows only if there is no current owner.</div>
+  </section>
+
+  <!-- ADMIN PANEL -->
+  <section id="adminPanel" class="panel" style="display:none">
+    <h3 style="margin-top:0">Owner Panel</h3>
+    <div class="muted">Only the owner can see this. Change roles, ban users, transfer ownership, delete messages.</div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <input id="adminUser" placeholder="Target username" style="width:260px">
+      <button class="small" onclick="adminSetRole('member')">Make Member</button>
+      <button class="small" onclick="adminSetRole('contributor')">Make Contributor</button>
+      <button class="small" onclick="adminSetRole('admin')">Make Admin</button>
+      <button class="small" onclick="transferOwnership()">Transfer Ownership</button>
+      <button class="small danger" onclick="adminBanUser()">Ban User</button>
+      <button class="small danger" onclick="adminDeleteMessages()">Delete Messages</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <h4 style="margin:0 0 8px 0">All users</h4>
+      <table id="usersTable"><thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <!-- FORUM PANEL -->
+  <section id="forumPanel" class="panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;gap:12px">
+      <div>
+        <div class="muted">Logged in as</div>
+        <div style="font-weight:700" id="currentUserDisplay"></div>
+      </div>
+      <div style="text-align:right">
+        <div class="muted">Role</div>
+        <div id="currentRoleDisplay" class="role-badge"></div>
+        <div style="margin-top:8px"><button class="ghost" onclick="logout()">Logout</button></div>
+      </div>
+    </div>
+
+    <hr style="border:none;height:12px">
+
+    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1">
+        <label class="muted">New Username</label>
+        <input id="newUsername" placeholder="New username">
+        <div id="usernameMsg" class="muted" style="margin-top:6px;color:#b6ffb3"></div>
+        <button onclick="changeUsername()">Change username</button>
+      </div>
+
+      <div style="width:320px">
+        <label class="muted">Change your role</label>
+        <div id="roleBox"></div>
+        <div class="muted" style="margin-top:6px">Owner option available only if owner slot is free or you are the owner.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div style="display:flex;gap:12px">
+      <div style="flex:1">
+        <label class="muted">Write a post</label>
+        <textarea id="postInput" placeholder="Share something..."></textarea>
+        <div class="controls"><button onclick="addPost()">Post</button></div>
+      </div>
+
+      <div style="width:320px">
+        <label class="muted">Updates (Owner/Admin only)</label>
+        <div id="updateBox" style="display:none">
+          <input id="updateInput" placeholder="Site update...">
+          <div style="margin-top:8px"><button onclick="addUpdate()">Post Update</button></div>
         </div>
-        <div id="memberCount" class="sub"></div>
-    </header>
+        <div id="updates" style="margin-top:12px"></div>
+      </div>
+    </div>
 
-    <!-- LOGIN PANEL -->
-    <section id="loginPanel" class="panel">
-        <div class="row">
-            <div style="flex:1">
-                <label class="small-muted">Username</label>
-                <input id="loginUser" placeholder="Username">
-            </div>
-            <div style="width:220px">
-                <label class="small-muted">Password</label>
-                <input id="loginPass" type="password" placeholder="Password">
-            </div>
-            <div style="width:160px; display:flex; flex-direction:column; gap:8px;">
-                <div style="flex:1"></div>
-                <button onclick="login()">Log in</button>
-                <button class="ghost" onclick="showRegister()">Register</button>
-            </div>
-        </div>
-        <div id="loginError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
-    </section>
+    <hr>
 
-    <!-- REGISTER PANEL -->
-    <section id="registerPanel" class="panel" style="display:none;">
-        <h3 style="margin-top:0">Create account</h3>
-        <div class="row">
-            <div style="flex:1">
-                <label class="small-muted">Username</label>
-                <input id="regUser" placeholder="Choose a username">
-            </div>
-            <div style="width:220px">
-                <label class="small-muted">Password</label>
-                <input id="regPass" type="password" placeholder="Password">
-            </div>
-            <div style="width:220px">
-                <label class="small-muted">Role</label>
-                <select id="regRole"></select>
-            </div>
-            <div style="width:120px; display:flex; align-items:end;">
-                <button onclick="register()">Create</button>
-            </div>
-        </div>
-        <div id="regError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
-        <div style="margin-top:8px" class="muted">Owner option shows only if there is no current owner.</div>
-    </section>
+    <div style="margin-top:10px">
+      <label class="muted">Create Topic</label>
+      <input id="topicTitle" placeholder="Topic title">
+      <textarea id="topicContent" placeholder="Topic content"></textarea>
+      <div class="controls"><button onclick="addTopic()">Create Topic</button></div>
+    </div>
 
-    <!-- ADMIN PANEL (owner only) -->
-    <section id="adminPanel" class="panel">
-        <h3 style="margin-top:0">Owner Panel</h3>
-        <div class="small-muted">Only the owner can see this. Use carefully.</div>
+    <h3 style="margin-top:18px">Topics</h3>
+    <div id="topics"></div>
 
-        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <input id="adminUser" placeholder="Target username" style="width:260px;">
-            <button onclick="adminSetRole('member')" class="small">Make Member</button>
-            <button onclick="adminSetRole('contributor')" class="small">Make Contributor</button>
-            <button onclick="adminSetRole('admin')" class="small">Make Admin</button>
-            <button onclick="transferOwnership()" class="small">Transfer Ownership</button>
-            <button onclick="adminBanUser()" class="small danger">Ban User</button>
-            <button onclick="adminDeleteMessages()" class="small danger">Delete Messages</button>
-        </div>
-
-        <div style="margin-top:14px;">
-            <h4 style="margin:0 0 8px 0">All users</h4>
-            <table id="usersTable">
-                <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- FORUM PANEL -->
-    <section id="forumPanel" class="panel" style="display:none;">
-        <div style="display:flex; justify-content:space-between; gap:12px;">
-            <div>
-                <div class="small-muted">Logged in as</div>
-                <div style="font-weight:700" id="currentUserDisplay"></div>
-            </div>
-            <div style="text-align:right">
-                <div class="small-muted">Role</div>
-                <div id="currentRoleDisplay" class="role-badge"></div>
-                <div style="margin-top:8px;">
-                    <button class="ghost" onclick="logout()">Logout</button>
-                </div>
-            </div>
-        </div>
-
-        <hr style="border:none;height:12px">
-
-        <!-- Username change & role change -->
-        <div class="row">
-            <div style="flex:1">
-                <label class="small-muted">New Username</label>
-                <input id="newUsername" placeholder="New username">
-                <div id="usernameMsg" class="muted" style="margin-top:6px;color:#b6ffb3"></div>
-                <button onclick="changeUsername()">Change username</button>
-            </div>
-
-            <div style="width:320px">
-                <label class="small-muted">Change your role</label>
-                <div id="roleBox"></div>
-                <div class="small-muted" style="margin-top:6px">Owner option available only if owner slot is free or you are the owner.</div>
-            </div>
-        </div>
-
-        <hr>
-
-        <!-- Updates (owner/admin only can post updates) -->
-        <div>
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1">
-                    <label class="small-muted">Write a post</label>
-                    <textarea id="postInput" placeholder="Share something..."></textarea>
-                    <div class="controls">
-                        <button onclick="addPost()">Post</button>
-                    </div>
-                </div>
-                <div style="width:320px">
-                    <label class="small-muted">Updates (Owner/Admin only)</label>
-                    <div id="updateBox" style="display:none">
-                        <input id="updateInput" placeholder="Site update...">
-                        <div style="margin-top:8px"><button onclick="addUpdate()">Post Update</button></div>
-                    </div>
-                    <div id="updates" style="margin-top:12px"></div>
-                </div>
-            </div>
-        </div>
-
-        <hr>
-
-        <!-- Create topic -->
-        <div style="margin-top:10px">
-            <label class="small-muted">Create Topic</label>
-            <input id="topicTitle" placeholder="Topic title">
-            <textarea id="topicContent" placeholder="Topic content"></textarea>
-            <div class="controls"><button onclick="addTopic()">Create Topic</button></div>
-        </div>
-
-        <h3 style="margin-top:18px">Topics</h3>
-        <div id="topics"></div>
-
-        <h3 style="margin-top:18px">Posts</h3>
-        <div id="posts"></div>
-    </section>
+    <h3 style="margin-top:18px">Posts</h3>
+    <div id="posts"></div>
+  </section>
 </main>
 
-<script>
-/* ---------------------------
-   Data & storage keys (unchanged keys for compatibility)
-----------------------------*/
-let censoredWords = ["nigger","bitch","fuck","n!gger","idiot","shit","dumbass","nigga","cum","cock","penis","cunt","faggot"];
-let accounts = JSON.parse(localStorage.getItem("toasty_accounts") || "{}");
-let posts = JSON.parse(localStorage.getItem("toasty_posts") || "[]");
-let bannedUsers = JSON.parse(localStorage.getItem("toasty_banned") || "[]");
-let topics = JSON.parse(localStorage.getItem("toasty_topics") || "[]");
-let updates = JSON.parse(localStorage.getItem("toasty_updates") || "[]");
-let lastUsernameChange = JSON.parse(localStorage.getItem("toasty_lastUsernameChange") || "{}");
-let currentUser = localStorage.getItem("toasty_currentUser") || null;
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, push, onValue, update, remove, get, child, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* ---------------------------
-   Save helpers
-----------------------------*/
-function saveAccounts(){ localStorage.setItem("toasty_accounts", JSON.stringify(accounts)); updateMemberCount(); renderUsersTable(); }
-function savePosts(){ localStorage.setItem("toasty_posts", JSON.stringify(posts)); displayPosts(); }
-function saveTopics(){ localStorage.setItem("toasty_topics", JSON.stringify(topics)); displayTopics(); }
-function saveUpdates(){ localStorage.setItem("toasty_updates", JSON.stringify(updates)); displayUpdates(); }
-function saveLastUsernameChange(){ localStorage.setItem("toasty_lastUsernameChange", JSON.stringify(lastUsernameChange)); }
-function saveCurrentUser(){ localStorage.setItem("toasty_currentUser", currentUser || ""); }
-function saveBanned(){ localStorage.setItem("toasty_banned", JSON.stringify(bannedUsers)); updateBannedList(); }
+  // ---------- Firebase config (uses your API key and project id) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+    authDomain: "toasty-89f07.firebaseapp.com",
+    databaseURL: "https://toasty-89f07-default-rtdb.firebaseio.com",
+    projectId: "toasty-89f07",
+    storageBucket: "toasty-89f07.appspot.com",
+    messagingSenderId: "743787667064",
+    appId: "1:743787667064:web:12284120fbbdd1e907d78d"
+  };
 
-/* ---------------------------
-   UI helpers
-----------------------------*/
-function updateMemberCount(){
-    const count = Object.keys(accounts).length;
-    document.getElementById("memberCount").innerText = `Members: ${count}`;
-}
-function updateBannedList(){
-    const box = document.getElementById("bannedList");
-    box.innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users";
-}
-function showRegister(){
-    document.getElementById("registerPanel").style.display = "block";
-    document.getElementById("loginPanel").style.display = "none";
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ---------- Local caches (mirrors DB) ----------
+  let accounts = {};      // accounts[username] = { password, role, lastUsernameChange }
+  let posts = [];         // array of post objects
+  let topics = [];        // array of topic objects (with comments)
+  let updates = [];       // array of updates
+  let bannedUsers = [];   // array
+  let currentUser = localStorage.getItem("toasty_currentUser") || null;
+  const censoredWords = ["nigger","bitch","fuck","n!gger","idiot","shit","dumbass","nigga","cum","cock","penis","cunt","faggot"];
+
+  // ---------- Helpers ----------
+  function saveSessionUser(u){ if(u) localStorage.setItem("toasty_currentUser", u); else localStorage.removeItem("toasty_currentUser"); }
+  function hashPass(s){ return btoa(s); }
+  function filterBadWords(text){
+    let out = text || "";
+    censoredWords.forEach(w => out = out.replace(new RegExp(w,"gi"), "***"));
+    out = out.replace(/@(\w+)/g, (m,name) => accounts[name] ? `<span style="color:var(--accent)">@${name}</span>` : `@${name}`);
+    return out;
+  }
+  function notifyMentions(text){
+    const names = [...(text||"").matchAll(/@(\w+)/g)].map(m=>m[1]);
+    names.forEach(n=>{ if(accounts[n] && n !== currentUser) alert(`${n}, you were mentioned by ${currentUser}!`); });
+  }
+
+  // ---------- Realtime DB listeners ----------
+  const accountsRef = ref(db, "accounts");
+  const postsRef = ref(db, "posts");
+  const topicsRef = ref(db, "topics");
+  const updatesRef = ref(db, "updates");
+  const bannedRef = ref(db, "banned");
+
+  // accounts
+  onValue(accountsRef, snap => {
+    accounts = snap.val() || {};
+    renderUsersTable();
     buildRegisterRoleOptions();
-}
-function showLogin(){
-    document.getElementById("registerPanel").style.display = "none";
-    document.getElementById("loginPanel").style.display = "block";
-}
-function hashPass(str){ return btoa(str); }
+    updateMemberCount();
+    // update role UI if logged in
+    if(currentUser && accounts[currentUser]) updateRoleUI();
+  });
 
-/* ---------------------------
-   Role helpers
-----------------------------*/
-function getCurrentOwner(){
-    return Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
-}
-function isOwner(user){ return accounts[user] && accounts[user].role === "owner"; }
-function isAdmin(user){ return accounts[user] && accounts[user].role === "admin"; }
+  // posts
+  onValue(postsRef, snap => {
+    const data = snap.val() || {};
+    posts = Object.keys(data).sort().map(k => ({ id:k, ...data[k] }));
+    displayPosts();
+  });
 
-/* Build role options for registration dropdown (owner option appears only if no owner exists) */
-function buildRegisterRoleOptions(){
+  // topics
+  onValue(topicsRef, snap => {
+    const data = snap.val() || {};
+    topics = Object.keys(data).sort().reverse().map(k => ({ id:k, ...data[k] })); // newest first
+    displayTopics();
+  });
+
+  // updates
+  onValue(updatesRef, snap => {
+    const data = snap.val() || {};
+    updates = Object.keys(data).sort().map(k => ({ id:k, ...data[k] }));
+    displayUpdates();
+  });
+
+  // banned
+  onValue(bannedRef, snap => {
+    const data = snap.val() || {};
+    bannedUsers = Object.keys(data || {});
+    updateBannedList();
+  });
+
+  // ---------- UI helpers ----------
+  function showRegister(){ document.getElementById("registerPanel").style.display="block"; document.getElementById("loginPanel").style.display="none"; buildRegisterRoleOptions(); }
+  function showLogin(){ document.getElementById("registerPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; }
+  function updateMemberCount(){ document.getElementById("memberCount").innerText = `Members: ${Object.keys(accounts).length}`; }
+  function updateBannedList(){ document.getElementById("bannedList").innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users"; }
+  function isOwner(u){ return accounts[u] && accounts[u].role === "owner"; }
+  function isAdmin(u){ return accounts[u] && accounts[u].role === "admin"; }
+
+  // ---------- Registration (with role dropdown) ----------
+  function buildRegisterRoleOptions(){
     const sel = document.getElementById("regRole");
-    const currentOwner = getCurrentOwner();
+    if(!sel) return;
+    const ownerExists = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
     sel.innerHTML = "";
-    sel.appendChild(optionEl("member","Member"));
-    sel.appendChild(optionEl("contributor","Contributor"));
-    sel.appendChild(optionEl("admin","Admin"));
-    if(!currentOwner){
-        sel.appendChild(optionEl("owner","Owner"));
-    }
-    function optionEl(val,txt){ const o=document.createElement("option"); o.value=val; o.innerText=txt; return o; }
-}
+    sel.appendChild(createOpt("member","Member"));
+    sel.appendChild(createOpt("contributor","Contributor"));
+    sel.appendChild(createOpt("admin","Admin"));
+    if(!ownerExists) sel.appendChild(createOpt("owner","Owner"));
+    function createOpt(v,t){ const o=document.createElement("option"); o.value=v; o.innerText=t; return o; }
+  }
 
-/* ---------------------------
-   Register
-----------------------------*/
-function register(){
+  async function register(){
     const user = (document.getElementById("regUser").value || "").trim();
     const pass = (document.getElementById("regPass").value || "").trim();
-    const selectedRole = (document.getElementById("regRole").value || "member");
+    const role = (document.getElementById("regRole").value || "member");
+    const err = document.getElementById("regError"); err.innerText = "";
 
-    const regError = document.getElementById("regError");
-    regError.innerText = "";
+    if(!user || !pass){ err.innerText = "Fill all fields"; return; }
+    if(accounts[user]){ err.innerText = "Username taken"; return; }
 
-    if(!user || !pass){ regError.innerText = "Fill all fields"; return; }
-    if(accounts[user]){ regError.innerText = "Username taken"; return; }
+    // if role === owner ensure none exists
+    if(role === "owner" && Object.keys(accounts).find(u=>accounts[u].role==="owner")) { err.innerText = "Owner already exists"; return; }
 
-    // Owner check
-    const currOwner = getCurrentOwner();
-    if(selectedRole === "owner" && currOwner){ regError.innerText = "There is already an owner!"; return; }
-
-    accounts[user] = { password: hashPass(pass), role: selectedRole };
-    saveAccounts();
-    alert("Account created! Log in now.");
+    // write new account in DB
+    await set(ref(db, `accounts/${user}`), { password: hashPass(pass), role: role, lastUsernameChange: 0 });
+    alert("Account created. Log in now.");
     showLogin();
-}
+  }
 
-/* ---------------------------
-   Login
-----------------------------*/
-function login(){
+  // ---------- Login ----------
+  async function login(){
     const u = (document.getElementById("loginUser").value || "").trim();
     const p = (document.getElementById("loginPass").value || "").trim();
-    const err = document.getElementById("loginError");
-    err.innerText = "";
+    const err = document.getElementById("loginError"); err.innerText = "";
 
     if(!accounts[u]){ err.innerText = "User does not exist"; return; }
     if(bannedUsers.includes(u)){ err.innerText = "You are banned!"; return; }
     if(accounts[u].password !== hashPass(p)){ err.innerText = "Wrong password"; return; }
 
-    currentUser = u; saveCurrentUser();
+    currentUser = u; saveSessionUser(u);
     openForum();
-}
+  }
 
-/* ---------------------------
-   Logout
-----------------------------*/
-function logout(){ currentUser=null; saveCurrentUser(); document.getElementById("forumPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; }
+  function logout(){ currentUser = null; saveSessionUser(null); document.getElementById("forumPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; }
 
-/* ---------------------------
-   Open forum (sets UI)
-----------------------------*/
-function openForum(){
-    document.getElementById("loginPanel").style.display = "none";
-    document.getElementById("registerPanel").style.display = "none";
-    document.getElementById("forumPanel").style.display = "block";
-
-    document.getElementById("currentUserDisplay").innerText = `${currentUser}`;
+  // ---------- Open forum UI ----------
+  function openForum(){
+    document.getElementById("loginPanel").style.display="none";
+    document.getElementById("registerPanel").style.display="none";
+    document.getElementById("forumPanel").style.display="block";
+    document.getElementById("currentUserDisplay").innerText = currentUser;
     updateRoleUI();
     updateMemberCount();
     updateBannedList();
+    if(isOwner(currentUser)) document.getElementById("adminPanel").style.display="block"; else document.getElementById("adminPanel").style.display="none";
+    if(isOwner(currentUser) || isAdmin(currentUser)) document.getElementById("updateBox").style.display="block"; else document.getElementById("updateBox").style.display="none";
+  }
 
-    // Show admin panel only to owner
-    if(isOwner(currentUser)){
-        document.getElementById("adminPanel").style.display = "block";
-    } else {
-        document.getElementById("adminPanel").style.display = "none";
-    }
-
-    // show update box only for admin/owner
-    if(isAdmin(currentUser) || isOwner(currentUser)){
-        document.getElementById("updateBox").style.display = "block";
-    } else {
-        document.getElementById("updateBox").style.display = "none";
-    }
-
-    // render everything
-    displayUpdates();
-    displayPosts();
-    displayTopics();
-    renderUsersTable();
-}
-
-/* ---------------------------
-   Role change UI in forum
-----------------------------*/
-function updateRoleUI(){
+  // ---------- Role change UI ----------
+  function updateRoleUI(){
     const roleBox = document.getElementById("roleBox");
     roleBox.innerHTML = "";
-
-    const currentRole = accounts[currentUser].role;
-    const ownerName = getCurrentOwner();
-    // build select
-    const sel = document.createElement("select");
-    sel.id = "roleSelect";
-    sel.style.width = "100%";
-    // options always include member/contributor/admin
-    addOption(sel,'member','Member');
-    addOption(sel,'contributor','Contributor');
-    addOption(sel,'admin','Admin');
-    // owner option only if free or if current user already owner
-    if(!ownerName || ownerName === currentUser) addOption(sel,'owner','Owner');
-
-    sel.value = currentRole;
+    if(!currentUser || !accounts[currentUser]) return;
+    const ownerName = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
+    const sel = document.createElement("select"); sel.id="roleSelect";
+    sel.appendChild(opt("member","Member")); sel.appendChild(opt("contributor","Contributor")); sel.appendChild(opt("admin","Admin"));
+    if(!ownerName || ownerName === currentUser) sel.appendChild(opt("owner","Owner"));
+    sel.value = accounts[currentUser].role;
     roleBox.appendChild(sel);
-    const btn = document.createElement("button"); btn.innerText="Save Role"; btn.style.marginTop="8px";
-    btn.onclick = changeRole;
+    const btn = document.createElement("button"); btn.innerText="Save Role"; btn.style.marginTop="8px"; btn.onclick = changeRole;
     roleBox.appendChild(btn);
+    document.getElementById("currentRoleDisplay").innerText = accounts[currentUser].role;
+    function opt(v,t){ const o=document.createElement("option"); o.value=v; o.innerText=t; return o; }
+  }
 
-    // display role badge
-    const badge = document.getElementById("currentRoleDisplay");
-    badge.innerText = accounts[currentUser].role;
-    badge.className = "role-badge role-" + (accounts[currentUser].role === 'owner' ? 'owner' : (accounts[currentUser].role === 'admin' ? 'admin' : 'user'));
-    function addOption(s,v,t){ const o=document.createElement("option"); o.value=v; o.innerText=t; s.appendChild(o); }
-}
+  async function changeRole(){
+    const sel = document.getElementById("roleSelect"); if(!sel) return;
+    const value = sel.value;
+    const ownerName = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
+    if(value === "owner" && ownerName && ownerName !== currentUser){ alert("Owner slot is taken"); updateRoleUI(); return; }
+    // update in DB
+    await update(ref(db, `accounts/${currentUser}`), { role: value });
+    // UI will update via onValue listener
+  }
 
-/* ---------------------------
-   Change role (user self-change)
-----------------------------*/
-function changeRole(){
-    const sel = document.getElementById("roleSelect");
-    if(!sel) return;
-    const selected = sel.value;
-    const ownerName = getCurrentOwner();
-    // if trying to pick owner but someone else has it
-    if(selected === "owner" && ownerName && ownerName !== currentUser){
-        alert("Owner role is already taken.");
-        updateRoleUI();
-        return;
-    }
-    // update user's role
-    accounts[currentUser].role = selected;
-    saveAccounts();
-    updateRoleUI();
-    displayPosts();
-    displayTopics();
-}
-
-/* ---------------------------
-   Posts
-----------------------------*/
-function notifyMentions(text){
-    const mentionedUsers = [...text.matchAll(/@(\w+)/g)].map(m=>m[1]);
-    mentionedUsers.forEach(u=>{
-        if(accounts[u] && u !== currentUser){
-            alert(`${u}, you were mentioned by ${currentUser}!`);
-        }
-    });
-}
-
-function filterBadWords(text){
-    let out = text;
-    censoredWords.forEach(w => { out = out.replace(new RegExp(w,"gi"), "***"); });
-    out = out.replace(/@(\w+)/g, (m,name)=> accounts[name] ? `<span style="color:var(--accent)">@${name}</span>` : `@${name}`);
-    return out;
-}
-
-function addPost(){
+  // ---------- Posts ----------
+  async function addPost(){
     if(!currentUser || bannedUsers.includes(currentUser)) return;
     const raw = (document.getElementById("postInput").value || "").trim(); if(!raw) return;
     notifyMentions(raw);
     const text = filterBadWords(raw);
-    posts.push({ id: "p"+Date.now()+Math.random().toString(36).slice(2,6), user: currentUser, role: accounts[currentUser].role, text, timestamp: Date.now() });
-    savePosts();
+    const node = push(postsRef);
+    await set(node, { user: currentUser, role: accounts[currentUser].role, text, timestamp: Date.now() });
     document.getElementById("postInput").value = "";
-}
+  }
 
-function displayPosts(){
+  function displayPosts(){
     const box = document.getElementById("posts"); box.innerHTML = "";
-    posts.forEach((p, idx) => {
-        if(bannedUsers.includes(p.user)) return;
-        const el = document.createElement("div"); el.className = "post-card";
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <strong>${p.user}</strong> <span class="small-muted">(${p.role})</span>
-                <div class="meta">${new Date(p.timestamp).toLocaleString()}</div>
-            </div>
-            <div></div>
-        </div>
-        <div style="margin-top:8px">${p.text}</div>`;
-
-        // delete button - owner/admin or creator
-        const role = accounts[currentUser].role;
-        if(currentUser === p.user || role === "owner" || role === "admin"){
-            const del = document.createElement("button");
-            del.className = "small danger";
-            del.innerText = "Delete";
-            del.onclick = () => { posts.splice(idx,1); savePosts(); };
-            el.querySelector("div:last-child").appendChild(del);
-        }
-
-        box.appendChild(el);
+    posts.forEach(p => {
+      if(bannedUsers.includes(p.user)) return;
+      const el = document.createElement("div"); el.className="post-card";
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${p.user}</strong> <span class="muted">(${p.role})</span><div class="meta">${new Date(p.timestamp).toLocaleString()}</div></div>
+        <div id="post-actions-${p.id}"></div>
+      </div><div style="margin-top:8px">${p.text}</div>`;
+      // delete button
+      if(currentUser === p.user || isOwner(currentUser) || isAdmin(currentUser)){
+        const del = document.createElement("button"); del.className="small danger"; del.innerText="Delete";
+        del.onclick = async () => { await remove(ref(db, `posts/${p.id}`)); };
+        el.querySelector(`#post-actions-${p.id}`).appendChild(del);
+      }
+      box.appendChild(el);
     });
-}
+  }
 
-/* ---------------------------
-   Topics & comments
-----------------------------*/
-function addTopic(){
+  // ---------- Topics & comments ----------
+  async function addTopic(){
     if(!currentUser || bannedUsers.includes(currentUser)) return;
     const title = (document.getElementById("topicTitle").value || "").trim();
     const content = (document.getElementById("topicContent").value || "").trim();
     if(!title || !content) return;
     notifyMentions(content);
-    const topic = { id: "t"+Date.now()+Math.random().toString(36).slice(2,6), user: currentUser, role: accounts[currentUser].role, title: filterBadWords(title), content: filterBadWords(content), comments: [], timestamp: Date.now() };
-    topics.unshift(topic);
-    saveTopics();
-    document.getElementById("topicTitle").value = "";
-    document.getElementById("topicContent").value = "";
-}
+    const node = push(topicsRef);
+    await set(node, { user: currentUser, role: accounts[currentUser].role, title: filterBadWords(title), content: filterBadWords(content), comments: {}, timestamp: Date.now() });
+    document.getElementById("topicTitle").value = ""; document.getElementById("topicContent").value = "";
+  }
 
-function displayTopics(){
+  function displayTopics(){
     const box = document.getElementById("topics"); box.innerHTML = "";
-    topics.forEach((t, tIndex) => {
-        if(bannedUsers.includes(t.user)) return;
-        const el = document.createElement("div"); el.className = "topic";
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><strong>${t.title}</strong><div class="small-muted">by ${t.user} (${t.role}) • ${new Date(t.timestamp).toLocaleString()}</div></div>
-            <div></div>
-        </div>
-        <div style="margin-top:8px">${t.content}</div>`;
-
-        // topic delete - owner/admin or author
-        const role = accounts[currentUser].role;
-        if(currentUser === t.user || role === "owner" || role === "admin"){
-            const delTopic = document.createElement("button"); delTopic.className="danger small"; delTopic.innerText="Delete Topic";
-            delTopic.onclick = () => { topics.splice(tIndex,1); saveTopics(); };
-            el.querySelector("div:last-child").appendChild(delTopic);
+    topics.forEach(t => {
+      if(bannedUsers.includes(t.user)) return;
+      const el = document.createElement("div"); el.className="topic";
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${t.title}</strong><div class="muted">by ${t.user} (${t.role}) • ${new Date(t.timestamp).toLocaleString()}</div></div>
+        <div id="topic-actions-${t.id}"></div>
+      </div><div style="margin-top:8px">${t.content}</div>`;
+      // topic delete
+      if(currentUser === t.user || isOwner(currentUser) || isAdmin(currentUser)){
+        const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete Topic";
+        del.onclick = async () => { await remove(ref(db, `topics/${t.id}`)); };
+        el.querySelector(`#topic-actions-${t.id}`).appendChild(del);
+      }
+      // comments
+      const comments = t.comments ? Object.keys(t.comments).map(k => ({ id:k, ...t.comments[k]})) : [];
+      comments.forEach(c => {
+        if(bannedUsers.includes(c.user)) return;
+        const cEl = document.createElement("div"); cEl.className="commentBox";
+        cEl.innerHTML = `<strong>${c.user}</strong> <span class="muted">(${c.role})</span> <div class="muted">${new Date(c.timestamp).toLocaleString()}</div><div style="margin-top:6px">${c.text}</div>`;
+        if(currentUser === c.user || isOwner(currentUser) || isAdmin(currentUser)){
+          const delC = document.createElement("button"); delC.className="danger small"; delC.innerText="Delete"; delC.onclick = async () => {
+            await remove(ref(db, `topics/${t.id}/comments/${c.id}`));
+          };
+          cEl.appendChild(delC);
         }
-
-        // comments
-        (t.comments || []).forEach((c, cIndex) => {
-            if(bannedUsers.includes(c.user)) return;
-            const cEl = document.createElement("div"); cEl.style.marginTop="10px"; cEl.style.padding="8px"; cEl.style.background="rgba(255,255,255,0.02)"; cEl.style.borderRadius="6px";
-            cEl.innerHTML = `<strong>${c.user}</strong> <span class="small-muted">(${c.role})</span> <div class="small-muted">${new Date(c.timestamp).toLocaleString()}</div><div style="margin-top:6px">${c.text}</div>`;
-            if(currentUser === c.user || role === "owner" || role === "admin"){
-                const delC = document.createElement("button"); delC.className="danger small"; delC.innerText="Delete"; delC.style.marginTop="6px";
-                delC.onclick = () => { t.comments.splice(cIndex,1); saveTopics(); };
-                cEl.appendChild(delC);
-            }
-            el.appendChild(cEl);
-        });
-
-        // add comment UI
-        const input = document.createElement("input"); input.placeholder="Comment...";
-        const btn = document.createElement("button"); btn.innerText="Post"; btn.style.marginLeft="8px";
-        btn.onclick = () => {
-            const text = (input.value || "").trim(); if(!text) return;
-            notifyMentions(text);
-            t.comments.push({ id:"c"+Date.now()+Math.random().toString(36).slice(2,6), user:currentUser, role:accounts[currentUser].role, text:filterBadWords(text), timestamp: Date.now() });
-            saveTopics();
-            input.value = "";
-        };
-        const ctrl = document.createElement("div"); ctrl.style.marginTop="8px"; ctrl.appendChild(input); ctrl.appendChild(btn);
-        el.appendChild(ctrl);
-
-        box.appendChild(el);
+        el.appendChild(cEl);
+      });
+      // add comment UI
+      const input = document.createElement("input"); input.placeholder="Comment...";
+      const btn = document.createElement("button"); btn.innerText="Post"; btn.style.marginLeft="8px";
+      btn.onclick = async () => {
+        const text = (input.value || "").trim(); if(!text) return;
+        notifyMentions(text);
+        const commentNode = push(ref(db, `topics/${t.id}/comments`));
+        await set(commentNode, { user: currentUser, role: accounts[currentUser].role, text: filterBadWords(text), timestamp: Date.now() });
+        input.value = "";
+      };
+      const ctrl = document.createElement("div"); ctrl.style.marginTop="8px"; ctrl.appendChild(input); ctrl.appendChild(btn);
+      el.appendChild(ctrl);
+      box.appendChild(el);
     });
-}
+  }
 
-/* ---------------------------
-   Updates
-----------------------------*/
-function addUpdate(){
+  // ---------- Updates ----------
+  async function addUpdate(){
     if(!currentUser) return;
-    const textRaw = (document.getElementById("updateInput").value || "").trim(); if(!textRaw) return;
-    notifyMentions(textRaw);
-    updates.push({ id:"u"+Date.now()+Math.random().toString(36).slice(2,6), user:currentUser, role:accounts[currentUser].role, text:filterBadWords(textRaw), timestamp: Date.now() });
-    saveUpdates();
+    const text = (document.getElementById("updateInput").value || "").trim(); if(!text) return;
+    notifyMentions(text);
+    const node = push(updatesRef);
+    await set(node, { user: currentUser, role: accounts[currentUser].role, text: filterBadWords(text), timestamp: Date.now() });
     document.getElementById("updateInput").value = "";
-}
+  }
 
-function displayUpdates(){
+  function displayUpdates(){
     const box = document.getElementById("updates"); box.innerHTML = "";
-    updates.forEach((u, idx) => {
-        if(bannedUsers.includes(u.user)) return;
-        const el = document.createElement("div"); el.className="update-card";
-        el.innerHTML = `<strong>${u.user} (${u.role})</strong> <div class="small-muted">${new Date(u.timestamp).toLocaleString()}</div><div style="margin-top:8px">${u.text}</div>`;
-        const role = accounts[currentUser].role;
-        if(currentUser === u.user || role === "owner" || role === "admin"){
-            const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete"; del.onclick = () => { updates.splice(idx,1); saveUpdates(); };
-            el.appendChild(del);
-        }
-        box.appendChild(el);
+    updates.forEach(u => {
+      if(bannedUsers.includes(u.user)) return;
+      const el = document.createElement("div"); el.className="update-card";
+      el.innerHTML = `<strong>${u.user} (${u.role})</strong> <div class="muted">${new Date(u.timestamp).toLocaleString()}</div><div style="margin-top:8px">${u.text}</div>`;
+      if(currentUser === u.user || isOwner(currentUser) || isAdmin(currentUser)){
+        const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete"; del.onclick = async () => { await remove(ref(db, `updates/${u.id}`)); };
+        el.appendChild(del);
+      }
+      box.appendChild(el);
     });
-}
+  }
 
-/* ---------------------------
-   Username change (7 day)
-----------------------------*/
-function changeUsername(){
+  // ---------- Username change (7 day) ----------
+  async function changeUsername(){
+    if(!currentUser) return;
     const newName = (document.getElementById("newUsername").value || "").trim();
-    const msg = document.getElementById("usernameMsg");
-    msg.style.color = "#b6ffb3"; msg.innerText = "";
-    if(!newName){ msg.style.color="#ffb0b0"; msg.innerText="Enter a new username."; return; }
-    if(accounts[newName]){ msg.style.color="#ffb0b0"; msg.innerText="Username already taken."; return; }
-    if(bannedUsers.includes(currentUser)){ msg.style.color="#ffb0b0"; msg.innerText="Banned users cannot change username."; return; }
+    const msgEl = document.getElementById("usernameMsg");
+    msgEl.style.color="#b6ffb3"; msgEl.innerText = "";
+    if(!newName){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Enter a new username."; return; }
+    if(accounts[newName]){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Username already taken."; return; }
+    if(bannedUsers.includes(currentUser)){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Banned users cannot change username."; return; }
 
     const now = Date.now();
-    if(lastUsernameChange[currentUser] && now - lastUsernameChange[currentUser] < 7*24*60*60*1000){
-        const daysLeft = Math.ceil((7*24*60*60*1000 - (now - lastUsernameChange[currentUser])) / (1000*60*60*24));
-        msg.style.color="#ffb0b0"; msg.innerText = `You can change username again in ${daysLeft} day(s).`; return;
+    const last = accounts[currentUser].lastUsernameChange || 0;
+    const oneWeek = 7*24*60*60*1000;
+    if(now - last < oneWeek){ const daysLeft = Math.ceil((oneWeek - (now - last)) / (1000*60*60*24)); msgEl.style.color="#ffb0b0"; msgEl.innerText=`You can change username again in ${daysLeft} day(s).`; return; }
+
+    // Create new account node with same password/role & update lastUsernameChange
+    await set(ref(db, `accounts/${newName}`), { password: accounts[currentUser].password, role: accounts[currentUser].role, lastUsernameChange: now });
+
+    // Update posts
+    for(const p of posts){ if(p.user === currentUser) await update(ref(db, `posts/${p.id}`), { user: newName }); }
+
+    // Update topics & comments
+    for(const t of topics){
+      if(t.user === currentUser) await update(ref(db, `topics/${t.id}`), { user: newName });
+      // comments: iterate
+      const commentsObj = t.comments || {};
+      for(const cid of Object.keys(commentsObj || {})){
+        if(commentsObj[cid].user === currentUser) await update(ref(db, `topics/${t.id}/comments/${cid}`), { user: newName });
+      }
     }
 
-    // copy account
-    accounts[newName] = accounts[currentUser];
-    delete accounts[currentUser];
+    // Updates
+    for(const u of updates){ if(u.user === currentUser) await update(ref(db, `updates/${u.id}`), { user: newName }); }
 
-    // update posts/topics/updates/comments
-    posts.forEach(p => { if(p.user === currentUser) p.user = newName; });
-    topics.forEach(t => {
-        if(t.user === currentUser) t.user = newName;
-        t.comments.forEach(c => { if(c.user === currentUser) c.user = newName; });
-    });
-    updates.forEach(u => { if(u.user === currentUser) u.user = newName; });
+    // Ban renaming if exists
+    const bannedSnap = await get(child(ref(db), `banned/${currentUser}`));
+    if(bannedSnap.exists()){ await set(ref(db, `banned/${newName}`), bannedSnap.val()); await remove(ref(db, `banned/${currentUser}`)); }
 
-    // banned rename
-    const bIndex = bannedUsers.indexOf(currentUser);
-    if(bIndex !== -1){ bannedUsers[bIndex] = newName; saveBanned(); }
+    // Remove old account
+    await remove(ref(db, `accounts/${currentUser}`));
 
-    lastUsernameChange[newName] = now; delete lastUsernameChange[currentUser]; saveLastUsernameChange();
-    currentUser = newName; saveCurrentUser();
-    saveAccounts(); savePosts(); saveTopics(); saveUpdates();
+    // Set session
+    currentUser = newName; saveSessionUser(newName);
+    msgEl.style.color="#b6ffb3"; msgEl.innerText = "Username changed successfully!";
+  }
 
-    document.getElementById("currentUserDisplay").innerText = currentUser;
-    msg.style.color="#b6ffb3"; msg.innerText = "Username changed successfully!";
-}
-
-/* ---------------------------
-   Owner/Admin actions (owner-only admin panel)
-----------------------------*/
-function renderUsersTable(){
-    const tbody = document.querySelector("#usersTable tbody");
+  // ---------- Owner/Admin actions ----------
+  async function renderUsersTable(){
+    const tbody = document.querySelector("#usersTable tbody"); if(!tbody) return;
     tbody.innerHTML = "";
     Object.keys(accounts).forEach(u => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${u}</td><td>${accounts[u].role}</td><td></td>`;
-        const actionsTd = tr.querySelector("td:last-child");
-        // quickly add buttons for owner to manage
-        if(isOwner(currentUser)){
-            const setMember = document.createElement("button"); setMember.className="small"; setMember.innerText="Member";
-            setMember.onclick = () => { accounts[u].role = "member"; saveAccounts(); };
-            const setContrib = document.createElement("button"); setContrib.className="small"; setContrib.innerText="Contributor";
-            setContrib.onclick = () => { accounts[u].role = "contributor"; saveAccounts(); };
-            const setAdmin = document.createElement("button"); setAdmin.className="small"; setAdmin.innerText="Admin";
-            setAdmin.onclick = () => { accounts[u].role = "admin"; saveAccounts(); };
-            const delUser = document.createElement("button"); delUser.className="small danger"; delUser.innerText="Delete"; 
-            delUser.onclick = () => { if(u===currentUser){ alert("You cannot delete your own owner account here."); return; } deleteUser(u); };
-            actionsTd.appendChild(setMember); actionsTd.appendChild(setContrib); actionsTd.appendChild(setAdmin); actionsTd.appendChild(delUser);
-        } else {
-            actionsTd.innerText = "-";
-        }
-        tbody.appendChild(tr);
+      const tr = document.createElement("tr");
+      const actionsTd = document.createElement("td");
+      tr.innerHTML = `<td>${u}</td><td>${accounts[u].role}</td>`; tr.appendChild(actionsTd);
+      if(isOwner(currentUser)){
+        const btnMember = document.createElement("button"); btnMember.className="small"; btnMember.innerText="Member"; btnMember.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "member" }); };
+        const btnContrib = document.createElement("button"); btnContrib.className="small"; btnContrib.innerText="Contributor"; btnContrib.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "contributor" }); };
+        const btnAdmin = document.createElement("button"); btnAdmin.className="small"; btnAdmin.innerText="Admin"; btnAdmin.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "admin" }); };
+        const btnDel = document.createElement("button"); btnDel.className="small danger"; btnDel.innerText="Delete"; btnDel.onclick = ()=>{ if(u===currentUser){ alert("Can't delete your own owner account here."); return; } deleteUser(u); };
+        actionsTd.appendChild(btnMember); actionsTd.appendChild(btnContrib); actionsTd.appendChild(btnAdmin); actionsTd.appendChild(btnDel);
+      } else {
+        actionsTd.innerText = "-";
+      }
+      tbody.appendChild(tr);
     });
-}
+  }
 
-function adminSetRole(role){
-    if(!isOwner(currentUser)){ alert("Only the owner can do this."); return; }
-    const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User does not exist"); return; }
-    if(accounts[u].role === "owner" && role !== "owner"){ alert("Cannot change owner via this action. Use transfer ownership."); return; }
-    // if role === owner ensure transfer rules - owner role should be unique
+  async function adminSetRole(role){
+    if(!isOwner(currentUser)){ alert("Only owner"); return; }
+    const u = (document.getElementById("adminUser").value || "").trim(); if(!u || !accounts[u]){ alert("User not found"); return; }
+    if(accounts[u].role === "owner" && role !== "owner"){ alert("Cannot change owner here"); return; }
     if(role === "owner"){
-        const curOwner = getCurrentOwner();
-        if(curOwner && curOwner !== currentUser){
-            alert("There is already an owner. Transfer ownership instead.");
-            return;
-        }
+      const curOwner = Object.keys(accounts).find(k=>accounts[k].role==="owner");
+      if(curOwner && curOwner !== currentUser){ alert("Owner exists; use transfer"); return; }
     }
-    accounts[u].role = role;
-    saveAccounts();
+    await update(ref(db, `accounts/${u}`), { role });
     alert(`${u} set to ${role}`);
-}
+  }
 
-/* transfer ownership (owner only) */
-function transferOwnership(){
-    if(!isOwner(currentUser)){ alert("Only the owner can transfer ownership."); return; }
+  async function transferOwnership(){
+    if(!isOwner(currentUser)){ alert("Only owner"); return; }
     const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User does not exist"); return; }
-    if(u === currentUser){ alert("You are already the owner."); return; }
-    // set previous owner to member (or keep their role? we'll set to member)
-    accounts[currentUser].role = "member";
-    accounts[u].role = "owner";
-    saveAccounts();
+    if(!u || !accounts[u]){ alert("User not found"); return; }
+    if(u === currentUser){ alert("You are already owner"); return; }
+    await update(ref(db, `accounts/${currentUser}`), { role: "member" });
+    await update(ref(db, `accounts/${u}`), { role: "owner" });
     alert("Ownership transferred to " + u);
-    // update UI: hide admin panel for current user if they are no longer owner
-    openForum();
-}
+  }
 
-/* ban user (owner only) */
-function adminBanUser(){
-    if(!isOwner(currentUser)){ alert("Only owner can ban"); return; }
+  async function adminBanUser(){
+    if(!isOwner(currentUser)){ alert("Only owner"); return; }
     const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User does not exist"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot ban the owner"); return; }
-    if(!bannedUsers.includes(u)) bannedUsers.push(u);
-    saveBanned();
-    // remove messages
-    posts = posts.filter(p => p.user !== u); savePosts();
-    topics.forEach(t => { t.comments = t.comments.filter(c => c.user !== u); });
-    topics = topics.filter(t => t.user !== u); saveTopics();
-    alert(u + " has been banned and their messages removed.");
-}
-
-/* delete all messages for a user (owner only) */
-function adminDeleteMessages(){
-    if(!isOwner(currentUser)){ alert("Only owner can delete messages"); return; }
-    const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User does not exist"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot delete owner's messages"); return; }
-    posts = posts.filter(p => p.user !== u);
-    topics.forEach(t => { t.comments = t.comments.filter(c => c.user !== u); });
-    topics = topics.filter(t => t.user !== u);
-    savePosts(); saveTopics();
-    alert("All messages from " + u + " deleted.");
-}
-
-/* delete user (owner only) */
-function deleteUser(u){
-    if(!isOwner(currentUser)){ alert("Only the owner can delete users."); return; }
-    if(!accounts[u]){ alert("User not found"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot delete the owner"); return; }
-    delete accounts[u];
+    if(!u || !accounts[u]){ alert("User not found"); return; }
+    if(accounts[u].role === "owner"){ alert("Cannot ban owner"); return; }
+    await set(ref(db, `banned/${u}`), { bannedAt: Date.now() });
     // remove content
-    posts = posts.filter(p => p.user !== u);
-    topics.forEach(t => { t.comments = t.comments.filter(c => c.user !== u); });
-    topics = topics.filter(t => t.user !== u);
-    saveAccounts(); savePosts(); saveTopics();
-    alert("Deleted user " + u);
-}
+    // delete posts
+    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
+    // delete topics & comments
+    for(const t of topics){ if(t.user === u) await remove(ref(db, `topics/${t.id}`)); else {
+      const comments = t.comments || {}; for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
+    } }
+    alert(u + " has been banned and their messages removed.");
+  }
 
-/* ---------------------------
-   Banned list helpers
-----------------------------*/
-function updateBannedList(){ document.getElementById("bannedList").innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users"; }
-
-/* ---------------------------
-   Initialization & rendering
-----------------------------*/
-function renderInitial(){
-    // prepare register role options
-    buildRegisterRoleOptions();
-
-    // display counts
-    updateMemberCount();
-    updateBannedList();
-
-    // if logged in, auto open
-    if(currentUser && accounts[currentUser]){
-        openForum();
-    } else {
-        document.getElementById("loginPanel").style.display = "block";
+  async function adminDeleteMessages(){
+    if(!isOwner(currentUser)){ alert("Only owner"); return; }
+    const u = (document.getElementById("adminUser").value || "").trim();
+    if(!u || !accounts[u]){ alert("User not found"); return; }
+    if(accounts[u].role === "owner"){ alert("Cannot delete owner's messages"); return; }
+    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
+    for(const t of topics){ 
+      if(t.user === u) await remove(ref(db, `topics/${t.id}`)); 
+      else {
+        const comments = t.comments || {};
+        for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
+      }
     }
-    renderUsersTable();
-    displayPosts();
-    displayTopics();
-    displayUpdates();
-}
+  }
 
-/* ---------------------------
-   Utility: delete messages by owner/admin when needed
-----------------------------*/
-function adminDeleteUserMessages(u){
-    posts = posts.filter(p => p.user !== u);
-    topics.forEach(t=> t.comments = t.comments.filter(c => c.user !== u));
-    topics = topics.filter(t => t.user !== u);
-    savePosts(); saveTopics();
-}
+  async function deleteUser(u){
+    if(!isOwner(currentUser)){ alert("Only owner"); return; }
+    if(!accounts[u]){ alert("User not found"); return; }
+    if(accounts[u].role === "owner"){ alert("Cannot delete owner"); return; }
+    await remove(ref(db, `accounts/${u}`));
+    // remove content
+    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
+    for(const t of topics){ if(t.user === u) await remove(ref(db, `topics/${t.id}`)); else {
+      const comments = t.comments || {}; for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
+    } }
+    alert("Deleted " + u);
+  }
 
-/* ---------------------------
-   Initial call
-----------------------------*/
-renderInitial();
+  // ---------- Utility: render helpers ----------
+  function renderUsersTable(){ document.querySelectorAll("#usersTable tbody tr").forEach(n=>n.remove()); if(Object.keys(accounts).length) renderUsersTableAsync(); }
+  function renderUsersTableAsync(){ /* will be rebuilt via onValue accounts listener */ }
 
-/* ---------------------------
-   Expose functions used by inline handlers (for safety)
-----------------------------*/
-window.showRegister = showRegister;
-window.showLogin = showLogin;
-window.register = register;
-window.login = login;
-window.logout = logout;
-window.openForum = openForum;
-window.addPost = addPost;
-window.addTopic = addTopic;
-window.addUpdate = addUpdate;
-window.changeUsername = changeUsername;
-window.changeRole = changeRole;
-window.adminSetRole = adminSetRole;
-window.adminBanUser = adminBanUser;
-window.adminDeleteMessages = adminDeleteMessages;
-window.transferOwnership = transferOwnership;
+  // ---------- Startup: initial render functions triggered by listeners already ----------
+  // Expose functions to global scope for inline handlers
+  window.showRegister = showRegister; window.showLogin = showLogin; window.register = register; window.login = login; window.logout = logout;
+  window.addPost = addPost; window.addTopic = addTopic; window.addUpdate = addUpdate; window.changeUsername = changeUsername;
+  window.changeRole = changeRole; window.adminSetRole = adminSetRole; window.adminBanUser = adminBanUser; window.adminDeleteMessages = adminDeleteMessages;
+  window.transferOwnership = transferOwnership; window.displayPosts = displayPosts; window.displayTopics = displayTopics; window.displayUpdates = displayUpdates;
 
 </script>
 </body>
