@@ -13,7 +13,7 @@
         button{margin-top:10px;padding:8px 15px;border-radius:10px;background:#5a4bff;border:none;color:white;cursor:pointer;transition:0.2s;}
         button:hover{background:#7c6cff;}
         .hidden{display:none;}
-        .post,.dm,.update{background:rgba(255,255,255,0.05);padding:10px;margin-top:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);}
+        .post,.dm,.update,.user{background:rgba(255,255,255,0.05);padding:10px;margin-top:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);}
         .section{margin-top:30px;}
         .owner-btn{background:#ff4b4b;}
         .owner-btn:hover{background:#ff6f6f;}
@@ -22,6 +22,8 @@
         .timestamp{font-size:0.8em;color:#aaa;}
         .post img{max-width:300px;margin-top:10px;border-radius:8px;}
         p.forgot{cursor:pointer;color:#5a4bff;margin-top:5px;}
+        .like-btn{background:#ff9800;margin-left:5px;}
+        .reply-box{margin-top:10px;}
     </style>
 </head>
 <body>
@@ -48,7 +50,7 @@
 </div>
 
 <div id="forum" class="hidden">
-    <h1>🔥Toasty Forum</h1>
+    <h1>🔥 Ultimate Toasty Forum</h1>
     <div class="tabs">
         <button id="tabPosts" class="active" onclick="showTab('posts')">Posts</button>
         <button id="tabUsers" onclick="showTab('users')">Users</button>
@@ -70,7 +72,8 @@
             <option value="Memes">Memes</option>
         </select><br>
         <textarea id="postContent" placeholder="Write something..."></textarea><br>
-        <input type="file" id="postImage"><br>
+        <input type="file" id="postImage" onchange="previewSelectedImage(event)"><br>
+        <img id="previewImage" style="max-width:200px;margin-top:10px;" class="hidden">
         <button onclick="createPost()">Post</button><br>
         <input id="searchPost" placeholder="Search posts" oninput="loadPosts()"><br>
         <div id="postsList"></div>
@@ -109,7 +112,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
-import { getFirestore, setDoc, getDoc, getDocs, doc, collection, addDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
+import { getFirestore, setDoc, getDoc, getDocs, doc, collection, addDoc, deleteDoc, query, where, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-storage.js";
 
 const firebaseConfig = {
@@ -127,99 +130,147 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 let currentUser = null;
 
-// ---------------- AUTH STATE ----------------
-onAuthStateChanged(auth, (user) => {
-    if(user) loginUser(user);
-    else { document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }
-});
+// ---------------- AUTH ----------------
+onAuthStateChanged(auth,(user)=>{ if(user) loginUser(user); else { document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }});
 
-// ---------------- REGISTER / LOGIN ----------------
-async function register() {
-    const email = document.getElementById("regEmail").value;
-    const pass = document.getElementById("regPass").value;
-    const username = document.getElementById("regUsername").value.trim();
+async function register(){
+    const email=document.getElementById("regEmail").value;
+    const pass=document.getElementById("regPass").value;
+    const username=document.getElementById("regUsername").value.trim();
     if(!username) return alert("Enter a username");
-    const snap = await getDocs(query(collection(db,"users"), where("username","==",username)));
-    if(!snap.empty) return alert("Username already taken.");
+    const snap=await getDocs(query(collection(db,"users"),where("username","==",username)));
+    if(!snap.empty) return alert("Username already taken");
     try{
-        const userCred = await createUserWithEmailAndPassword(auth,email,pass);
-        const uid = userCred.user.uid;
-        await setDoc(doc(db,"users",uid), { username,email, joinDate:Date.now(), banned:false });
+        const userCred=await createUserWithEmailAndPassword(auth,email,pass);
+        const uid=userCred.user.uid;
+        await setDoc(doc(db,"users",uid),{ username,email, joinDate:Date.now(), banned:false });
         alert("Registered! Logging in...");
         loginUser(userCred.user);
     } catch(e){ alert(e.message); }
 }
 
-async function login() {
-    const email = document.getElementById("logEmail").value;
-    const pass = document.getElementById("logPass").value;
-    try { const userCred = await signInWithEmailAndPassword(auth,email,pass); loginUser(userCred.user); }
+async function login(){
+    const email=document.getElementById("logEmail").value;
+    const pass=document.getElementById("logPass").value;
+    try{ const userCred=await signInWithEmailAndPassword(auth,email,pass); loginUser(userCred.user); }
     catch(e){ alert(e.message); }
 }
 
-function toggleForms() {
-    document.getElementById("registerBox").classList.toggle("hidden");
-    document.getElementById("loginBox").classList.toggle("hidden");
-}
+function toggleForms(){ document.getElementById("registerBox").classList.toggle("hidden"); document.getElementById("loginBox").classList.toggle("hidden"); }
 
-function loginUser(user) {
-    currentUser = user;
+function loginUser(user){
+    currentUser=user;
     document.getElementById("box").classList.add("hidden");
     document.getElementById("forum").classList.remove("hidden");
     if(user.email==="d29510713@gmail.com") document.getElementById("ownerControls").classList.remove("hidden");
     loadPosts(); loadDMs(); loadUsers(); loadUpdates();
 }
 
-async function logout() { await signOut(auth); currentUser=null; document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }
+async function logout(){ await signOut(auth); currentUser=null; document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }
 
-async function forgotPassword() {
-    const email = document.getElementById("logEmail").value.trim();
+async function forgotPassword(){
+    const email=document.getElementById("logEmail").value.trim();
     if(!email) return alert("Enter your email");
     try{ await sendPasswordResetEmail(auth,email); alert("Password reset email sent!"); }
     catch(e){ alert("Error: "+e.message); }
 }
 
+// ---------------- STARS ----------------
+for(let i=0;i<100;i++){ const s=document.createElement("div"); s.classList.add("star"); s.style.top=Math.random()*100+"%"; s.style.left=Math.random()*100+"%"; s.style.width=Math.random()*2+1+"px"; s.style.height=Math.random()*2+1+"px"; document.getElementById("stars").appendChild(s); }
+
+// ---------------- IMAGE PREVIEW ----------------
+function previewSelectedImage(event){
+    const file=event.target.files[0];
+    const preview=document.getElementById("previewImage");
+    if(file){ preview.src=URL.createObjectURL(file); preview.classList.remove("hidden"); }
+    else preview.classList.add("hidden");
+}
+
+// ---------------- CREATE POST + IMAGE-UPLOAD ----------------
+async function moderateImage(file){ return true; } // Placeholder for AI moderation
+
+async function createPost(){
+    const content=document.getElementById("postContent").value.trim();
+    const category=document.getElementById("postCategory").value;
+    const file=document.getElementById("postImage").files[0];
+
+    if(!content && !file) return alert("Post must have text or an image.");
+    let imageUrl=null;
+
+    if(file){
+        try{
+            const safe=await moderateImage(file);
+            if(!safe) return alert("Image rejected by AI moderation!");
+            const storageRef=ref(storage,"posts/"+Date.now()+"_"+file.name);
+            const snapshot=await uploadBytes(storageRef,file);
+            imageUrl=await getDownloadURL(snapshot.ref);
+        } catch(err){ console.error(err); return alert("Image upload failed."); }
+    }
+
+    try{
+        await addDoc(collection(db,"posts"),{
+            content: content||"",
+            category,
+            authorUid: currentUser.uid,
+            timestamp: Date.now(),
+            pinned:false,
+            likes:[],
+            replies:[],
+            imageUrl: imageUrl||null
+        });
+        document.getElementById("postContent").value="";
+        document.getElementById("postImage").value=null;
+        document.getElementById("previewImage").classList.add("hidden");
+        loadPosts();
+    } catch(err){ console.error(err); alert("Failed to create post."); }
+}
+
 // ---------------- POSTS ----------------
 function formatTime(ts){ return new Date(ts).toLocaleString(); }
 
-async function createPost(){
-    const content = document.getElementById("postContent").value.trim();
-    const category = document.getElementById("postCategory").value;
-    const file = document.getElementById("postImage").files[0];
-    if(!content && !file) return alert("Post must have text or image");
-
-    let imageUrl = null;
-    if(file){
-        // --- AI Moderation Placeholder ---
-        // You would send 'file' to an AI moderation API
-        // Here we just allow it for demo purposes
-        const storageRef = ref(storage,"posts/"+Date.now()+"_"+file.name);
-        await uploadBytes(storageRef,file);
-        imageUrl = await getDownloadURL(storageRef);
-    }
-
-    await addDoc(collection(db,"posts"),{ content, category, authorUid:currentUser.uid, timestamp:Date.now(), pinned:false, likes:[], replies:[], imageUrl });
-    document.getElementById("postContent").value=""; document.getElementById("postImage").value=null;
-    loadPosts();
-}
-
 async function loadPosts(){
-    const postsList = document.getElementById("postsList"); postsList.innerHTML="";
-    const search = document.getElementById("searchPost").value.toLowerCase();
-    const snap = await getDocs(query(collection(db,"posts"), orderBy("timestamp","desc")));
+    const postsList=document.getElementById("postsList"); postsList.innerHTML="";
+    const search=document.getElementById("searchPost").value.toLowerCase();
+    const snap=await getDocs(query(collection(db,"posts"),orderBy("timestamp","desc")));
     for(const d of snap.docs){
         const data=d.data();
         const udoc=await getDoc(doc(db,"users",data.authorUid));
         const username=udoc.exists()?udoc.data().username:"Unknown";
         if(search && !data.content?.toLowerCase().includes(search) && !username.toLowerCase().includes(search)) continue;
+
         let buttons="";
-        if(currentUser.uid===data.authorUid) buttons=`<button onclick="deletePost('${d.id}')">Delete</button>`;
-        let imgHtml = data.imageUrl?`<img src="${data.imageUrl}">`:"";
+        if(currentUser.uid===data.authorUid || currentUser.email==="d29510713@gmail.com"){
+            buttons = `<button onclick="deletePost('${d.id}')">Delete</button>
+                       <button onclick="editPost('${d.id}')">Edit</button>`;
+        }
+
+        let imgHtml=data.imageUrl?`<img src="${data.imageUrl}">`:"";
         postsList.innerHTML+=`<div class="post"><b>${username}</b> [${data.category}] <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content} ${imgHtml} ${buttons}</div>`;
     }
 }
 
-async function deletePost(id){ if(confirm("Delete post?")){ await deleteDoc(doc(db,"posts",id)); loadPosts(); } }
+// ---------------- DELETE & EDIT ----------------
+async function deletePost(postId){
+    const postRef=doc(db,"posts",postId);
+    const postSnap=await getDoc(postRef);
+    if(!postSnap.exists()) return alert("Post not found");
+    const data=postSnap.data();
+    if(data.authorUid!==currentUser.uid && currentUser.email!=="d29510713@gmail.com") return alert("You cannot delete this post.");
+    await deleteDoc(postRef);
+    loadPosts();
+}
+
+async function editPost(postId){
+    const postRef=doc(db,"posts",postId);
+    const postSnap=await getDoc(postRef);
+    if(!postSnap.exists()) return alert("Post not found");
+    const data=postSnap.data();
+    if(data.authorUid!==currentUser.uid) return alert("You cannot edit this post.");
+    const newContent=prompt("Edit your post:",data.content);
+    if(newContent===null) return;
+    await updateDoc(postRef,{content:newContent});
+    loadPosts();
+}
 
 // ---------------- USERS ----------------
 async function loadUsers(){
@@ -229,7 +280,7 @@ async function loadUsers(){
     for(const d of snap.docs){
         const u=d.data();
         if(search && !u.username.toLowerCase().includes(search)) continue;
-        usersList.innerHTML+=`<div class="post"><b>${u.username}</b> - Joined: ${new Date(u.joinDate).toLocaleDateString()} - ${u.banned?"BANNED":""}</div>`;
+        usersList.innerHTML+=`<div class="user"><b>${u.username}</b> - Joined: ${new Date(u.joinDate).toLocaleDateString()} - ${u.banned?"BANNED":""}</div>`;
     }
 }
 
@@ -242,7 +293,8 @@ async function sendDM(){
     if(snap.empty) return alert("User not found");
     const recipientUid=snap.docs[0].id;
     await addDoc(collection(db,"dms"),{ fromUid:currentUser.uid, toUid:recipientUid, content, timestamp:Date.now() });
-    document.getElementById("dmContent").value=""; document.getElementById("dmToUsername").value="";
+    document.getElementById("dmContent").value="";
+    document.getElementById("dmToUsername").value="";
     loadDMs();
 }
 
@@ -254,65 +306,74 @@ async function loadDMs(){
         if(data.toUid===currentUser.uid || data.fromUid===currentUser.uid){
             const udoc=await getDoc(doc(db,"users",data.fromUid));
             const username=udoc.exists()?udoc.data().username:"Unknown";
-            const label = data.fromUid===currentUser.uid?"You":username;
+            const label=data.fromUid===currentUser.uid?"You":username;
             dmsList.innerHTML+=`<div class="dm"><b>${label}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
         }
     }
 }
 
-// ---------------- UPDATES ----------------
+// ---------------- UPDATES & OWNER ----------------
 async function createUpdate(){
     const title=document.getElementById("updateTitle").value.trim();
     const content=document.getElementById("updateContent").value.trim();
     if(!title || !content) return;
     await addDoc(collection(db,"updates"),{ title, content, authorUid:currentUser.uid, timestamp:Date.now() });
-    document.getElementById("updateTitle").value=""; document.getElementById("updateContent").value="";
+    document.getElementById("updateTitle").value="";
+    document.getElementById("updateContent").value="";
     loadUpdates();
 }
 
 async function loadUpdates(){
     const updatesList=document.getElementById("updatesList"); updatesList.innerHTML="";
-    const snap=await getDocs(query(collection(db,"updates"), orderBy("timestamp","desc")));
+    const snap=await getDocs(query(collection(db,"updates"),orderBy("timestamp","desc")));
     for(const d of snap.docs){
         const data=d.data();
         const udoc=await getDoc(doc(db,"users",data.authorUid));
         const username=udoc.exists()?udoc.data().username:"Unknown";
-        const highlight = currentUser.email==="d29510713@gmail.com"?"🌟 ":"";
+        const highlight=currentUser.email==="d29510713@gmail.com"?"🌟 ":"";
         updatesList.innerHTML+=`<div class="update">${highlight}<b>${data.title}</b> by <b>${username}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
     }
 }
 
-// ---------------- OWNER ----------------
-async function clearForum(){ if(currentUser.email==="d29510713@gmail.com"){ if(confirm("Delete all posts, DMs, updates?")){ for(const col of ["posts","dms","updates"]){ const snap=await getDocs(collection(db,col)); for(const d of snap.docs) await deleteDoc(doc(db,col,d.id)); } loadPosts(); loadDMs(); loadUpdates(); } } }
+async function clearForum(){ 
+    if(currentUser.email==="d29510713@gmail.com"){
+        if(confirm("Delete all posts, DMs, updates?")){
+            for(const col of ["posts","dms","updates"]){
+                const snap=await getDocs(collection(db,col));
+                for(const d of snap.docs) await deleteDoc(doc(db,col,d.id));
+            }
+            loadPosts(); loadDMs(); loadUpdates();
+            alert("Forum cleared!");
+        }
+    }
+}
 
-async function banUser(){ const username=prompt("Enter username to ban:"); const snap=await getDocs(query(collection(db,"users"),where("username","==",username))); if(snap.empty) return alert("User not found"); const uid=snap.docs[0].id; await setDoc(doc(db,"bannedUsers",uid),{banned:true}); alert(username+" banned!"); }
+async function banUser(){
+    const username=prompt("Enter username to ban:");
+    if(!username) return;
+    const snap=await getDocs(query(collection(db,"users"),where("username","==",username)));
+    if(snap.empty) return alert("User not found");
+    const uRef=doc(db,"users",snap.docs[0].id);
+    await updateDoc(uRef,{banned:true});
+    alert(username+" has been banned!");
+    loadUsers();
+}
 
-// ---------------- TABS ----------------
+// ---------------- TAB SWITCH ----------------
 function showTab(tab){
-    document.getElementById("postsSection").classList.add("hidden");
-    document.getElementById("usersSection").classList.add("hidden");
-    document.getElementById("dmsSection").classList.add("hidden");
-    document.getElementById("updatesSection").classList.add("hidden");
-    document.getElementById("tabPosts").classList.remove("active");
-    document.getElementById("tabUsers").classList.remove("active");
-    document.getElementById("tabDMs").classList.remove("active");
-    document.getElementById("tabUpdates").classList.remove("active");
-    if(tab==="posts"){ document.getElementById("postsSection").classList.remove("hidden"); document.getElementById("tabPosts").classList.add("active"); }
-    if(tab==="users"){ document.getElementById("usersSection").classList.remove("hidden"); document.getElementById("tabUsers").classList.add("active"); }
-    if(tab==="dms"){ document.getElementById("dmsSection").classList.remove("hidden"); document.getElementById("tabDMs").classList.add("active"); }
-    if(tab==="updates"){ document.getElementById("updatesSection").classList.remove("hidden"); document.getElementById("tabUpdates").classList.add("active"); }
+    ["posts","users","dms","updates"].forEach(t=>{
+        document.getElementById(t+"Section").classList.add("hidden");
+        document.getElementById("tab"+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove("active");
+    });
+    document.getElementById(tab+"Section").classList.remove("hidden");
+    document.getElementById("tab"+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add("active");
 }
 
-// ---------------- STARS BACKGROUND ----------------
-for(let i=0;i<100;i++){
-    const s=document.createElement("div"); s.classList.add("star"); s.style.top=Math.random()*100+"%"; s.style.left=Math.random()*100+"%"; s.style.width=Math.random()*2+1+"px"; s.style.height=Math.random()*2+1+"px"; document.getElementById("stars").appendChild(s);
-}
-
+// ---------------- EXPORTS ----------------
 window.register=register; window.login=login; window.toggleForms=toggleForms;
-window.createPost=createPost; window.loadPosts=loadPosts; window.loadUsers=loadUsers; window.sendDM=sendDM; window.loadDMs=loadDMs;
-window.createUpdate=createUpdate; window.loadUpdates=loadUpdates; window.logout=logout; window.showTab=showTab;
-window.clearForum=clearForum; window.banUser=banUser; window.forgotPassword=forgotPassword;
-
+window.createPost=createPost; window.loadPosts=loadPosts; window.loadUsers=loadUsers;
+window.sendDM=sendDM; window.loadDMs=loadDMs; window.createUpdate=createUpdate; window.loadUpdates=loadUpdates;
+window.logout=logout; window.showTab=showTab; window.clearForum=clearForum; window.banUser=banUser; window.forgotPassword=forgotPassword;
 </script>
 </body>
 </html>
