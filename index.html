@@ -2,183 +2,368 @@
 <html>
 <head>
     <title>Toasty Forum</title>
-
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
     <style>
         body {
-            background: radial-gradient(circle at center, #0a0f2c, #000);
-            color: #d0d7ff;
-            font-family: Arial;
+            margin:0;
+            font-family: 'Orbitron', sans-serif;
+            background: radial-gradient(circle at top, #0b0c2a, #000000);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        /* STAR BACKGROUND */
+        #stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: transparent;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+        /* CONTAINERS */
+        #box, #forum, #dmsBox, #updatesBox {
+            max-width: 800px;
+            margin: 20px auto;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
             padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(4px);
         }
-
-        .panel {
-            background: rgba(20, 20, 40, 0.75);
-            padding: 18px;
-            border-radius: 12px;
-            width: 420px;
-            margin: auto;
-            box-shadow: 0 0 18px #4c5cff;
-        }
-
-        button {
-            background: #4c5cff;
-            border: none;
-            padding: 8px 15px;
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 12px;
-        }
-
-        input {
-            width: 95%;
+        h1,h2,h3 { color:#5a4bff; }
+        input, textarea {
+            width: 90%;
             padding: 8px;
             margin-top: 8px;
-            background:#1a1e35;
-            border: 1px solid #39427a;
-            border-radius: 6px;
+            border-radius: 8px;
+            border: none;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            border-radius: 10px;
+            background: #5a4bff;
+            border: none;
             color: white;
+            cursor: pointer;
+            transition: 0.2s;
         }
-
-        #forumBox {
-            display: none;
+        button:hover {
+            background: #7c6cff;
         }
-
-        .message {
-            background: #1e2342;
+        .hidden { display: none; }
+        .post, .dm, .update {
+            background: rgba(255,255,255,0.05);
             padding: 10px;
-            margin-top: 6px;
-            border-radius: 6px;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .section {
+            margin-top: 30px;
+        }
+        .owner-btn {
+            background: #ff4b4b;
+        }
+        .owner-btn:hover {
+            background: #ff6f6f;
+        }
+        .tabs button {
+            margin-right: 5px;
+            background: #333;
+        }
+        .tabs button.active {
+            background: #5a4bff;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+        p.forgot {
+            cursor:pointer; 
+            color:#5a4bff; 
+            margin-top:5px;
         }
     </style>
 </head>
-
 <body>
 
-<h1 style="text-align:center;"> Toasty Forum</h1>
+<div id="stars"></div>
 
-<!-- LOGIN / REGISTER -->
-<div id="authBox" class="panel">
-    <h2>Login / Register</h2>
-    <input id="username" placeholder="Username">
-    <button onclick="register()">Register</button>
-    <button onclick="login()">Login</button>
-    <p id="authMsg"></p>
+<div id="box">
+    <h1>🔥 Toasty Forum Login</h1>
+    <div id="registerBox">
+        <h2>Register</h2>
+        <input id="regEmail" placeholder="Email">
+        <input id="regPass" type="password" placeholder="Password">
+        <input id="regUsername" placeholder="Username">
+        <button onclick="register()">Register</button>
+        <p style="cursor:pointer;" onclick="toggleForms()">Already have an account? Login</p>
+    </div>
+
+    <div id="loginBox" class="hidden">
+        <h2>Login</h2>
+        <input id="logEmail" placeholder="Email">
+        <input id="logPass" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p style="cursor:pointer;" onclick="toggleForms()">Don't have an account? Register</p>
+        <p class="forgot" onclick="forgotPassword()">Forgot Password?</p>
+    </div>
 </div>
 
-<!-- MAIN FORUM -->
-<div id="forumBox" class="panel">
-    <h2>Welcome, <span id="currentUser"></span></h2>
-    <p>Role: <span id="currentRole"></span></p>
+<div id="forum" class="hidden">
+    <h1>🔥 Toasty Forum</h1>
+    <div class="tabs">
+        <button id="tabPosts" class="active" onclick="showTab('posts')">Posts</button>
+        <button id="tabDMs" onclick="showTab('dms')">DMs</button>
+        <button id="tabUpdates" onclick="showTab('updates')">Updates</button>
+    </div>
 
-    <h3>Post Message</h3>
-    <input id="postInput" placeholder="Write something...">
-    <button onclick="sendPost()">Send</button>
+    <div id="postsSection" class="section">
+        <h2>Posts</h2>
+        <textarea id="postContent" placeholder="Write something..."></textarea><br>
+        <button onclick="createPost()">Post</button>
+        <div id="postsList"></div>
+    </div>
 
-    <h3>Messages</h3>
-    <div id="messages"></div>
+    <div id="dmsSection" class="section hidden">
+        <h2>Direct Messages</h2>
+        <input id="dmToEmail" placeholder="Send to (email)">
+        <textarea id="dmContent" placeholder="Message..."></textarea><br>
+        <button onclick="sendDM()">Send DM</button>
+        <div id="dmsList"></div>
+    </div>
+
+    <div id="updatesSection" class="section hidden">
+        <h2>Updates & News</h2>
+        <div id="updatesList"></div>
+        <div id="ownerControls" class="hidden">
+            <h3>Owner Controls</h3>
+            <input id="updateTitle" placeholder="Update Title">
+            <textarea id="updateContent" placeholder="Update Content"></textarea><br>
+            <button class="owner-btn" onclick="createUpdate()">Create Update</button>
+        </div>
+    </div>
+
+    <button onclick="logout()">Log Out</button>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+import { getFirestore, setDoc, getDoc, getDocs, doc, collection, addDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
 
-<script>
-/* ----------------- FIREBASE SETUP ----------------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
-  authDomain: "toasty-89f07.firebaseapp.com",
-  projectId: "toasty-89f07",
-  storageBucket: "toasty-89f07.firebasestorage.app",
-  messagingSenderId: "743787667064",
-  appId: "1:743787667064:web:12284120fbbdd1e907d78d",
-  measurementId: "G-VHGVH5JEYY",
-  databaseURL: "https://toasty-89f07-default-rtdb.firebaseio.com/"
+    apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+    authDomain: "toasty-89f07.firebaseapp.com",
+    projectId: "toasty-89f07",
+    storageBucket: "toasty-89f07.firebasestorage.app",
+    messagingSenderId: "743787667064",
+    appId: "1:743787667064:web:12284120fbbdd1e907d78d",
+    measurementId: "G-VHGVH5JEYY"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-/* ----------------- AUTH SYSTEM ----------------- */
 let currentUser = null;
 
-function register() {
-    let name = username.value.trim();
-    if (!name) return showAuth("Enter a username");
+// ---------- LOGIN / REGISTER ----------
+async function register() {
+    const email = document.getElementById("regEmail").value;
+    const pass = document.getElementById("regPass").value;
+    const username = document.getElementById("regUsername").value.trim();
+    if(!username) return alert("Enter a username");
 
-    db.ref("users/" + name).once("value").then(snap => {
-        if (snap.exists()) {
-            return showAuth("User already exists");
+    try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+        const uid = userCred.user.uid;
+        await setDoc(doc(db,"users",uid), { username, email });
+        alert("Registered! Logging in...");
+        loginUser(userCred.user);
+    } catch(e) { alert(e.message); }
+}
+
+async function login() {
+    const email = document.getElementById("logEmail").value;
+    const pass = document.getElementById("logPass").value;
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, pass);
+        loginUser(userCred.user);
+    } catch(e) { alert(e.message); }
+}
+
+function toggleForms() {
+    document.getElementById("registerBox").classList.toggle("hidden");
+    document.getElementById("loginBox").classList.toggle("hidden");
+}
+
+function loginUser(user) {
+    currentUser = user;
+    document.getElementById("box").classList.add("hidden");
+    document.getElementById("forum").classList.remove("hidden");
+
+    // show owner controls if email matches
+    if(user.email === "d29510713@gmail.com") {
+        document.getElementById("ownerControls").classList.remove("hidden");
+    }
+
+    loadPosts();
+    loadDMs();
+    loadUpdates();
+}
+
+async function logout() {
+    await signOut(auth);
+    currentUser = null;
+    document.getElementById("forum").classList.add("hidden");
+    document.getElementById("box").classList.remove("hidden");
+}
+
+// ---------- FORGOT PASSWORD ----------
+async function forgotPassword() {
+    const email = document.getElementById("logEmail").value.trim();
+    if(!email) return alert("Please enter your email to reset your password.");
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Password reset email sent! Check your inbox.");
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+window.forgotPassword = forgotPassword;
+
+// ---------- FORUM FUNCTIONS ----------
+function formatTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString();
+}
+
+async function createPost() {
+    const content = document.getElementById("postContent").value.trim();
+    if(!content) return;
+    await addDoc(collection(db,"posts"),{
+        content,
+        authorUid: currentUser.uid,
+        timestamp: Date.now()
+    });
+    document.getElementById("postContent").value="";
+    loadPosts();
+}
+
+async function loadPosts() {
+    const postsList = document.getElementById("postsList");
+    postsList.innerHTML="";
+    const postsSnap = await getDocs(query(collection(db,"posts"), orderBy("timestamp","desc")));
+    for(const docSnap of postsSnap.docs){
+        const data = docSnap.data();
+        const userDoc = await getDoc(doc(db,"users",data.authorUid));
+        const username = userDoc.exists()?userDoc.data().username:"Unknown";
+        postsList.innerHTML += `<div class="post"><b>${username}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
+    }
+}
+
+async function sendDM() {
+    const toEmail = document.getElementById("dmToEmail").value.trim();
+    const content = document.getElementById("dmContent").value.trim();
+    if(!toEmail || !content) return alert("Fill both fields");
+    const q = query(collection(db,"users"), where("email","==",toEmail), limit(1));
+    const snap = await getDocs(q);
+    if(snap.empty) return alert("User not found");
+    const recipientUid = snap.docs[0].id;
+    await addDoc(collection(db,"dms"),{
+        fromUid: currentUser.uid,
+        toUid: recipientUid,
+        content,
+        timestamp: Date.now()
+    });
+    document.getElementById("dmContent").value="";
+    loadDMs();
+}
+
+async function loadDMs() {
+    const dmsList = document.getElementById("dmsList");
+    dmsList.innerHTML="";
+    const snap = await getDocs(collection(db,"dms"));
+    for(const docSnap of snap.docs){
+        const d = docSnap.data();
+        if(d.toUid===currentUser.uid || d.fromUid===currentUser.uid){
+            const fromUserDoc = await getDoc(doc(db,"users",d.fromUid));
+            const fromUsername = fromUserDoc.exists()?fromUserDoc.data().username:"Unknown";
+            const label = d.fromUid===currentUser.uid?"You":fromUsername;
+            dmsList.innerHTML += `<div class="dm"><b>${label}</b> <span class="timestamp">(${formatTime(d.timestamp)})</span>: ${d.content}</div>`;
         }
+    }
+}
 
-        // First ever user becomes owner
-        db.ref("users").once("value").then(all => {
-            const role = all.exists() ? "member" : "owner";
-
-            db.ref("users/" + name).set({
-                role: role
-            });
-
-            loginUser(name, role);
-        });
+async function createUpdate() {
+    const title = document.getElementById("updateTitle").value.trim();
+    const content = document.getElementById("updateContent").value.trim();
+    if(!title||!content) return;
+    await addDoc(collection(db,"updates"),{
+        title,
+        content,
+        authorUid: currentUser.uid,
+        timestamp: Date.now()
     });
+    document.getElementById("updateTitle").value="";
+    document.getElementById("updateContent").value="";
+    loadUpdates();
 }
 
-function login() {
-    let name = username.value.trim();
-    if (!name) return showAuth("Enter a username");
-
-    db.ref("users/" + name).once("value").then(snap => {
-        if (!snap.exists()) return showAuth("User not found");
-
-        loginUser(name, snap.val().role);
-    });
+async function loadUpdates() {
+    const updatesList = document.getElementById("updatesList");
+    updatesList.innerHTML="";
+    const snap = await getDocs(query(collection(db,"updates"), orderBy("timestamp","desc")));
+    for(const docSnap of snap.docs){
+        const d = docSnap.data();
+        const userDoc = await getDoc(doc(db,"users",d.authorUid));
+        const username = userDoc.exists()?userDoc.data().username:"Unknown";
+        updatesList.innerHTML += `<div class="update"><b>${d.title}</b> by <b>${username}</b> <span class="timestamp">(${formatTime(d.timestamp)})</span>: ${d.content}</div>`;
+    }
 }
 
-function loginUser(name, role) {
-    currentUser = name;
-    currentUserSpan.innerText = name;
-    currentRole.innerText = role;
+// ---------- TABS ----------
+function showTab(tab){
+    document.getElementById("postsSection").classList.add("hidden");
+    document.getElementById("dmsSection").classList.add("hidden");
+    document.getElementById("updatesSection").classList.add("hidden");
 
-    authBox.style.display = "none";
-    forumBox.style.display = "block";
+    document.getElementById("tabPosts").classList.remove("active");
+    document.getElementById("tabDMs").classList.remove("active");
+    document.getElementById("tabUpdates").classList.remove("active");
 
-    loadMessages();
+    if(tab==="posts"){ document.getElementById("postsSection").classList.remove("hidden"); document.getElementById("tabPosts").classList.add("active"); }
+    if(tab==="dms"){ document.getElementById("dmsSection").classList.remove("hidden"); document.getElementById("tabDMs").classList.add("active"); }
+    if(tab==="updates"){ document.getElementById("updatesSection").classList.remove("hidden"); document.getElementById("tabUpdates").classList.add("active"); }
 }
 
-function showAuth(txt) {
-    authMsg.innerText = txt;
+// ---------- STAR BACKGROUND ----------
+const starsContainer = document.getElementById("stars");
+for(let i=0;i<100;i++){
+    const star=document.createElement("div");
+    star.classList.add("star");
+    star.style.width=star.style.height=(Math.random()*2+1)+"px";
+    star.style.top=Math.random()*100+"%";
+    star.style.left=Math.random()*100+"%";
+    starsContainer.appendChild(star);
 }
 
-/* ----------------- MESSAGES ----------------- */
-function sendPost() {
-    let text = postInput.value.trim();
-    if (!text) return;
-
-    let msg = {
-        user: currentUser,
-        text: text,
-        time: Date.now()
-    };
-
-    db.ref("messages").push(msg);
-    postInput.value = "";
-}
-
-function loadMessages() {
-    db.ref("messages").on("value", snap => {
-        messages.innerHTML = "";
-        snap.forEach(child => {
-            let d = child.val();
-
-            let div = document.createElement("div");
-            div.className = "message";
-            div.innerHTML = `<b>${d.user}:</b> ${d.text}`;
-
-            messages.appendChild(div);
-        });
-    });
-}
+// ---------- GLOBAL WINDOW ----------
+window.register = register;
+window.login = login;
+window.toggleForms = toggleForms;
+window.logout = logout;
+window.createPost = createPost;
+window.sendDM = sendDM;
+window.createUpdate = createUpdate;
+window.showTab = showTab;
 </script>
 
 </body>
