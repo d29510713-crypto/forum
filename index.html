@@ -2,33 +2,45 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Toasty Forum — Realtime + DMs</title>
+  <title>Toasty Forum — Realtime + DMs (Space)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root{
-      --bg:#0f1113; --card:#161719; --muted:#9aa1a8; --accent:#ff7a00; --accent-2:#ff8f2a; --danger:#ff4c4c;
+    :root {
+      --bg: #03040a;
+      --panel: linear-gradient(180deg,#071023,#0b1220);
+      --glass: rgba(255,255,255,0.03);
+      --muted: #9aa1a8;
+      --accent: #ff7a00;
+      --accent-2: #ffb66a;
+      --danger: #ff4c4c;
+      --neon: #66aaff;
     }
-    html,body{height:100%; margin:0; background:var(--bg); color:#e6e7e8; font-family:Inter,Arial,Helvetica; -webkit-font-smoothing:antialiased;}
-    main{max-width:1100px; margin:28px auto; padding:18px;}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-    h1{color:var(--accent); margin:0; font-size:1.6rem;}
-    .sub { color:var(--muted); font-size:0.95rem; }
-    .panel{background:var(--card); border-radius:12px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); margin-bottom:14px; border:1px solid rgba(255,255,255,0.03);}
-    input, textarea, select { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:#fff; padding:10px; border-radius:8px; width:100%; box-sizing:border-box; }
-    button { background:var(--accent); color:#0b0b0b; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; }
+
+    html,body {height:100%; margin:0; background: radial-gradient(1200px 600px at 10% 20%, #0b1220 0%, #03040a 25%, #000 100%), #000; color:#e6eef8; font-family:Inter, system-ui, Arial; -webkit-font-smoothing:antialiased;}
+    main {max-width:1200px; margin:28px auto; padding:22px;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px; gap:12px}
+    h1{color:var(--accent); margin:0; font-size:1.6rem; text-shadow:0 0 14px rgba(255,122,0,0.18)}
+    .sub{ color:var(--muted); font-size:0.95rem; }
+
+    .panel{ background: var(--panel); border-radius:14px; padding:16px; margin-bottom:14px; border:1px solid rgba(255,255,255,0.04); box-shadow: 0 10px 40px rgba(0,0,0,0.7) inset; }
+    input, textarea, select { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:#eaf2ff; padding:10px; border-radius:10px; width:100%; box-sizing:border-box; font-size:0.95rem; }
+    input::placeholder, textarea::placeholder { color:#8ea1b8; }
+
+    button { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#061019; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 6px 20px rgba(255,122,0,0.08); }
     button.ghost{ background:transparent; color:var(--accent); border:1px solid rgba(255,127,0,0.12); }
-    button.danger{ background:var(--danger); color:#fff; }
-    .small{ font-size:0.9rem; padding:6px 10px; }
+    button.danger{ background:var(--danger); color:white; }
+    button.small{ padding:6px 10px; font-size:0.9rem; }
+
     .muted{ color:var(--muted); }
+    .meta{ color:var(--muted); font-size:0.85rem; margin-top:6px; }
+    .role-badge{ padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--accent); font-weight:700; font-size:0.85rem; }
+
     #topics,#posts,#updates{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-    .topic,.post-card,.update-card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
-    .meta{ color:var(--muted); font-size:0.9rem; margin-top:6px; display:flex; gap:8px; align-items:center; }
-    .role-badge{ padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--accent); font-weight:700; font-size:0.85rem;}
-    .controls{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-    .commentBox{ margin-left:18px; background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; }
-    table{ width:100%; border-collapse:collapse; color:#fff; }
-    th,td{ padding:8px 6px; text-align:left; border-bottom:1px dashed rgba(255,255,255,0.03); font-size:0.95rem; }
-    .dm-panel{ display:flex; gap:12px; align-items:flex-start; }
+    .topic,.post-card,.update-card{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
+    .post-card .actions, .topic .actions { display:flex; gap:8px; }
+
+    /* DM layout */
+    .dm-panel{ display:flex; gap:12px; align-items:flex-start; margin-top:6px; }
     .dm-list{ width:260px; max-height:420px; overflow:auto; border-radius:8px; padding:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); }
     .dm-chat{ flex:1; display:flex; flex-direction:column; max-height:420px; }
     .dm-messages{ flex:1; overflow:auto; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); }
@@ -36,7 +48,9 @@
     .dm-item.active{ background:rgba(255,127,0,0.06); }
     .dm-message{ margin-bottom:8px; padding:6px; border-radius:6px; background:rgba(255,255,255,0.02); }
     .dm-message.me{ background:linear-gradient(90deg, rgba(255,127,0,0.12), rgba(255,143,42,0.06)); text-align:right; }
-    @media (max-width:900px){ .dm-list{ display:none; } .dm-panel{ flex-direction:column; } }
+
+    @media (max-width:980px){ .dm-list{ display:none; } .dm-panel{ flex-direction:column; } }
+    @media (max-width:720px){ header{flex-direction:column;align-items:flex-start} main{padding:12px} }
   </style>
 </head>
 <body>
@@ -44,19 +58,21 @@
   <header>
     <div>
       <h1>Toasty Forum</h1>
-      <div class="sub">Dark theme · Realtime (Firebase Realtime Database) · DMs enabled</div>
+      <div class="sub">Realtime · Space theme · DMs · Roles</div>
     </div>
-    <div id="memberCount" class="sub"></div>
+    <div id="memberCount" class="sub">Members: 0</div>
   </header>
 
   <!-- LOGIN PANEL -->
   <section id="loginPanel" class="panel">
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
       <div style="flex:1">
-        <label class="muted">Username</label><input id="loginUser" placeholder="Username">
+        <label class="muted">Username</label>
+        <input id="loginUser" placeholder="Username">
       </div>
       <div style="width:220px">
-        <label class="muted">Password</label><input id="loginPass" type="password" placeholder="Password">
+        <label class="muted">Password</label>
+        <input id="loginPass" type="password" placeholder="Password">
       </div>
       <div style="width:160px;display:flex;flex-direction:column;gap:8px">
         <div style="flex:1"></div>
@@ -83,13 +99,13 @@
   <!-- ADMIN PANEL -->
   <section id="adminPanel" class="panel" style="display:none">
     <h3 style="margin-top:0">Owner Panel</h3>
-    <div class="muted">Only the owner can see this. Change roles, ban users, transfer ownership, delete messages.</div>
+    <div class="muted">Owner-only tools (role change, ban, transfer owner, delete messages)</div>
 
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <input id="adminUser" placeholder="Target username" style="width:260px">
-      <button class="small" onclick="adminSetRole('member')">Make Member</button>
-      <button class="small" onclick="adminSetRole('contributor')">Make Contributor</button>
-      <button class="small" onclick="adminSetRole('admin')">Make Admin</button>
+      <button class="small" onclick="adminSetRole('member')">Member</button>
+      <button class="small" onclick="adminSetRole('contributor')">Contributor</button>
+      <button class="small" onclick="adminSetRole('admin')">Admin</button>
       <button class="small" onclick="transferOwnership()">Transfer Ownership</button>
       <button class="small danger" onclick="adminBanUser()">Ban User</button>
       <button class="small danger" onclick="adminDeleteMessages()">Delete Messages</button>
@@ -137,8 +153,8 @@
     <div style="display:flex;gap:12px">
       <div style="flex:1">
         <label class="muted">Write a post</label>
-        <textarea id="postInput" placeholder="Share something..."></textarea>
-        <div class="controls"><button onclick="addPost()">Post</button></div>
+        <textarea id="postInput" placeholder="Share something..." style="height:80px"></textarea>
+        <div class="controls" style="margin-top:8px"><button onclick="addPost()">Post</button></div>
       </div>
 
       <div style="width:320px">
@@ -157,7 +173,7 @@
       <label class="muted">Create Topic</label>
       <input id="topicTitle" placeholder="Topic title">
       <textarea id="topicContent" placeholder="Topic content"></textarea>
-      <div class="controls"><button onclick="addTopic()">Create Topic</button></div>
+      <div class="controls" style="margin-top:8px"><button onclick="addTopic()">Create Topic</button></div>
     </div>
 
     <h3 style="margin-top:18px">Topics</h3>
@@ -199,7 +215,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, set, push, onValue, update, remove, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // ---------- Firebase config ----------
+  // ---------- Firebase config (your config) ----------
   const firebaseConfig = {
     apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
     authDomain: "toasty-89f07.firebaseapp.com",
@@ -213,22 +229,24 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // ---------- Refs ----------
+  // ---------- Database refs ----------
   const accountsRef = ref(db, "accounts");
   const postsRef = ref(db, "posts");
   const topicsRef = ref(db, "topics");
   const updatesRef = ref(db, "updates");
   const bannedRef = ref(db, "banned");
-  const dmChatsRef = ref(db, "dmChats"); // top-level chat collection
+  const dmChatsRef = ref(db, "dmChats");
 
-  // ---------- Local caches ----------
+  // ---------- Local mirrors ----------
   let accounts = {};
   let posts = [];
   let topics = [];
   let updates = [];
   let bannedUsers = [];
-  let dmChats = {}; // { chatId: { users: {u1:true, u2:true}, messages: { msgId: {...} } } }
+  let dmChats = {};
   let currentUser = localStorage.getItem("toasty_currentUser") || null;
+
+  // list of bad words (example)
   const censoredWords = ["nigger","bitch","fuck","n!gger","idiot","shit","dumbass","nigga","cum","cock","penis","cunt","faggot"];
 
   // ---------- Helpers ----------
@@ -236,8 +254,8 @@
   function hashPass(s){ return btoa(s); }
   function filterBadWords(text){
     let out = text || "";
-    censoredWords.forEach(w => out = out.replace(new RegExp(w,"gi"), "***"));
-    out = out.replace(/@(\w+)/g, (m,name) => accounts[name] ? `<span style="color:var(--accent)">@${name}</span>` : `@${name}`);
+    censoredWords.forEach(w => { out = out.replace(new RegExp(w,"gi"), "***"); });
+    out = out.replace(/@(\w+)/g, (m,name) => accounts[name] ? `<span style="color:var(--neon)">@${name}</span>` : `@${name}`);
     return out;
   }
   function notifyMentions(text){
@@ -251,9 +269,11 @@
     renderUsersTable();
     buildRegisterRoleOptions();
     updateMemberCount();
-    if(currentUser && accounts[currentUser]) openForum();
-    if(currentUser && accounts[currentUser]) updateRoleUI();
-    renderDMList(); // rebuild DM list after accounts change
+    renderDMList();
+    if(currentUser && accounts[currentUser]) {
+      openForum();
+      updateRoleUI();
+    }
   });
 
   onValue(postsRef, snap => {
@@ -280,11 +300,9 @@
     updateBannedList();
   });
 
-  // DM chats listener: keep local mirror
   onValue(dmChatsRef, snap => {
     dmChats = snap.val() || {};
     renderDMList();
-    // if a chat is selected, re-render messages
     if(window._selectedChatId) renderChatMessages(window._selectedChatId);
   });
 
@@ -317,7 +335,6 @@
 
     if(!user || !pass){ err.innerText = "Fill all fields"; return; }
     if(accounts[user]){ err.innerText = "Username taken"; return; }
-
     if(role === "owner" && Object.keys(accounts).find(u=>accounts[u].role==="owner")) { err.innerText = "Owner already exists"; return; }
 
     await set(ref(db, `accounts/${user}`), { password: hashPass(pass), role: role, lastUsernameChange: 0 });
@@ -339,7 +356,7 @@
     openForum();
   }
 
-  function logout(){ currentUser = null; saveSessionUser(null); document.getElementById("forumPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; }
+  function logout(){ currentUser = null; saveSessionUser(null); document.getElementById("forumPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; window._selectedChatId = null; }
 
   // ---------- Open forum ----------
   function openForum(){
@@ -350,8 +367,8 @@
     updateRoleUI();
     updateMemberCount();
     updateBannedList();
-    if(isOwner(currentUser)) document.getElementById("adminPanel").style.display="block"; else document.getElementById("adminPanel").style.display="none";
-    if(isOwner(currentUser) || isAdmin(currentUser)) document.getElementById("updateBox").style.display="block"; else document.getElementById("updateBox").style.display="none";
+    document.getElementById("adminPanel").style.display = isOwner(currentUser) ? "block" : "none";
+    document.getElementById("updateBox").style.display = (isOwner(currentUser) || isAdmin(currentUser)) ? "block" : "none";
     renderDMList();
   }
 
@@ -398,7 +415,7 @@
       const el = document.createElement("div"); el.className="post-card";
       el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
         <div><strong>${p.user}</strong> <span class="muted">(${p.role})</span><div class="meta">${new Date(p.timestamp).toLocaleString()}</div></div>
-        <div id="post-actions-${p.id}"></div>
+        <div id="post-actions-${p.id}" class="actions"></div>
       </div><div style="margin-top:8px">${p.text}</div>`;
       if(currentUser === p.user || isOwner(currentUser) || isAdmin(currentUser)){
         const del = document.createElement("button"); del.className="small danger"; del.innerText="Delete";
@@ -414,7 +431,7 @@
     if(!currentUser || bannedUsers.includes(currentUser)) return;
     const title = (document.getElementById("topicTitle").value || "").trim();
     const content = (document.getElementById("topicContent").value || "").trim();
-    if(!title || !content) return;
+    if(!title || !content) return alert("Fill all fields");
     notifyMentions(content);
     const node = push(topicsRef);
     await set(node, { user: currentUser, role: accounts[currentUser].role, title: filterBadWords(title), content: filterBadWords(content), comments: {}, timestamp: Date.now() });
@@ -428,13 +445,14 @@
       const el = document.createElement("div"); el.className="topic";
       el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
         <div><strong>${t.title}</strong><div class="muted">by ${t.user} (${t.role}) • ${new Date(t.timestamp).toLocaleString()}</div></div>
-        <div id="topic-actions-${t.id}"></div>
+        <div id="topic-actions-${t.id}" class="actions"></div>
       </div><div style="margin-top:8px">${t.content}</div>`;
       if(currentUser === t.user || isOwner(currentUser) || isAdmin(currentUser)){
         const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete Topic";
         del.onclick = async () => { await remove(ref(db, `topics/${t.id}`)); };
         el.querySelector(`#topic-actions-${t.id}`).appendChild(del);
       }
+
       const comments = t.comments ? Object.keys(t.comments).map(k => ({ id:k, ...t.comments[k]})) : [];
       comments.forEach(c => {
         if(bannedUsers.includes(c.user)) return;
@@ -448,6 +466,7 @@
         }
         el.appendChild(cEl);
       });
+
       const input = document.createElement("input"); input.placeholder="Comment...";
       const btn = document.createElement("button"); btn.innerText="Post"; btn.style.marginLeft="8px";
       btn.onclick = async () => {
@@ -459,6 +478,7 @@
       };
       const ctrl = document.createElement("div"); ctrl.style.marginTop="8px"; ctrl.appendChild(input); ctrl.appendChild(btn);
       el.appendChild(ctrl);
+
       box.appendChild(el);
     });
   }
@@ -487,7 +507,7 @@
     });
   }
 
-  // ---------- Username change (7 day) ----------
+  // ---------- Username change ----------
   async function changeUsername(){
     if(!currentUser) return;
     const newName = (document.getElementById("newUsername").value || "").trim();
@@ -505,7 +525,6 @@
     await set(ref(db, `accounts/${newName}`), { password: accounts[currentUser].password, role: accounts[currentUser].role, lastUsernameChange: now });
 
     for(const p of posts){ if(p.user === currentUser) await update(ref(db, `posts/${p.id}`), { user: newName }); }
-
     for(const t of topics){
       if(t.user === currentUser) await update(ref(db, `topics/${t.id}`), { user: newName });
       const commentsObj = t.comments || {};
@@ -513,10 +532,9 @@
         if(commentsObj[cid].user === currentUser) await update(ref(db, `topics/${t.id}/comments/${cid}`), { user: newName });
       }
     }
-
     for(const u of updates){ if(u.user === currentUser) await update(ref(db, `updates/${u.id}`), { user: newName }); }
 
-    try {
+    try{
       const bannedSnap = await get(child(ref(db), `banned/${currentUser}`));
       if(bannedSnap.exists()){ await set(ref(db, `banned/${newName}`), bannedSnap.val()); await remove(ref(db, `banned/${currentUser}`)); }
     } catch(e){ console.warn("ban check failed", e); }
@@ -524,6 +542,7 @@
     await remove(ref(db, `accounts/${currentUser}`));
     currentUser = newName; saveSessionUser(newName);
     msgEl.style.color="#b6ffb3"; msgEl.innerText = "Username changed successfully!";
+    // UI will update via onValue listener
   }
 
   // ---------- Owner/Admin actions ----------
@@ -618,11 +637,8 @@
   }
 
   // ---------- DM utilities ----------
-  function makeChatId(a,b){
-    return [a,b].sort((x,y)=>x.localeCompare(y)).join("__");
-  }
+  function makeChatId(a,b){ return [a,b].sort((x,y)=>x.localeCompare(y)).join("__"); }
 
-  // Render DM chats list (chats involving currentUser)
   function renderDMList(){
     const container = document.getElementById("dmChatsContainer");
     if(!container) return;
@@ -631,10 +647,9 @@
     const keys = Object.keys(dmChats).sort((a,b)=> a.localeCompare(b));
     keys.forEach(chatId => {
       const chat = dmChats[chatId];
-      // chat.users may be stored as object or array — normalize
       const usersObj = chat.users || {};
       const users = Array.isArray(chat.users) ? chat.users : Object.keys(usersObj);
-      if(!users.includes(currentUser)) return; // not in this chat
+      if(!users.includes(currentUser)) return;
       const other = users.find(u=>u!==currentUser) || "Unknown";
       const el = document.createElement("div");
       el.className = "dm-item";
@@ -649,7 +664,6 @@
     if(container.innerHTML === "") container.innerHTML = "<div class='muted'>No chats yet. Start one above.</div>";
   }
 
-  // Start chat with username typed in
   async function startChat(){
     const target = (document.getElementById("dmStartUser").value || "").trim();
     if(!currentUser){ alert("Log in first"); return; }
@@ -657,7 +671,6 @@
     if(!accounts[target]){ alert("User not found"); return; }
     if(target === currentUser){ alert("Can't chat with yourself"); return; }
     const chatId = makeChatId(currentUser, target);
-    // ensure chat exists with users map
     await set(ref(db, `dmChats/${chatId}/users`), { [currentUser]: true, [target]: true });
     window._selectedChatId = chatId;
     renderDMList();
@@ -665,14 +678,12 @@
     document.getElementById("dmStartUser").value = "";
   }
 
-  // Select a chat to open
   function selectChat(chatId){
     window._selectedChatId = chatId;
     renderDMList();
     renderChatMessages(chatId);
   }
 
-  // Render messages for selected chat
   function renderChatMessages(chatId){
     const box = document.getElementById("dmMessages");
     const title = document.getElementById("dmChatTitle");
@@ -686,7 +697,7 @@
     title.innerText = other;
     parts.innerText = users.join(", ");
     const msgsObj = chat.messages || {};
-    const keys = Object.keys(msgsObj).sort((a,b)=> parseInt(a) - parseInt(b)); // keys are push IDs (string)
+    const keys = Object.keys(msgsObj).sort((a,b)=> parseInt(a) - parseInt(b));
     keys.forEach(k=>{
       const m = msgsObj[k];
       const mEl = document.createElement("div"); mEl.className="dm-message";
@@ -695,11 +706,9 @@
       mEl.innerHTML = `<div style="font-size:0.9rem"><strong>${m.sender}</strong> <span class="muted"> ${timeStr}</span></div><div style="margin-top:6px">${m.text}</div>`;
       box.appendChild(mEl);
     });
-    // scroll to bottom
     box.scrollTop = box.scrollHeight;
   }
 
-  // Send a DM in selected chat (creates chat if needed)
   async function sendDM(){
     if(!currentUser){ alert("Log in first"); return; }
     const chatId = window._selectedChatId;
@@ -708,15 +717,9 @@
     if(!textRaw) return;
     const text = filterBadWords(textRaw);
     notifyMentions(textRaw);
-    // If no chat selected, prompt to start one
-    if(!chatId){
-      alert("Select a chat or start one first.");
-      return;
-    }
-    // ensure users map exists
+    if(!chatId){ alert("Select a chat or start one first."); return; }
     const chatUsers = dmChats[chatId] && (dmChats[chatId].users || {});
     if(!chatUsers || !chatUsers[currentUser]) {
-      // weird edge: ensure our user is in users map
       const parts = chatId.split("__");
       const u1 = parts[0], u2 = parts[1];
       await set(ref(db, `dmChats/${chatId}/users`), { [u1]: true, [u2]: true });
@@ -726,24 +729,13 @@
     input.value = "";
   }
 
-  // Utility to list all chats for current user (used at startup)
-  function getUserChats(){
-    if(!currentUser) return [];
-    return Object.keys(dmChats).filter(id=>{
-      const usersObj = dmChats[id].users || {};
-      const users = Array.isArray(dmChats[id].users) ? dmChats[id].users : Object.keys(usersObj);
-      return users.includes(currentUser);
-    });
-  }
-
-  // ---------- Expose functions ----------
+  // ---------- Expose functions globally ----------
   window.showRegister = showRegister; window.showLogin = showLogin; window.register = register; window.login = login; window.logout = logout;
   window.addPost = addPost; window.addTopic = addTopic; window.addUpdate = addUpdate; window.changeUsername = changeUsername;
   window.changeRole = changeRole; window.adminSetRole = adminSetRole; window.adminBanUser = adminBanUser; window.adminDeleteMessages = adminDeleteMessages;
-  window.transferOwnership = transferOwnership; window.displayPosts = displayPosts; window.displayTopics = displayTopics; window.displayUpdates = displayUpdates;
-  window.startChat = startChat; window.sendDM = sendDM; window.selectChat = selectChat;
+  window.transferOwnership = transferOwnership; window.startChat = startChat; window.sendDM = sendDM; window.selectChat = selectChat;
 
-  // initial UI: accounts onValue will open forum if session exists
+  // initial UI state: onValue listeners will open forum if session exists
 </script>
 </body>
 </html>
