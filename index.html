@@ -26,8 +26,8 @@
             opacity: 0.8;
         }
         /* CONTAINERS */
-        #box, #forum, #dmsBox, #updatesBox {
-            max-width: 800px;
+        #box, #forum {
+            max-width: 900px;
             margin: 20px auto;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.2);
@@ -64,39 +64,21 @@
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.15);
         }
-        .section {
-            margin-top: 30px;
-        }
-        .owner-btn {
-            background: #ff4b4b;
-        }
-        .owner-btn:hover {
-            background: #ff6f6f;
-        }
-        .tabs button {
-            margin-right: 5px;
-            background: #333;
-        }
-        .tabs button.active {
-            background: #5a4bff;
-        }
-        .timestamp {
-            font-size: 0.8em;
-            color: #aaa;
-        }
-        p.forgot {
-            cursor:pointer; 
-            color:#5a4bff; 
-            margin-top:5px;
-        }
+        .section { margin-top: 30px; }
+        .owner-btn { background: #ff4b4b; }
+        .owner-btn:hover { background: #ff6f6f; }
+        .tabs button { margin-right: 5px; background: #333; }
+        .tabs button.active { background: #5a4bff; }
+        .timestamp { font-size: 0.8em; color: #aaa; }
+        p.forgot { cursor:pointer; color:#5a4bff; margin-top:5px; }
     </style>
 </head>
 <body>
-
 <div id="stars"></div>
 
 <div id="box">
     <h1>🔥 Toasty Forum Login</h1>
+
     <div id="registerBox">
         <h2>Register</h2>
         <input id="regEmail" placeholder="Email">
@@ -147,6 +129,7 @@
             <input id="updateTitle" placeholder="Update Title">
             <textarea id="updateContent" placeholder="Update Content"></textarea><br>
             <button class="owner-btn" onclick="createUpdate()">Create Update</button>
+            <button class="owner-btn" onclick="clearForum()">Clear All Content</button>
         </div>
     </div>
 
@@ -155,8 +138,12 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
-import { getFirestore, setDoc, getDoc, getDocs, doc, collection, addDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
+import { 
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js";
+import { 
+    getFirestore, setDoc, getDoc, getDocs, doc, collection, addDoc, deleteDoc, query, where, orderBy 
+} from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
@@ -174,6 +161,12 @@ const db = getFirestore(app);
 
 let currentUser = null;
 
+// ---------- AUTH STATE (Remember Me) ----------
+onAuthStateChanged(auth, (user) => {
+    if(user) loginUser(user);
+    else { document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }
+});
+
 // ---------- LOGIN / REGISTER ----------
 async function register() {
     const email = document.getElementById("regEmail").value;
@@ -181,8 +174,12 @@ async function register() {
     const username = document.getElementById("regUsername").value.trim();
     if(!username) return alert("Enter a username");
 
+    // Check unique username
+    const snap = await getDocs(query(collection(db,"users"), where("username","==",username)));
+    if(!snap.empty) return alert("Username already taken.");
+
     try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+        const userCred = await createUserWithEmailAndPassword(auth,email,pass);
         const uid = userCred.user.uid;
         await setDoc(doc(db,"users",uid), { username, email });
         alert("Registered! Logging in...");
@@ -194,7 +191,7 @@ async function login() {
     const email = document.getElementById("logEmail").value;
     const pass = document.getElementById("logPass").value;
     try {
-        const userCred = await signInWithEmailAndPassword(auth, email, pass);
+        const userCred = await signInWithEmailAndPassword(auth,email,pass);
         loginUser(userCred.user);
     } catch(e) { alert(e.message); }
 }
@@ -210,123 +207,97 @@ function loginUser(user) {
     document.getElementById("forum").classList.remove("hidden");
 
     // show owner controls if email matches
-    if(user.email === "d29510713@gmail.com") {
-        document.getElementById("ownerControls").classList.remove("hidden");
-    }
+    if(user.email === "d29510713@gmail.com") document.getElementById("ownerControls").classList.remove("hidden");
 
-    loadPosts();
-    loadDMs();
-    loadUpdates();
+    loadPosts(); loadDMs(); loadUpdates();
 }
 
-async function logout() {
-    await signOut(auth);
-    currentUser = null;
-    document.getElementById("forum").classList.add("hidden");
-    document.getElementById("box").classList.remove("hidden");
-}
+async function logout() { await signOut(auth); currentUser=null; document.getElementById("forum").classList.add("hidden"); document.getElementById("box").classList.remove("hidden"); }
 
 // ---------- FORGOT PASSWORD ----------
 async function forgotPassword() {
     const email = document.getElementById("logEmail").value.trim();
-    if(!email) return alert("Please enter your email to reset your password.");
-    try {
-        await sendPasswordResetEmail(auth, email);
-        alert("Password reset email sent! Check your inbox.");
-    } catch(e) {
-        alert("Error: " + e.message);
-    }
+    if(!email) return alert("Enter your email to reset password.");
+    try { await sendPasswordResetEmail(auth,email); alert("Password reset email sent! Check inbox/spam."); }
+    catch(e){ alert("Error: "+e.message); }
 }
-window.forgotPassword = forgotPassword;
 
 // ---------- FORUM FUNCTIONS ----------
-function formatTime(ts) {
-    const d = new Date(ts);
-    return d.toLocaleString();
-}
+function formatTime(ts) { const d = new Date(ts); return d.toLocaleString(); }
 
 async function createPost() {
-    const content = document.getElementById("postContent").value.trim();
-    if(!content) return;
-    await addDoc(collection(db,"posts"),{
-        content,
-        authorUid: currentUser.uid,
-        timestamp: Date.now()
-    });
-    document.getElementById("postContent").value="";
-    loadPosts();
+    const content = document.getElementById("postContent").value.trim(); if(!content) return;
+    await addDoc(collection(db,"posts"),{ content, authorUid:currentUser.uid, timestamp:Date.now() });
+    document.getElementById("postContent").value=""; loadPosts();
 }
 
 async function loadPosts() {
-    const postsList = document.getElementById("postsList");
-    postsList.innerHTML="";
-    const postsSnap = await getDocs(query(collection(db,"posts"), orderBy("timestamp","desc")));
-    for(const docSnap of postsSnap.docs){
-        const data = docSnap.data();
-        const userDoc = await getDoc(doc(db,"users",data.authorUid));
-        const username = userDoc.exists()?userDoc.data().username:"Unknown";
+    const postsList = document.getElementById("postsList"); postsList.innerHTML="";
+    const snap = await getDocs(query(collection(db,"posts"), orderBy("timestamp","desc")));
+    for(const d of snap.docs){
+        const data = d.data();
+        const udoc = await getDoc(doc(db,"users",data.authorUid));
+        const username = udoc.exists()?udoc.data().username:"Unknown";
         postsList.innerHTML += `<div class="post"><b>${username}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
     }
 }
 
 async function sendDM() {
-    const toEmail = document.getElementById("dmToEmail").value.trim();
-    const content = document.getElementById("dmContent").value.trim();
+    const toEmail = document.getElementById("dmToEmail").value.trim(); const content = document.getElementById("dmContent").value.trim();
     if(!toEmail || !content) return alert("Fill both fields");
-    const q = query(collection(db,"users"), where("email","==",toEmail), limit(1));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(collection(db,"users"),where("email","==",toEmail)));
     if(snap.empty) return alert("User not found");
     const recipientUid = snap.docs[0].id;
-    await addDoc(collection(db,"dms"),{
-        fromUid: currentUser.uid,
-        toUid: recipientUid,
-        content,
-        timestamp: Date.now()
-    });
-    document.getElementById("dmContent").value="";
-    loadDMs();
+    await addDoc(collection(db,"dms"),{ fromUid:currentUser.uid, toUid:recipientUid, content, timestamp:Date.now() });
+    document.getElementById("dmContent").value=""; loadDMs();
 }
 
 async function loadDMs() {
-    const dmsList = document.getElementById("dmsList");
-    dmsList.innerHTML="";
+    const dmsList=document.getElementById("dmsList"); dmsList.innerHTML="";
     const snap = await getDocs(collection(db,"dms"));
-    for(const docSnap of snap.docs){
-        const d = docSnap.data();
-        if(d.toUid===currentUser.uid || d.fromUid===currentUser.uid){
-            const fromUserDoc = await getDoc(doc(db,"users",d.fromUid));
-            const fromUsername = fromUserDoc.exists()?fromUserDoc.data().username:"Unknown";
-            const label = d.fromUid===currentUser.uid?"You":fromUsername;
-            dmsList.innerHTML += `<div class="dm"><b>${label}</b> <span class="timestamp">(${formatTime(d.timestamp)})</span>: ${d.content}</div>`;
+    for(const d of snap.docs){
+        const data = d.data();
+        if(data.toUid===currentUser.uid || data.fromUid===currentUser.uid){
+            const udoc = await getDoc(doc(db,"users",data.fromUid));
+            const username = udoc.exists()?udoc.data().username:"Unknown";
+            const label = data.fromUid===currentUser.uid?"You":username;
+            dmsList.innerHTML += `<div class="dm"><b>${label}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
         }
     }
 }
 
 async function createUpdate() {
-    const title = document.getElementById("updateTitle").value.trim();
-    const content = document.getElementById("updateContent").value.trim();
+    const title=document.getElementById("updateTitle").value.trim();
+    const content=document.getElementById("updateContent").value.trim();
     if(!title||!content) return;
-    await addDoc(collection(db,"updates"),{
-        title,
-        content,
-        authorUid: currentUser.uid,
-        timestamp: Date.now()
-    });
-    document.getElementById("updateTitle").value="";
-    document.getElementById("updateContent").value="";
+    await addDoc(collection(db,"updates"),{ title, content, authorUid:currentUser.uid, timestamp:Date.now() });
+    document.getElementById("updateTitle").value=""; document.getElementById("updateContent").value="";
     loadUpdates();
 }
 
 async function loadUpdates() {
-    const updatesList = document.getElementById("updatesList");
-    updatesList.innerHTML="";
+    const updatesList=document.getElementById("updatesList"); updatesList.innerHTML="";
     const snap = await getDocs(query(collection(db,"updates"), orderBy("timestamp","desc")));
-    for(const docSnap of snap.docs){
-        const d = docSnap.data();
-        const userDoc = await getDoc(doc(db,"users",d.authorUid));
-        const username = userDoc.exists()?userDoc.data().username:"Unknown";
-        updatesList.innerHTML += `<div class="update"><b>${d.title}</b> by <b>${username}</b> <span class="timestamp">(${formatTime(d.timestamp)})</span>: ${d.content}</div>`;
+    for(const d of snap.docs){
+        const data=d.data();
+        const udoc=await getDoc(doc(db,"users",data.authorUid));
+        const username=udoc.exists()?udoc.data().username:"Unknown";
+        updatesList.innerHTML += `<div class="update"><b>${data.title}</b> by <b>${username}</b> <span class="timestamp">(${formatTime(data.timestamp)})</span>: ${data.content}</div>`;
     }
+}
+
+// ---------- CLEAR ALL CONTENT (Owner only) ----------
+async function clearForum() {
+    if(currentUser.email!=="d29510713@gmail.com") return alert("Only owner can clear content!");
+    if(!confirm("Are you sure? This will delete all posts, DMs, and updates.")) return;
+
+    const collections=["posts","dms","updates"];
+    for(const col of collections){
+        const snap = await getDocs(collection(db,col));
+        for(const d of snap.docs) await deleteDoc(doc(db,col,d.id));
+    }
+    alert("All content cleared!");
+    loadPosts(); loadDMs(); loadUpdates();
 }
 
 // ---------- TABS ----------
@@ -364,6 +335,7 @@ window.createPost = createPost;
 window.sendDM = sendDM;
 window.createUpdate = createUpdate;
 window.showTab = showTab;
+window.clearForum = clearForum;
 </script>
 
 </body>
