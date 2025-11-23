@@ -1,741 +1,185 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Toasty Forum — Realtime + DMs (Space)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    :root {
-      --bg: #03040a;
-      --panel: linear-gradient(180deg,#071023,#0b1220);
-      --glass: rgba(255,255,255,0.03);
-      --muted: #9aa1a8;
-      --accent: #ff7a00;
-      --accent-2: #ffb66a;
-      --danger: #ff4c4c;
-      --neon: #66aaff;
-    }
+    <title>Toasty Forum</title>
 
-    html,body {height:100%; margin:0; background: radial-gradient(1200px 600px at 10% 20%, #0b1220 0%, #03040a 25%, #000 100%), #000; color:#e6eef8; font-family:Inter, system-ui, Arial; -webkit-font-smoothing:antialiased;}
-    main {max-width:1200px; margin:28px auto; padding:22px;}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px; gap:12px}
-    h1{color:var(--accent); margin:0; font-size:1.6rem; text-shadow:0 0 14px rgba(255,122,0,0.18)}
-    .sub{ color:var(--muted); font-size:0.95rem; }
-
-    .panel{ background: var(--panel); border-radius:14px; padding:16px; margin-bottom:14px; border:1px solid rgba(255,255,255,0.04); box-shadow: 0 10px 40px rgba(0,0,0,0.7) inset; }
-    input, textarea, select { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:#eaf2ff; padding:10px; border-radius:10px; width:100%; box-sizing:border-box; font-size:0.95rem; }
-    input::placeholder, textarea::placeholder { color:#8ea1b8; }
-
-    button { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#061019; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 6px 20px rgba(255,122,0,0.08); }
-    button.ghost{ background:transparent; color:var(--accent); border:1px solid rgba(255,127,0,0.12); }
-    button.danger{ background:var(--danger); color:white; }
-    button.small{ padding:6px 10px; font-size:0.9rem; }
-
-    .muted{ color:var(--muted); }
-    .meta{ color:var(--muted); font-size:0.85rem; margin-top:6px; }
-    .role-badge{ padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--accent); font-weight:700; font-size:0.85rem; }
-
-    #topics,#posts,#updates{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-    .topic,.post-card,.update-card{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
-    .post-card .actions, .topic .actions { display:flex; gap:8px; }
-
-    /* DM layout */
-    .dm-panel{ display:flex; gap:12px; align-items:flex-start; margin-top:6px; }
-    .dm-list{ width:260px; max-height:420px; overflow:auto; border-radius:8px; padding:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); }
-    .dm-chat{ flex:1; display:flex; flex-direction:column; max-height:420px; }
-    .dm-messages{ flex:1; overflow:auto; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); }
-    .dm-item{ padding:8px; border-radius:6px; cursor:pointer; margin-bottom:6px; }
-    .dm-item.active{ background:rgba(255,127,0,0.06); }
-    .dm-message{ margin-bottom:8px; padding:6px; border-radius:6px; background:rgba(255,255,255,0.02); }
-    .dm-message.me{ background:linear-gradient(90deg, rgba(255,127,0,0.12), rgba(255,143,42,0.06)); text-align:right; }
-
-    @media (max-width:980px){ .dm-list{ display:none; } .dm-panel{ flex-direction:column; } }
-    @media (max-width:720px){ header{flex-direction:column;align-items:flex-start} main{padding:12px} }
-  </style>
-</head>
-<body>
-<main>
-  <header>
-    <div>
-      <h1>Toasty Forum</h1>
-      <div class="sub">Realtime · Space theme · DMs · Roles</div>
-    </div>
-    <div id="memberCount" class="sub">Members: 0</div>
-  </header>
-
-  <!-- LOGIN PANEL -->
-  <section id="loginPanel" class="panel">
-    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-      <div style="flex:1">
-        <label class="muted">Username</label>
-        <input id="loginUser" placeholder="Username">
-      </div>
-      <div style="width:220px">
-        <label class="muted">Password</label>
-        <input id="loginPass" type="password" placeholder="Password">
-      </div>
-      <div style="width:160px;display:flex;flex-direction:column;gap:8px">
-        <div style="flex:1"></div>
-        <button onclick="login()">Log in</button>
-        <button class="ghost" onclick="showRegister()">Register</button>
-      </div>
-    </div>
-    <div id="loginError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
-  </section>
-
-  <!-- REGISTER PANEL -->
-  <section id="registerPanel" class="panel" style="display:none">
-    <h3 style="margin-top:0">Create account</h3>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <div style="flex:1"><label class="muted">Username</label><input id="regUser" placeholder="Choose a username"></div>
-      <div style="width:220px"><label class="muted">Password</label><input id="regPass" type="password" placeholder="Password"></div>
-      <div style="width:220px"><label class="muted">Role</label><select id="regRole"></select></div>
-      <div style="width:120px;display:flex;align-items:end"><button onclick="register()">Create</button></div>
-    </div>
-    <div id="regError" class="muted" style="margin-top:8px;color:#ffb0b0"></div>
-    <div style="margin-top:8px" class="muted">Owner option shows only if there is no current owner.</div>
-  </section>
-
-  <!-- ADMIN PANEL -->
-  <section id="adminPanel" class="panel" style="display:none">
-    <h3 style="margin-top:0">Owner Panel</h3>
-    <div class="muted">Owner-only tools (role change, ban, transfer owner, delete messages)</div>
-
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <input id="adminUser" placeholder="Target username" style="width:260px">
-      <button class="small" onclick="adminSetRole('member')">Member</button>
-      <button class="small" onclick="adminSetRole('contributor')">Contributor</button>
-      <button class="small" onclick="adminSetRole('admin')">Admin</button>
-      <button class="small" onclick="transferOwnership()">Transfer Ownership</button>
-      <button class="small danger" onclick="adminBanUser()">Ban User</button>
-      <button class="small danger" onclick="adminDeleteMessages()">Delete Messages</button>
-    </div>
-
-    <div style="margin-top:14px">
-      <h4 style="margin:0 0 8px 0">All users</h4>
-      <table id="usersTable"><thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead><tbody></tbody></table>
-    </div>
-  </section>
-
-  <!-- FORUM PANEL -->
-  <section id="forumPanel" class="panel" style="display:none">
-    <div style="display:flex;justify-content:space-between;gap:12px">
-      <div>
-        <div class="muted">Logged in as</div>
-        <div style="font-weight:700" id="currentUserDisplay"></div>
-      </div>
-      <div style="text-align:right">
-        <div class="muted">Role</div>
-        <div id="currentRoleDisplay" class="role-badge"></div>
-        <div style="margin-top:8px"><button class="ghost" onclick="logout()">Logout</button></div>
-      </div>
-    </div>
-
-    <hr style="border:none;height:12px">
-
-    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-      <div style="flex:1">
-        <label class="muted">New Username</label>
-        <input id="newUsername" placeholder="New username">
-        <div id="usernameMsg" class="muted" style="margin-top:6px;color:#b6ffb3"></div>
-        <button onclick="changeUsername()">Change username</button>
-      </div>
-
-      <div style="width:320px">
-        <label class="muted">Change your role</label>
-        <div id="roleBox"></div>
-        <div class="muted" style="margin-top:6px">Owner option available only if owner slot is free or you are the owner.</div>
-      </div>
-    </div>
-
-    <hr>
-
-    <div style="display:flex;gap:12px">
-      <div style="flex:1">
-        <label class="muted">Write a post</label>
-        <textarea id="postInput" placeholder="Share something..." style="height:80px"></textarea>
-        <div class="controls" style="margin-top:8px"><button onclick="addPost()">Post</button></div>
-      </div>
-
-      <div style="width:320px">
-        <label class="muted">Updates (Owner/Admin only)</label>
-        <div id="updateBox" style="display:none">
-          <input id="updateInput" placeholder="Site update...">
-          <div style="margin-top:8px"><button onclick="addUpdate()">Post Update</button></div>
-        </div>
-        <div id="updates" style="margin-top:12px"></div>
-      </div>
-    </div>
-
-    <hr>
-
-    <div style="margin-top:10px">
-      <label class="muted">Create Topic</label>
-      <input id="topicTitle" placeholder="Topic title">
-      <textarea id="topicContent" placeholder="Topic content"></textarea>
-      <div class="controls" style="margin-top:8px"><button onclick="addTopic()">Create Topic</button></div>
-    </div>
-
-    <h3 style="margin-top:18px">Topics</h3>
-    <div id="topics"></div>
-
-    <h3 style="margin-top:18px">Posts</h3>
-    <div id="posts"></div>
-
-    <hr>
-
-    <h3 style="margin-top:18px">Direct Messages</h3>
-    <div class="dm-panel">
-      <div class="dm-list" id="dmList">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <input id="dmStartUser" placeholder="Start chat with..." style="flex:1">
-          <button onclick="startChat()">Start</button>
-        </div>
-        <div id="dmChatsContainer"></div>
-      </div>
-
-      <div class="dm-chat">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <div style="font-weight:700" id="dmChatTitle">No chat selected</div>
-          <div style="margin-left:auto" id="dmChatParticipants" class="muted"></div>
-        </div>
-        <div class="dm-messages" id="dmMessages"></div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input id="dmMessageInput" placeholder="Message..." style="flex:1">
-          <button onclick="sendDM()">Send</button>
-        </div>
-      </div>
-    </div>
-
-  </section>
-</main>
-
-<!-- Firebase SDKs -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, set, push, onValue, update, remove, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-  // ---------- Firebase config (your config) ----------
-  const firebaseConfig = {
-    apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
-    authDomain: "toasty-89f07.firebaseapp.com",
-    databaseURL: "https://toasty-89f07-default-rtdb.firebaseio.com",
-    projectId: "toasty-89f07",
-    storageBucket: "toasty-89f07.appspot.com",
-    messagingSenderId: "743787667064",
-    appId: "1:743787667064:web:12284120fbbdd1e907d78d"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // ---------- Database refs ----------
-  const accountsRef = ref(db, "accounts");
-  const postsRef = ref(db, "posts");
-  const topicsRef = ref(db, "topics");
-  const updatesRef = ref(db, "updates");
-  const bannedRef = ref(db, "banned");
-  const dmChatsRef = ref(db, "dmChats");
-
-  // ---------- Local mirrors ----------
-  let accounts = {};
-  let posts = [];
-  let topics = [];
-  let updates = [];
-  let bannedUsers = [];
-  let dmChats = {};
-  let currentUser = localStorage.getItem("toasty_currentUser") || null;
-
-  // list of bad words (example)
-  const censoredWords = ["nigger","bitch","fuck","n!gger","idiot","shit","dumbass","nigga","cum","cock","penis","cunt","faggot"];
-
-  // ---------- Helpers ----------
-  function saveSessionUser(u){ if(u) localStorage.setItem("toasty_currentUser", u); else localStorage.removeItem("toasty_currentUser"); }
-  function hashPass(s){ return btoa(s); }
-  function filterBadWords(text){
-    let out = text || "";
-    censoredWords.forEach(w => { out = out.replace(new RegExp(w,"gi"), "***"); });
-    out = out.replace(/@(\w+)/g, (m,name) => accounts[name] ? `<span style="color:var(--neon)">@${name}</span>` : `@${name}`);
-    return out;
-  }
-  function notifyMentions(text){
-    const names = [...(text||"").matchAll(/@(\w+)/g)].map(m=>m[1]);
-    names.forEach(n=>{ if(accounts[n] && n !== currentUser) alert(`${n}, you were mentioned by ${currentUser}!`); });
-  }
-
-  // ---------- Realtime listeners ----------
-  onValue(accountsRef, snap => {
-    accounts = snap.val() || {};
-    renderUsersTable();
-    buildRegisterRoleOptions();
-    updateMemberCount();
-    renderDMList();
-    if(currentUser && accounts[currentUser]) {
-      openForum();
-      updateRoleUI();
-    }
-  });
-
-  onValue(postsRef, snap => {
-    const data = snap.val() || {};
-    posts = Object.keys(data).sort().map(k => ({ id:k, ...data[k] }));
-    displayPosts();
-  });
-
-  onValue(topicsRef, snap => {
-    const data = snap.val() || {};
-    topics = Object.keys(data).sort().reverse().map(k => ({ id:k, ...data[k] }));
-    displayTopics();
-  });
-
-  onValue(updatesRef, snap => {
-    const data = snap.val() || {};
-    updates = Object.keys(data).sort().map(k => ({ id:k, ...data[k] }));
-    displayUpdates();
-  });
-
-  onValue(bannedRef, snap => {
-    const data = snap.val() || {};
-    bannedUsers = Object.keys(data || {});
-    updateBannedList();
-  });
-
-  onValue(dmChatsRef, snap => {
-    dmChats = snap.val() || {};
-    renderDMList();
-    if(window._selectedChatId) renderChatMessages(window._selectedChatId);
-  });
-
-  // ---------- UI helpers ----------
-  function showRegister(){ document.getElementById("registerPanel").style.display="block"; document.getElementById("loginPanel").style.display="none"; buildRegisterRoleOptions(); }
-  function showLogin(){ document.getElementById("registerPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; }
-  function updateMemberCount(){ document.getElementById("memberCount").innerText = `Members: ${Object.keys(accounts).length}`; }
-  function updateBannedList(){ const el = document.getElementById("bannedList"); if(el) el.innerText = bannedUsers.length ? bannedUsers.join(", ") : "No banned users"; }
-  function isOwner(u){ return accounts[u] && accounts[u].role === "owner"; }
-  function isAdmin(u){ return accounts[u] && accounts[u].role === "admin"; }
-
-  // ---------- Registration ----------
-  function buildRegisterRoleOptions(){
-    const sel = document.getElementById("regRole");
-    if(!sel) return;
-    const ownerExists = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
-    sel.innerHTML = "";
-    sel.appendChild(createOpt("member","Member"));
-    sel.appendChild(createOpt("contributor","Contributor"));
-    sel.appendChild(createOpt("admin","Admin"));
-    if(!ownerExists) sel.appendChild(createOpt("owner","Owner"));
-    function createOpt(v,t){ const o=document.createElement("option"); o.value=v; o.innerText=t; return o; }
-  }
-
-  async function register(){
-    const user = (document.getElementById("regUser").value || "").trim();
-    const pass = (document.getElementById("regPass").value || "").trim();
-    const role = (document.getElementById("regRole").value || "member");
-    const err = document.getElementById("regError"); err.innerText = "";
-
-    if(!user || !pass){ err.innerText = "Fill all fields"; return; }
-    if(accounts[user]){ err.innerText = "Username taken"; return; }
-    if(role === "owner" && Object.keys(accounts).find(u=>accounts[u].role==="owner")) { err.innerText = "Owner already exists"; return; }
-
-    await set(ref(db, `accounts/${user}`), { password: hashPass(pass), role: role, lastUsernameChange: 0 });
-    alert("Account created. Log in now.");
-    showLogin();
-  }
-
-  // ---------- Login ----------
-  async function login(){
-    const u = (document.getElementById("loginUser").value || "").trim();
-    const p = (document.getElementById("loginPass").value || "").trim();
-    const err = document.getElementById("loginError"); err.innerText = "";
-
-    if(!accounts[u]){ err.innerText = "User does not exist"; return; }
-    if(bannedUsers.includes(u)){ err.innerText = "You are banned!"; return; }
-    if(accounts[u].password !== hashPass(p)){ err.innerText = "Wrong password"; return; }
-
-    currentUser = u; saveSessionUser(u);
-    openForum();
-  }
-
-  function logout(){ currentUser = null; saveSessionUser(null); document.getElementById("forumPanel").style.display="none"; document.getElementById("loginPanel").style.display="block"; window._selectedChatId = null; }
-
-  // ---------- Open forum ----------
-  function openForum(){
-    document.getElementById("loginPanel").style.display="none";
-    document.getElementById("registerPanel").style.display="none";
-    document.getElementById("forumPanel").style.display="block";
-    document.getElementById("currentUserDisplay").innerText = currentUser;
-    updateRoleUI();
-    updateMemberCount();
-    updateBannedList();
-    document.getElementById("adminPanel").style.display = isOwner(currentUser) ? "block" : "none";
-    document.getElementById("updateBox").style.display = (isOwner(currentUser) || isAdmin(currentUser)) ? "block" : "none";
-    renderDMList();
-  }
-
-  // ---------- Role change UI ----------
-  function updateRoleUI(){
-    const roleBox = document.getElementById("roleBox");
-    roleBox.innerHTML = "";
-    if(!currentUser || !accounts[currentUser]) return;
-    const ownerName = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
-    const sel = document.createElement("select"); sel.id="roleSelect";
-    sel.appendChild(opt("member","Member")); sel.appendChild(opt("contributor","Contributor")); sel.appendChild(opt("admin","Admin"));
-    if(!ownerName || ownerName === currentUser) sel.appendChild(opt("owner","Owner"));
-    sel.value = accounts[currentUser].role || "member";
-    roleBox.appendChild(sel);
-    const btn = document.createElement("button"); btn.innerText="Save Role"; btn.style.marginTop="8px"; btn.onclick = changeRole;
-    roleBox.appendChild(btn);
-    document.getElementById("currentRoleDisplay").innerText = accounts[currentUser].role || "member";
-    function opt(v,t){ const o=document.createElement("option"); o.value=v; o.innerText=t; return o; }
-  }
-
-  async function changeRole(){
-    const sel = document.getElementById("roleSelect"); if(!sel) return;
-    const value = sel.value;
-    const ownerName = Object.keys(accounts).find(u => accounts[u] && accounts[u].role === "owner");
-    if(value === "owner" && ownerName && ownerName !== currentUser){ alert("Owner slot is taken"); updateRoleUI(); return; }
-    await update(ref(db, `accounts/${currentUser}`), { role: value });
-  }
-
-  // ---------- Posts ----------
-  async function addPost(){
-    if(!currentUser || bannedUsers.includes(currentUser)) return;
-    const raw = (document.getElementById("postInput").value || "").trim(); if(!raw) return;
-    notifyMentions(raw);
-    const text = filterBadWords(raw);
-    const node = push(postsRef);
-    await set(node, { user: currentUser, role: accounts[currentUser].role, text, timestamp: Date.now() });
-    document.getElementById("postInput").value = "";
-  }
-
-  function displayPosts(){
-    const box = document.getElementById("posts"); box.innerHTML = "";
-    posts.forEach(p => {
-      if(bannedUsers.includes(p.user)) return;
-      const el = document.createElement("div"); el.className="post-card";
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div><strong>${p.user}</strong> <span class="muted">(${p.role})</span><div class="meta">${new Date(p.timestamp).toLocaleString()}</div></div>
-        <div id="post-actions-${p.id}" class="actions"></div>
-      </div><div style="margin-top:8px">${p.text}</div>`;
-      if(currentUser === p.user || isOwner(currentUser) || isAdmin(currentUser)){
-        const del = document.createElement("button"); del.className="small danger"; del.innerText="Delete";
-        del.onclick = async () => { await remove(ref(db, `posts/${p.id}`)); };
-        el.querySelector(`#post-actions-${p.id}`).appendChild(del);
-      }
-      box.appendChild(el);
-    });
-  }
-
-  // ---------- Topics & comments ----------
-  async function addTopic(){
-    if(!currentUser || bannedUsers.includes(currentUser)) return;
-    const title = (document.getElementById("topicTitle").value || "").trim();
-    const content = (document.getElementById("topicContent").value || "").trim();
-    if(!title || !content) return alert("Fill all fields");
-    notifyMentions(content);
-    const node = push(topicsRef);
-    await set(node, { user: currentUser, role: accounts[currentUser].role, title: filterBadWords(title), content: filterBadWords(content), comments: {}, timestamp: Date.now() });
-    document.getElementById("topicTitle").value = ""; document.getElementById("topicContent").value = "";
-  }
-
-  function displayTopics(){
-    const box = document.getElementById("topics"); box.innerHTML = "";
-    topics.forEach(t => {
-      if(bannedUsers.includes(t.user)) return;
-      const el = document.createElement("div"); el.className="topic";
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div><strong>${t.title}</strong><div class="muted">by ${t.user} (${t.role}) • ${new Date(t.timestamp).toLocaleString()}</div></div>
-        <div id="topic-actions-${t.id}" class="actions"></div>
-      </div><div style="margin-top:8px">${t.content}</div>`;
-      if(currentUser === t.user || isOwner(currentUser) || isAdmin(currentUser)){
-        const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete Topic";
-        del.onclick = async () => { await remove(ref(db, `topics/${t.id}`)); };
-        el.querySelector(`#topic-actions-${t.id}`).appendChild(del);
-      }
-
-      const comments = t.comments ? Object.keys(t.comments).map(k => ({ id:k, ...t.comments[k]})) : [];
-      comments.forEach(c => {
-        if(bannedUsers.includes(c.user)) return;
-        const cEl = document.createElement("div"); cEl.className="commentBox";
-        cEl.innerHTML = `<strong>${c.user}</strong> <span class="muted">(${c.role})</span> <div class="muted">${new Date(c.timestamp).toLocaleString()}</div><div style="margin-top:6px">${c.text}</div>`;
-        if(currentUser === c.user || isOwner(currentUser) || isAdmin(currentUser)){
-          const delC = document.createElement("button"); delC.className="danger small"; delC.innerText="Delete"; delC.onclick = async () => {
-            await remove(ref(db, `topics/${t.id}/comments/${c.id}`));
-          };
-          cEl.appendChild(delC);
+    <style>
+        body {
+            background: radial-gradient(circle at center, #0a0f2c, #000);
+            color: #d0d7ff;
+            font-family: Arial;
+            padding: 20px;
         }
-        el.appendChild(cEl);
-      });
 
-      const input = document.createElement("input"); input.placeholder="Comment...";
-      const btn = document.createElement("button"); btn.innerText="Post"; btn.style.marginLeft="8px";
-      btn.onclick = async () => {
-        const text = (input.value || "").trim(); if(!text) return;
-        notifyMentions(text);
-        const commentNode = push(ref(db, `topics/${t.id}/comments`));
-        await set(commentNode, { user: currentUser, role: accounts[currentUser].role, text: filterBadWords(text), timestamp: Date.now() });
-        input.value = "";
-      };
-      const ctrl = document.createElement("div"); ctrl.style.marginTop="8px"; ctrl.appendChild(input); ctrl.appendChild(btn);
-      el.appendChild(ctrl);
+        .panel {
+            background: rgba(20, 20, 40, 0.75);
+            padding: 18px;
+            border-radius: 12px;
+            width: 420px;
+            margin: auto;
+            box-shadow: 0 0 18px #4c5cff;
+        }
 
-      box.appendChild(el);
+        button {
+            background: #4c5cff;
+            border: none;
+            padding: 8px 15px;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        input {
+            width: 95%;
+            padding: 8px;
+            margin-top: 8px;
+            background:#1a1e35;
+            border: 1px solid #39427a;
+            border-radius: 6px;
+            color: white;
+        }
+
+        #forumBox {
+            display: none;
+        }
+
+        .message {
+            background: #1e2342;
+            padding: 10px;
+            margin-top: 6px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1 style="text-align:center;"> Toasty Forum</h1>
+
+<!-- LOGIN / REGISTER -->
+<div id="authBox" class="panel">
+    <h2>Login / Register</h2>
+    <input id="username" placeholder="Username">
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+    <p id="authMsg"></p>
+</div>
+
+<!-- MAIN FORUM -->
+<div id="forumBox" class="panel">
+    <h2>Welcome, <span id="currentUser"></span></h2>
+    <p>Role: <span id="currentRole"></span></p>
+
+    <h3>Post Message</h3>
+    <input id="postInput" placeholder="Write something...">
+    <button onclick="sendPost()">Send</button>
+
+    <h3>Messages</h3>
+    <div id="messages"></div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+<script>
+/* ----------------- FIREBASE SETUP ----------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+  authDomain: "toasty-89f07.firebaseapp.com",
+  projectId: "toasty-89f07",
+  storageBucket: "toasty-89f07.firebasestorage.app",
+  messagingSenderId: "743787667064",
+  appId: "1:743787667064:web:12284120fbbdd1e907d78d",
+  measurementId: "G-VHGVH5JEYY",
+  databaseURL: "https://toasty-89f07-default-rtdb.firebaseio.com/"
+};
+
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ----------------- AUTH SYSTEM ----------------- */
+let currentUser = null;
+
+function register() {
+    let name = username.value.trim();
+    if (!name) return showAuth("Enter a username");
+
+    db.ref("users/" + name).once("value").then(snap => {
+        if (snap.exists()) {
+            return showAuth("User already exists");
+        }
+
+        // First ever user becomes owner
+        db.ref("users").once("value").then(all => {
+            const role = all.exists() ? "member" : "owner";
+
+            db.ref("users/" + name).set({
+                role: role
+            });
+
+            loginUser(name, role);
+        });
     });
-  }
+}
 
-  // ---------- Updates ----------
-  async function addUpdate(){
-    if(!currentUser) return;
-    const text = (document.getElementById("updateInput").value || "").trim(); if(!text) return;
-    notifyMentions(text);
-    const node = push(updatesRef);
-    await set(node, { user: currentUser, role: accounts[currentUser].role, text: filterBadWords(text), timestamp: Date.now() });
-    document.getElementById("updateInput").value = "";
-  }
+function login() {
+    let name = username.value.trim();
+    if (!name) return showAuth("Enter a username");
 
-  function displayUpdates(){
-    const box = document.getElementById("updates"); box.innerHTML = "";
-    updates.forEach(u => {
-      if(bannedUsers.includes(u.user)) return;
-      const el = document.createElement("div"); el.className="update-card";
-      el.innerHTML = `<strong>${u.user} (${u.role})</strong> <div class="muted">${new Date(u.timestamp).toLocaleString()}</div><div style="margin-top:8px">${u.text}</div>`;
-      if(currentUser === u.user || isOwner(currentUser) || isAdmin(currentUser)){
-        const del = document.createElement("button"); del.className="danger small"; del.innerText="Delete"; del.onclick = async () => { await remove(ref(db, `updates/${u.id}`)); };
-        el.appendChild(del);
-      }
-      box.appendChild(el);
+    db.ref("users/" + name).once("value").then(snap => {
+        if (!snap.exists()) return showAuth("User not found");
+
+        loginUser(name, snap.val().role);
     });
-  }
+}
 
-  // ---------- Username change ----------
-  async function changeUsername(){
-    if(!currentUser) return;
-    const newName = (document.getElementById("newUsername").value || "").trim();
-    const msgEl = document.getElementById("usernameMsg");
-    msgEl.style.color="#b6ffb3"; msgEl.innerText = "";
-    if(!newName){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Enter a new username."; return; }
-    if(accounts[newName]){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Username already taken."; return; }
-    if(bannedUsers.includes(currentUser)){ msgEl.style.color="#ffb0b0"; msgEl.innerText="Banned users cannot change username."; return; }
+function loginUser(name, role) {
+    currentUser = name;
+    currentUserSpan.innerText = name;
+    currentRole.innerText = role;
 
-    const now = Date.now();
-    const last = accounts[currentUser].lastUsernameChange || 0;
-    const oneWeek = 7*24*60*60*1000;
-    if(now - last < oneWeek){ const daysLeft = Math.ceil((oneWeek - (now - last)) / (1000*60*60*24)); msgEl.style.color="#ffb0b0"; msgEl.innerText=`You can change username again in ${daysLeft} day(s).`; return; }
+    authBox.style.display = "none";
+    forumBox.style.display = "block";
 
-    await set(ref(db, `accounts/${newName}`), { password: accounts[currentUser].password, role: accounts[currentUser].role, lastUsernameChange: now });
+    loadMessages();
+}
 
-    for(const p of posts){ if(p.user === currentUser) await update(ref(db, `posts/${p.id}`), { user: newName }); }
-    for(const t of topics){
-      if(t.user === currentUser) await update(ref(db, `topics/${t.id}`), { user: newName });
-      const commentsObj = t.comments || {};
-      for(const cid of Object.keys(commentsObj || {})){
-        if(commentsObj[cid].user === currentUser) await update(ref(db, `topics/${t.id}/comments/${cid}`), { user: newName });
-      }
-    }
-    for(const u of updates){ if(u.user === currentUser) await update(ref(db, `updates/${u.id}`), { user: newName }); }
+function showAuth(txt) {
+    authMsg.innerText = txt;
+}
 
-    try{
-      const bannedSnap = await get(child(ref(db), `banned/${currentUser}`));
-      if(bannedSnap.exists()){ await set(ref(db, `banned/${newName}`), bannedSnap.val()); await remove(ref(db, `banned/${currentUser}`)); }
-    } catch(e){ console.warn("ban check failed", e); }
+/* ----------------- MESSAGES ----------------- */
+function sendPost() {
+    let text = postInput.value.trim();
+    if (!text) return;
 
-    await remove(ref(db, `accounts/${currentUser}`));
-    currentUser = newName; saveSessionUser(newName);
-    msgEl.style.color="#b6ffb3"; msgEl.innerText = "Username changed successfully!";
-    // UI will update via onValue listener
-  }
+    let msg = {
+        user: currentUser,
+        text: text,
+        time: Date.now()
+    };
 
-  // ---------- Owner/Admin actions ----------
-  async function renderUsersTable(){
-    const tbody = document.querySelector("#usersTable tbody");
-    if(!tbody) return;
-    tbody.innerHTML = "";
-    const keys = Object.keys(accounts).sort((a,b)=> a.localeCompare(b));
-    keys.forEach(u => {
-      const tr = document.createElement("tr");
-      const tdName = document.createElement("td"); tdName.innerText = u;
-      const tdRole = document.createElement("td"); tdRole.innerText = accounts[u].role || "member";
-      const tdActions = document.createElement("td");
-      if(isOwner(currentUser)){
-        const btnMember = document.createElement("button"); btnMember.className="small"; btnMember.innerText="Member";
-        btnMember.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "member" }); };
-        const btnContrib = document.createElement("button"); btnContrib.className="small"; btnContrib.innerText="Contributor";
-        btnContrib.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "contributor" }); };
-        const btnAdmin = document.createElement("button"); btnAdmin.className="small"; btnAdmin.innerText="Admin";
-        btnAdmin.onclick = async ()=>{ await update(ref(db, `accounts/${u}`), { role: "admin" }); };
-        const btnDel = document.createElement("button"); btnDel.className="small danger"; btnDel.innerText="Delete";
-        btnDel.onclick = ()=>{ if(u===currentUser){ alert("Can't delete your own owner account here."); return; } deleteUser(u); };
-        tdActions.appendChild(btnMember); tdActions.appendChild(btnContrib); tdActions.appendChild(btnAdmin); tdActions.appendChild(btnDel);
-      } else {
-        tdActions.innerText = "-";
-      }
-      tr.appendChild(tdName); tr.appendChild(tdRole); tr.appendChild(tdActions); tbody.appendChild(tr);
+    db.ref("messages").push(msg);
+    postInput.value = "";
+}
+
+function loadMessages() {
+    db.ref("messages").on("value", snap => {
+        messages.innerHTML = "";
+        snap.forEach(child => {
+            let d = child.val();
+
+            let div = document.createElement("div");
+            div.className = "message";
+            div.innerHTML = `<b>${d.user}:</b> ${d.text}`;
+
+            messages.appendChild(div);
+        });
     });
-  }
-
-  async function adminSetRole(role){
-    if(!isOwner(currentUser)){ alert("Only owner"); return; }
-    const u = (document.getElementById("adminUser").value || "").trim(); if(!u || !accounts[u]){ alert("User not found"); return; }
-    if(accounts[u].role === "owner" && role !== "owner"){ alert("Cannot change owner here"); return; }
-    if(role === "owner"){
-      const curOwner = Object.keys(accounts).find(k=>accounts[k].role==="owner");
-      if(curOwner && curOwner !== currentUser){ alert("Owner exists; use transfer"); return; }
-    }
-    await update(ref(db, `accounts/${u}`), { role });
-    alert(`${u} set to ${role}`);
-  }
-
-  async function transferOwnership(){
-    if(!isOwner(currentUser)){ alert("Only owner"); return; }
-    const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User not found"); return; }
-    if(u === currentUser){ alert("You are already owner"); return; }
-    await update(ref(db, `accounts/${currentUser}`), { role: "member" });
-    await update(ref(db, `accounts/${u}`), { role: "owner" });
-    alert("Ownership transferred to " + u);
-  }
-
-  async function adminBanUser(){
-    if(!isOwner(currentUser)){ alert("Only owner"); return; }
-    const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User not found"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot ban owner"); return; }
-    await set(ref(db, `banned/${u}`), { bannedAt: Date.now() });
-    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
-    for(const t of topics){ if(t.user === u) await remove(ref(db, `topics/${t.id}`)); else {
-      const comments = t.comments || {}; for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
-    } }
-    alert(u + " has been banned and their messages removed.");
-  }
-
-  async function adminDeleteMessages(){
-    if(!isOwner(currentUser)){ alert("Only owner"); return; }
-    const u = (document.getElementById("adminUser").value || "").trim();
-    if(!u || !accounts[u]){ alert("User not found"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot delete owner's messages"); return; }
-    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
-    for(const t of topics){ 
-      if(t.user === u) await remove(ref(db, `topics/${t.id}`)); 
-      else {
-        const comments = t.comments || {};
-        for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
-      }
-    }
-    alert("Deleted messages for " + u);
-  }
-
-  async function deleteUser(u){
-    if(!isOwner(currentUser)){ alert("Only owner"); return; }
-    if(!accounts[u]){ alert("User not found"); return; }
-    if(accounts[u].role === "owner"){ alert("Cannot delete owner"); return; }
-    await remove(ref(db, `accounts/${u}`));
-    for(const p of posts){ if(p.user === u) await remove(ref(db, `posts/${p.id}`)); }
-    for(const t of topics){ if(t.user === u) await remove(ref(db, `topics/${t.id}`)); else {
-      const comments = t.comments || {}; for(const cid of Object.keys(comments)){ if(comments[cid].user === u) await remove(ref(db, `topics/${t.id}/comments/${cid}`)); }
-    } }
-    alert("Deleted " + u);
-  }
-
-  // ---------- DM utilities ----------
-  function makeChatId(a,b){ return [a,b].sort((x,y)=>x.localeCompare(y)).join("__"); }
-
-  function renderDMList(){
-    const container = document.getElementById("dmChatsContainer");
-    if(!container) return;
-    container.innerHTML = "";
-    if(!currentUser) { container.innerHTML = "<div class='muted'>Log in to see chats</div>"; return; }
-    const keys = Object.keys(dmChats).sort((a,b)=> a.localeCompare(b));
-    keys.forEach(chatId => {
-      const chat = dmChats[chatId];
-      const usersObj = chat.users || {};
-      const users = Array.isArray(chat.users) ? chat.users : Object.keys(usersObj);
-      if(!users.includes(currentUser)) return;
-      const other = users.find(u=>u!==currentUser) || "Unknown";
-      const el = document.createElement("div");
-      el.className = "dm-item";
-      if(window._selectedChatId === chatId) el.classList.add("active");
-      const lastMsgKey = chat.messages ? Object.keys(chat.messages).sort().slice(-1)[0] : null;
-      const lastMsg = lastMsgKey ? chat.messages[lastMsgKey] : null;
-      const preview = lastMsg ? (lastMsg.text.length>50 ? lastMsg.text.slice(0,47)+"..." : lastMsg.text) : "<no messages>";
-      el.innerHTML = `<div style="font-weight:700">${other}</div><div class="muted" style="font-size:0.85rem">${preview}</div>`;
-      el.onclick = () => { selectChat(chatId); };
-      container.appendChild(el);
-    });
-    if(container.innerHTML === "") container.innerHTML = "<div class='muted'>No chats yet. Start one above.</div>";
-  }
-
-  async function startChat(){
-    const target = (document.getElementById("dmStartUser").value || "").trim();
-    if(!currentUser){ alert("Log in first"); return; }
-    if(!target){ alert("Enter a username"); return; }
-    if(!accounts[target]){ alert("User not found"); return; }
-    if(target === currentUser){ alert("Can't chat with yourself"); return; }
-    const chatId = makeChatId(currentUser, target);
-    await set(ref(db, `dmChats/${chatId}/users`), { [currentUser]: true, [target]: true });
-    window._selectedChatId = chatId;
-    renderDMList();
-    renderChatMessages(chatId);
-    document.getElementById("dmStartUser").value = "";
-  }
-
-  function selectChat(chatId){
-    window._selectedChatId = chatId;
-    renderDMList();
-    renderChatMessages(chatId);
-  }
-
-  function renderChatMessages(chatId){
-    const box = document.getElementById("dmMessages");
-    const title = document.getElementById("dmChatTitle");
-    const parts = document.getElementById("dmChatParticipants");
-    box.innerHTML = ""; title.innerText = "No chat selected"; parts.innerText = "";
-    if(!chatId || !dmChats[chatId]) return;
-    const chat = dmChats[chatId];
-    const usersObj = chat.users || {};
-    const users = Array.isArray(chat.users) ? chat.users : Object.keys(usersObj);
-    const other = users.find(u=>u!==currentUser) || "Unknown";
-    title.innerText = other;
-    parts.innerText = users.join(", ");
-    const msgsObj = chat.messages || {};
-    const keys = Object.keys(msgsObj).sort((a,b)=> parseInt(a) - parseInt(b));
-    keys.forEach(k=>{
-      const m = msgsObj[k];
-      const mEl = document.createElement("div"); mEl.className="dm-message";
-      if(m.sender === currentUser) mEl.classList.add("me");
-      const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : "";
-      mEl.innerHTML = `<div style="font-size:0.9rem"><strong>${m.sender}</strong> <span class="muted"> ${timeStr}</span></div><div style="margin-top:6px">${m.text}</div>`;
-      box.appendChild(mEl);
-    });
-    box.scrollTop = box.scrollHeight;
-  }
-
-  async function sendDM(){
-    if(!currentUser){ alert("Log in first"); return; }
-    const chatId = window._selectedChatId;
-    const input = document.getElementById("dmMessageInput");
-    const textRaw = (input.value || "").trim();
-    if(!textRaw) return;
-    const text = filterBadWords(textRaw);
-    notifyMentions(textRaw);
-    if(!chatId){ alert("Select a chat or start one first."); return; }
-    const chatUsers = dmChats[chatId] && (dmChats[chatId].users || {});
-    if(!chatUsers || !chatUsers[currentUser]) {
-      const parts = chatId.split("__");
-      const u1 = parts[0], u2 = parts[1];
-      await set(ref(db, `dmChats/${chatId}/users`), { [u1]: true, [u2]: true });
-    }
-    const msgNode = push(ref(db, `dmChats/${chatId}/messages`));
-    await set(msgNode, { sender: currentUser, text, timestamp: Date.now() });
-    input.value = "";
-  }
-
-  // ---------- Expose functions globally ----------
-  window.showRegister = showRegister; window.showLogin = showLogin; window.register = register; window.login = login; window.logout = logout;
-  window.addPost = addPost; window.addTopic = addTopic; window.addUpdate = addUpdate; window.changeUsername = changeUsername;
-  window.changeRole = changeRole; window.adminSetRole = adminSetRole; window.adminBanUser = adminBanUser; window.adminDeleteMessages = adminDeleteMessages;
-  window.transferOwnership = transferOwnership; window.startChat = startChat; window.sendDM = sendDM; window.selectChat = selectChat;
-
-  // initial UI state: onValue listeners will open forum if session exists
+}
 </script>
+
 </body>
 </html>
