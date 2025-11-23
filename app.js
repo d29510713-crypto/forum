@@ -508,17 +508,24 @@ window.onload = function() {
     dmsList.innerHTML = "<p style='text-align:center; color:#888;'>Loading messages...</p>";
     
     try{
+      // Get all DMs for current user without orderBy to avoid index requirement
       const snapshot = await db.collection("dms")
         .where("toId", "==", currentUser.uid)
-        .orderBy("timestamp", "desc")
-        .limit(50)
         .get();
+      
+      // Convert to array and sort manually
+      const dms = [];
+      snapshot.forEach(doc => {
+        dms.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // Sort by timestamp descending
+      dms.sort((a, b) => b.timestamp - a.timestamp);
       
       dmsList.innerHTML = "";
       
-      snapshot.forEach(doc => {
-        const dm = doc.data();
-        
+      // Display sorted DMs
+      dms.slice(0, 50).forEach(dm => {
         const dmDiv = document.createElement("div");
         dmDiv.className = "dm-item";
         dmDiv.innerHTML = `
@@ -532,6 +539,7 @@ window.onload = function() {
       if(dmsList.innerHTML === "") dmsList.innerHTML = "<p style='text-align:center; color:#888;'>No messages</p>";
     }catch(e){
       dmsList.innerHTML = "<p style='text-align:center; color:red;'>Error loading DMs: " + e.message + "</p>";
+      console.error("DM Error:", e);
     }
   }
 
