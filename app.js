@@ -237,6 +237,22 @@ window.onload = function() {
       let query = db.collection("posts").orderBy("timestamp", "desc").limit(50);
       const snapshot = await query.get();
       
+      // Get all user data for role badges
+      const userDataCache = {};
+      const userIds = new Set();
+      snapshot.forEach(doc => userIds.add(doc.data().authorId));
+      
+      for(let userId of userIds) {
+        try {
+          const userDoc = await db.collection("users").doc(userId).get();
+          if(userDoc.exists) {
+            userDataCache[userId] = userDoc.data();
+          }
+        } catch(e) {
+          console.log("Could not fetch user:", userId);
+        }
+      }
+      
       postsList.innerHTML = "";
       
       snapshot.forEach(doc => {
@@ -252,13 +268,24 @@ window.onload = function() {
         const canModerate = isOwner || isModerator;
         const canDelete = post.authorId === currentUser.uid || canModerate;
         
+        // Get author role
+        const authorData = userDataCache[post.authorId];
+        let roleBadge = "";
+        if(authorData) {
+          if(authorData.email === "d29510713@gmail.com") {
+            roleBadge = '<span style="color:#ff6b35; text-shadow: 0 0 10px rgba(255,107,53,0.8);"> 👑 OWNER</span>';
+          } else if(authorData.moderator) {
+            roleBadge = '<span style="color:#00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.6);"> 🛡️ MOD</span>';
+          }
+        }
+        
         const postDiv = document.createElement("div");
         postDiv.className = "post";
         if(post.reported) postDiv.style.borderColor = "rgba(255, 0, 0, 0.6)";
         
         postDiv.innerHTML = `
           <div class="post-header">
-            <strong>${post.author}</strong> - ${post.category}
+            <strong>${post.author}${roleBadge}</strong> - ${post.category}
             ${post.reported ? '<span style="color:red;"> ⚠ REPORTED</span>' : ''}
             <span class="post-time">${new Date(post.timestamp).toLocaleString()}</span>
           </div>
