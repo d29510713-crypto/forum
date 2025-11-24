@@ -196,12 +196,33 @@ window.onload = function() {
     
     if(!content && !imageFile) return alert("Write something or upload an image!");
     
+    const postBtn = document.getElementById("postBtn");
+    postBtn.disabled = true;
+    postBtn.textContent = "Uploading...";
+    
     try{
       let imageUrl = null;
       if(imageFile){
-        const storageRef = storage.ref(`posts/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
-        const uploadTask = await storageRef.put(imageFile);
-        imageUrl = await uploadTask.ref.getDownloadURL();
+        // Upload to Imgur (FREE!)
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Client-ID 546c25a59c58ad7' // Public Imgur Client ID
+          },
+          body: formData
+        });
+        
+        const imgurData = await imgurResponse.json();
+        
+        if(imgurData.success) {
+          imageUrl = imgurData.data.link;
+          console.log("Image uploaded to Imgur:", imageUrl);
+        } else {
+          throw new Error("Image upload failed");
+        }
       }
       
       await db.collection("posts").add({
@@ -214,17 +235,27 @@ window.onload = function() {
         likes: 0,
         likedBy: [],
         reported: false,
-        reportCount: 0
+        reportCount: 0,
+        comments: [],
+        pinned: false,
+        edited: false
       });
       
       document.getElementById("postContent").value = "";
       document.getElementById("postImage").value = "";
       document.getElementById("previewImage").classList.add("hidden");
-      alert("Post created!");
+      document.getElementById("previewImage").src = "";
+      
+      postBtn.disabled = false;
+      postBtn.textContent = "Post";
+      
+      alert("Post created successfully!");
       loadPosts();
     }catch(e){
+      postBtn.disabled = false;
+      postBtn.textContent = "Post";
       alert("Error creating post: " + e.message);
-      console.error(e);
+      console.error("Full error:", e);
     }
   }
 
@@ -267,6 +298,7 @@ window.onload = function() {
         const isLiked = post.likedBy && post.likedBy.includes(currentUser.uid);
         const canModerate = isOwner || isModerator;
         const canDelete = post.authorId === currentUser.uid || canModerate;
+        const canEdit = post.authorId === currentUser.uid;
         
         // Get author role
         const authorData = userDataCache[post.authorId];
@@ -279,26 +311,50 @@ window.onload = function() {
           }
         }
         
+        // Time ago
+        const timeAgo = getTimeAgo(post.timestamp);
+        
+        // Pin badge
+        const pinBadge = post.pinned ? '<span style="color:#ffd700;">📌 PINNED</span>' : '';
+        
         const postDiv = document.createElement("div");
         postDiv.className = "post";
         if(post.reported) postDiv.style.borderColor = "rgba(255, 0, 0, 0.6)";
+        if(post.pinned) postDiv.style.borderColor = "rgba(255, 215, 0, 0.6)";
         
         postDiv.innerHTML = `
           <div class="post-header">
-            <strong>${post.author}${roleBadge}</strong> - ${post.category}
+            <strong>${post.author}${roleBadge}</strong> - ${post.category} ${pinBadge}
             ${post.reported ? '<span style="color:red;"> ⚠ REPORTED</span>' : ''}
-            <span class="post-time">${new Date(post.timestamp).toLocaleString()}</span>
+            ${post.edited ? '<span style="color:#888;font-size:12px;"> (edited)</span>' : ''}
+            <span class="post-time">${new Date(post.timestamp).toLocaleString()} (${timeAgo})</span>
           </div>
           ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
-          ${post.imageUrl ? `<img src="${post.imageUrl}" class="post-image" alt="Post image">` : ''}
+          ${post.imageUrl ? `<img src="${post.imageUrl}" class="post-image" alt="Post image" onclick="openImageModal('${post.imageUrl}')">` : ''}
+          ${post.comments && post.comments.length > 0 ? `
+            <div style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px;">
+              <strong style="color:#00d4ff;">💬 Comments (${post.comments.length}):</strong>
+              ${post.comments.map(c => `
+                <div style="margin:8px 0; padding:8px; background:rgba(0,0,0,0.2); border-left:2px solid #8a2be2; border-radius:5px;">
+                  <small style="color:#00d4ff;"><strong>${c.author}</strong> - ${new Date(c.timestamp).toLocaleString()}</small><br>
+                  <span style="color:#e0e0e0;">${escapeHtml(c.text)}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
           <div class="post-actions">
             <button onclick="likePost('${postId}')" style="background:${isLiked ? 'linear-gradient(135deg, #ff6b35, #f7931e)' : ''}">
               ${isLiked ? '❤️' : '👍'} ${post.likes || 0}
             </button>
+            <button onclick="commentOnPost('${postId}')">💬 Comment</button>
+            ${canEdit ? `<button onclick="editPost('${postId}', \`${escapeHtml(post.content || '').replace(/`/g, '\\`')}\`)">✏️ Edit</button>` : ''}
             ${canDelete ? `<button onclick="deletePost('${postId}')">🗑️ Delete</button>` : ''}
             ${!canModerate && post.authorId !== currentUser.uid ? 
               `<button onclick="reportPost('${postId}')">⚠️ Report</button>` : ''}
-            ${canModerate ? `<button onclick="warnUser('${post.authorId}', '${post.author}')">⚠️ Warn User</button>` : ''}
+            ${canModerate ? `
+              <button onclick="warnUser('${post.authorId}', '${post.author}')">⚠️ Warn</button>
+              ${!post.pinned ? `<button onclick="pinPost('${postId}')">📌 Pin</button>` : `<button onclick="unpinPost('${postId}')">📌 Unpin</button>`}
+            ` : ''}
           </div>
         `;
         postsList.appendChild(postDiv);
@@ -422,20 +478,16 @@ window.onload = function() {
       const postDoc = await db.collection("posts").doc(postId).get();
       const post = postDoc.data();
       
-      // Delete image from storage if exists
-      if(post.imageUrl){
-        try{
-          const imageRef = storage.refFromURL(post.imageUrl);
-          await imageRef.delete();
-        }catch(e){
-          console.log("Image already deleted or doesn't exist");
-        }
-      }
+      // Note: Imgur images can't be deleted with free API
+      // They will auto-delete after 6 months of no views
       
       await db.collection("posts").doc(postId).delete();
+      
+      alert("Post deleted!");
       loadPosts();
     }catch(e){
       alert("Error: " + e.message);
+      console.error("Delete error:", e);
     }
   }
 
@@ -576,25 +628,41 @@ window.onload = function() {
     updatesList.innerHTML = "<p style='text-align:center; color:#888;'>Loading updates...</p>";
     
     try{
-      const snapshot = await db.collection("updates")
-        .orderBy("timestamp", "desc")
-        .limit(20)
-        .get();
+      // Get all updates without orderBy to avoid index requirement
+      const snapshot = await db.collection("updates").get();
+      
+      // Convert to array and sort manually
+      const updates = [];
+      snapshot.forEach(doc => {
+        updates.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // Sort by timestamp descending
+      updates.sort((a, b) => b.timestamp - a.timestamp);
       
       updatesList.innerHTML = "";
       
-      snapshot.forEach(doc => {
-        const update = doc.data();
-        const updateId = doc.id;
-        
+      // Display sorted updates
+      updates.slice(0, 20).forEach(update => {
         const updateDiv = document.createElement("div");
         updateDiv.className = "update-item";
+        
+        // Calculate time ago
+        const timeAgo = getTimeAgo(update.timestamp);
+        
+        // Add pin emoji if pinned
+        const pinnedBadge = update.pinned ? '<span style="color:#ffd700;">📌 PINNED</span> ' : '';
+        
         updateDiv.innerHTML = `
-          <h3>${escapeHtml(update.title)}</h3>
+          <h3>${pinnedBadge}${escapeHtml(update.title)}</h3>
           <div>${escapeHtml(update.content)}</div>
-          <span>${new Date(update.timestamp).toLocaleString()}</span>
-          ${isOwner || isModerator ? 
-            `<button onclick="deleteUpdate('${updateId}')">Delete</button>` : ''}
+          <span>${new Date(update.timestamp).toLocaleString()} (${timeAgo})</span>
+          ${isOwner || isModerator ? `
+            <div style="margin-top:10px;">
+              ${!update.pinned ? `<button onclick="pinUpdate('${update.id}')">📌 Pin</button>` : `<button onclick="unpinUpdate('${update.id}')">📌 Unpin</button>`}
+              <button onclick="deleteUpdate('${update.id}')">🗑️ Delete</button>
+            </div>
+          ` : ''}
         `;
         updatesList.appendChild(updateDiv);
       });
@@ -602,7 +670,25 @@ window.onload = function() {
       if(updatesList.innerHTML === "") updatesList.innerHTML = "<p style='text-align:center; color:#888;'>No updates yet</p>";
     }catch(e){
       updatesList.innerHTML = "<p style='text-align:center; color:red;'>Error loading updates: " + e.message + "</p>";
+      console.error("Updates Error:", e);
     }
+  }
+
+  // Helper function to get "time ago" string
+  function getTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    const years = Math.floor(months / 12);
+    return `${years}y ago`;
   }
 
   // ================= MODERATION FUNCTIONS =================
@@ -657,16 +743,105 @@ window.onload = function() {
     
     if(!title || !content) return alert("Fill in all fields");
     
+    // Ask for category and priority
+    const category = prompt("Category (e.g., Feature, Bug Fix, News, Maintenance):", "News");
+    const priorityOptions = "Choose priority:\n1. High\n2. Medium\n3. Low";
+    const priorityChoice = prompt(priorityOptions, "2");
+    
+    let priority = 'medium';
+    if(priorityChoice === '1') priority = 'high';
+    else if(priorityChoice === '3') priority = 'low';
+    
     try{
       await db.collection("updates").add({
         title,
         content,
-        timestamp: Date.now()
+        category: category || 'General',
+        priority,
+        timestamp: Date.now(),
+        pinned: false,
+        author: currentUsername,
+        reactions: {
+          like: 0,
+          love: 0,
+          fire: 0,
+          rocket: 0
+        }
       });
       
       document.getElementById("updateTitle").value = "";
       document.getElementById("updateContent").value = "";
       alert("Update created!");
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Pin/Unpin updates
+  window.pinUpdate = async function(updateId){
+    try{
+      await db.collection("updates").doc(updateId).update({pinned: true});
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.unpinUpdate = async function(updateId){
+    try{
+      await db.collection("updates").doc(updateId).update({pinned: false});
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Edit update
+  window.editUpdate = async function(updateId){
+    try{
+      const updateDoc = await db.collection("updates").doc(updateId).get();
+      const update = updateDoc.data();
+      
+      const newTitle = prompt("Edit title:", update.title);
+      if(!newTitle) return;
+      
+      const newContent = prompt("Edit content:", update.content);
+      if(!newContent) return;
+      
+      const category = prompt("Category:", update.category);
+      const priorityOptions = "Choose priority:\n1. High\n2. Medium\n3. Low";
+      const priorityChoice = prompt(priorityOptions, update.priority === 'high' ? '1' : update.priority === 'low' ? '3' : '2');
+      
+      let priority = 'medium';
+      if(priorityChoice === '1') priority = 'high';
+      else if(priorityChoice === '3') priority = 'low';
+      
+      await db.collection("updates").doc(updateId).update({
+        title: newTitle,
+        content: newContent,
+        category: category || 'General',
+        priority
+      });
+      
+      alert("Update edited!");
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // React to update
+  window.reactToUpdate = async function(updateId, reactionType){
+    try{
+      const updateRef = db.collection("updates").doc(updateId);
+      const updateDoc = await updateRef.get();
+      const update = updateDoc.data();
+      
+      const reactions = update.reactions || { like: 0, love: 0, fire: 0, rocket: 0 };
+      reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+      
+      await updateRef.update({ reactions });
       loadUpdates();
     }catch(e){
       alert("Error: " + e.message);
@@ -720,6 +895,182 @@ window.onload = function() {
     }catch(e){
       alert("Error: " + e.message);
     }
+  }
+
+  // ================= NEW FEATURES =================
+  
+  // Comment on post
+  window.commentOnPost = async function(postId){
+    const commentText = prompt("Write your comment:");
+    if(!commentText) return;
+    
+    try{
+      const postRef = db.collection("posts").doc(postId);
+      const postDoc = await postRef.get();
+      const post = postDoc.data();
+      
+      const comments = post.comments || [];
+      comments.push({
+        author: currentUsername,
+        authorId: currentUser.uid,
+        text: commentText,
+        timestamp: Date.now()
+      });
+      
+      await postRef.update({ comments });
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Edit post
+  window.editPost = async function(postId, currentContent){
+    const newContent = prompt("Edit your post:", currentContent);
+    if(!newContent || newContent === currentContent) return;
+    
+    try{
+      await db.collection("posts").doc(postId).update({
+        content: newContent,
+        edited: true
+      });
+      alert("Post updated!");
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Pin/Unpin post (moderator only)
+  window.pinPost = async function(postId){
+    try{
+      await db.collection("posts").doc(postId).update({ pinned: true });
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.unpinPost = async function(postId){
+    try{
+      await db.collection("posts").doc(postId).update({ pinned: false });
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Image modal viewer
+  window.openImageModal = function(imageUrl){
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      cursor: pointer;
+      animation: fadeIn 0.3s ease-out;
+    `;
+    
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: relative;
+      max-width: 95%;
+      max-height: 95%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.style.cssText = `
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 0 50px rgba(138, 43, 226, 0.8);
+      animation: zoomIn 0.3s ease-out;
+    `;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕ Close';
+    closeBtn.style.cssText = `
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: linear-gradient(135deg, #8a2be2, #4b0082);
+      border: 2px solid rgba(138, 43, 226, 0.8);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+    `;
+    
+    const downloadBtn = document.createElement('button');
+    downloadBtn.innerHTML = '⬇️ Download';
+    downloadBtn.style.cssText = closeBtn.style.cssText;
+    downloadBtn.style.background = 'linear-gradient(135deg, #ff6b35, #f7931e)';
+    downloadBtn.style.marginLeft = '10px';
+    
+    downloadBtn.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'toasty-image-' + Date.now() + '.jpg';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } catch(e) {
+        alert('Could not download image');
+      }
+    };
+    
+    const btnContainer = document.createElement('div');
+    btnContainer.style.cssText = 'display: flex; gap: 10px; margin-top: 20px;';
+    btnContainer.appendChild(downloadBtn);
+    btnContainer.appendChild(closeBtn);
+    
+    container.appendChild(img);
+    container.appendChild(btnContainer);
+    modal.appendChild(container);
+    
+    closeBtn.onclick = () => modal.remove();
+    modal.onclick = (e) => {
+      if(e.target === modal) modal.remove();
+    };
+    
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes zoomIn {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(modal);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    modal.addEventListener('remove', () => {
+      document.body.style.overflow = 'auto';
+    });
   }
 
 };
