@@ -1,6 +1,6 @@
 window.onload = function() {
 
-  window.onload = function() {
+window.onload = function() {
   console.log("App loaded!");
 
   // ================= STARS =================
