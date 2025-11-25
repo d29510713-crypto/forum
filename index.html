@@ -2,324 +2,57 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Toasty Forum</title>
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Courier New', monospace;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #000000 100%);
-  color: #e0e0e0;
-  min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
-}
-
-#stars {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.star {
-  position: absolute;
-  background: white;
-  border-radius: 50%;
-  animation: twinkle 3s infinite;
-}
-
-@keyframes twinkle {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
-.panel {
-  position: relative;
-  z-index: 1;
-  max-width: 900px;
-  margin: 30px auto;
-  padding: 30px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 3px solid rgba(138, 43, 226, 0.6);
-  border-radius: 15px;
-  box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
-}
-
-h1 {
-  text-align: center;
-  color: #00d4ff;
-  text-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
-  margin-bottom: 20px;
-  font-size: 2.5em;
-}
-
-h2 {
-  color: #8a2be2;
-  margin: 15px 0;
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(138, 43, 226, 0.5);
-  border-radius: 8px;
-  color: #e0e0e0;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-}
-
-button {
-  padding: 12px 25px;
-  margin: 8px 5px 8px 0;
-  background: linear-gradient(135deg, #8a2be2, #4b0082);
-  border: 2px solid rgba(138, 43, 226, 0.8);
-  border-radius: 10px;
-  color: #fff;
-  font-weight: bold;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
-}
-
-button:hover {
-  background: linear-gradient(135deg, #9d4edd, #5a189a);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.tabs button {
-  flex: 1;
-  min-width: 120px;
-  background: rgba(138, 43, 226, 0.3);
-  border: 2px solid rgba(138, 43, 226, 0.5);
-}
-
-.tabs button.active {
-  background: linear-gradient(135deg, #8a2be2, #4b0082);
-  border-color: #00d4ff;
-  box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
-}
-
-.hidden {
-  display: none !important;
-}
-
-.post, .user-item, .dm-item, .update-item, .leaderboard-item {
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(138, 43, 226, 0.4);
-  border-radius: 12px;
-  padding: 15px;
-  margin: 15px 0;
-  transition: all 0.3s ease;
-}
-
-.post:hover, .user-item:hover, .dm-item:hover, .update-item:hover {
-  border-color: rgba(0, 212, 255, 0.6);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.post-time {
-  color: #888;
-  font-size: 12px;
-}
-
-.post-content {
-  margin: 12px 0;
-  line-height: 1.6;
-  color: #e0e0e0;
-  word-wrap: break-word;
-}
-
-.post-image {
-  max-width: 100%;
-  border-radius: 10px;
-  margin: 10px 0;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-  border: 2px solid rgba(138, 43, 226, 0.3);
-}
-
-.post-image:hover {
-  transform: scale(1.02);
-  border-color: rgba(0, 212, 255, 0.6);
-}
-
-#previewImage {
-  max-width: 300px;
-  max-height: 300px;
-  border-radius: 10px;
-  margin: 10px 0;
-  border: 2px solid rgba(138, 43, 226, 0.5);
-}
-
-.post-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-
-.post-actions button {
-  padding: 8px 15px;
-  font-size: 13px;
-  flex: 0 1 auto;
-}
-
-.user-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.dm-item {
-  border-left: 4px solid #8a2be2;
-}
-
-.update-item h3 {
-  color: #00d4ff;
-  margin-bottom: 10px;
-}
-
-.owner-btn {
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  border-color: rgba(255, 107, 53, 0.8);
-}
-
-.owner-btn:hover {
-  background: linear-gradient(135deg, #ff8555, #ffa43e);
-}
-
-.forgot {
-  color: #00d4ff;
-  cursor: pointer;
-  text-align: center;
-  margin-top: 10px;
-  font-size: 13px;
-}
-
-.forgot:hover {
-  text-decoration: underline;
-}
-
-p {
-  margin: 10px 0;
-  color: #b0b0b0;
-}
-
-#ownerControls {
-  margin-top: 30px;
-  padding: 20px;
-  background: rgba(255, 107, 53, 0.1);
-  border: 2px solid rgba(255, 107, 53, 0.3);
-  border-radius: 12px;
-}
-
-@media (max-width: 768px) {
-  .panel {
-    margin: 15px;
-    padding: 20px;
-  }
-  
-  h1 {
-    font-size: 1.8em;
-  }
-  
-  .tabs {
-    flex-direction: column;
-  }
-  
-  .tabs button {
-    width: 100%;
-  }
-  
-  .post-actions {
-    flex-direction: column;
-  }
-  
-  .post-actions button {
-    width: 100%;
-  }
-}
-</style>
+<title>Toasty Black Hole Forum</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="blackhole"></div>
 <div id="stars"></div>
+
+<!-- LOGIN/REGISTER -->
 <div id="box" class="panel">
-  <h1>🔥 Toasty Login</h1>
+  <h1>🔥 Welcome to Toasty</h1>
   <div id="registerBox">
-    <h2>Register</h2>
-    <input id="regEmail" placeholder="Email">
-    <input id="regPass" type="password" placeholder="Password">
+    <h2>Create Account</h2>
+    <p style="color:#888; font-size:14px;">You'll need to verify your email address</p>
+    <input id="regEmail" placeholder="Email" type="email">
+    <input id="regPass" type="password" placeholder="Password (min 6 characters)">
     <input id="regUsername" placeholder="Username">
     <button id="registerBtn">Register</button>
-    <p style="cursor:pointer;" id="toggleToLogin">Already have an account? Login</p>
+    <p style="cursor:pointer; color:#00d4ff;" id="toggleToLogin">Already have an account? <strong>Login</strong></p>
   </div>
   <div id="loginBox" class="hidden">
-    <h2>Login</h2>
-    <input id="logEmail" placeholder="Email">
+    <h2>Welcome Back!</h2>
+    <p style="color:#888; font-size:14px;">Login to your account</p>
+    <input id="logEmail" placeholder="Email" type="email">
     <input id="logPass" type="password" placeholder="Password">
     <button id="loginBtn">Login</button>
-    <p style="cursor:pointer;" id="toggleToRegister">Don't have an account? Register</p>
+    <p style="cursor:pointer; color:#00d4ff;" id="toggleToRegister">Need an account? <strong>Register</strong></p>
     <p class="forgot" id="forgotPass">Forgot Password?</p>
   </div>
 </div>
+
+<!-- MAIN FORUM -->
 <div id="forum" class="panel hidden">
-  <h1>🔥 Toasty Forum</h1>
-  <div class="tabs">
-    <button id="tabPosts" class="active">Posts</button>
-    <button id="tabUsers">Users</button>
-    <button id="tabDMs">DMs</button>
-    <button id="tabUpdates">Updates</button>
-    <button id="tabSuggestions">Suggestions</button>
-    <button id="tabLeaderboard">🏆 Leaderboard</button>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h1 style="margin:0;">🔥 Toasty Black Hole</h1>
+    <button onclick="setCustomStatus()" style="padding:8px 20px; background:linear-gradient(135deg, #8a2be2, #4b0082);">
+      ⚙️ Set Status
+    </button>
   </div>
   
-  <!-- POSTS SECTION -->
+  <div class="tabs">
+    <button id="tabPosts" class="active">📝 Posts</button>
+    <button id="tabUsers">👥 Users</button>
+    <button id="tabDMs">💬 DMs</button>
+    <button id="tabUpdates">📢 Updates</button>
+    <button id="tabSuggestions">💡 Ideas</button>
+    <button id="tabLeaderboard">🏆 Ranks</button>
+  </div>
+  
+  <!-- REST OF YOUR SECTIONS HERE (same as before) -->
   <div id="postsSection" class="section">
     <h2>Posts</h2>
-    
-    <!-- Filters and Sort -->
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
       <select id="categoryFilter" style="flex:1; min-width:150px;">
         <option value="all">All Categories</option>
@@ -339,8 +72,6 @@ p {
         <option value="discussed">Most Discussed</option>
       </select>
     </div>
-    
-    <!-- Create Post -->
     <select id="postCategory">
       <option value="General">General</option>
       <option value="Space">Space</option>
@@ -352,71 +83,62 @@ p {
       <option value="Art">Art</option>
       <option value="Memes">Memes</option>
     </select><br>
-    <textarea id="postContent" placeholder="Write something..."></textarea><br>
+    <textarea id="postContent" placeholder="Share something with the community..."></textarea><br>
     <input type="file" id="postImage" accept="image/*"><br>
     <img id="previewImage" class="hidden">
     <button id="postBtn">Post</button>
-    <button id="createPollBtn" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">📊 Create Poll</button>
+    <button onclick="createPoll()" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">📊 Create Poll</button>
     <br>
     <input id="searchPost" placeholder="🔍 Search posts"><br>
     <div id="postsList"></div>
   </div>
   
-  <!-- USERS SECTION -->
   <div id="usersSection" class="section hidden">
-    <h2>Users</h2>
-    <input id="searchUser" placeholder="🔍 Search users by username"><br>
+    <h2>Community Members</h2>
+    <input id="searchUser" placeholder="🔍 Search users"><br>
     <div id="usersList"></div>
   </div>
   
-  <!-- DMS SECTION -->
   <div id="dmsSection" class="section hidden">
     <h2>Direct Messages</h2>
-    <input id="dmToUsername" placeholder="Send to (username)">
-    <textarea id="dmContent" placeholder="Message..."></textarea><br>
-    <button id="dmBtn">Send DM</button>
+    <input id="dmToUsername" placeholder="Username">
+    <textarea id="dmContent" placeholder="Type your message..."></textarea><br>
+    <button id="dmBtn">Send Message</button>
     <div id="dmsList"></div>
   </div>
   
-  <!-- UPDATES SECTION -->
   <div id="updatesSection" class="section hidden">
-    <h2>Updates & News</h2>
+    <h2>Updates & Announcements</h2>
     <div id="updatesList"></div>
     <div id="ownerControls" class="hidden">
-      <h3>Owner Controls</h3>
+      <h3>Admin Controls</h3>
       <input id="updateTitle" placeholder="Update Title">
       <textarea id="updateContent" placeholder="Update Content"></textarea><br>
-      <button id="createUpdateBtn" class="owner-btn">Create Update</button>
-      <button id="clearForumBtn" class="owner-btn">Clear All Content</button>
+      <button id="createUpdateBtn" class="owner-btn">Post Update</button>
+      <button id="clearForumBtn" class="owner-btn">Clear Forum</button>
       <button id="banUserBtn" class="owner-btn">Ban User</button>
-      <button id="makeModBtn" class="owner-btn">Make Moderator</button>
     </div>
   </div>
   
-  <!-- SUGGESTIONS SECTION -->
   <div id="suggestionsSection" class="section hidden">
-    <h2>💡 Suggestions</h2>
-    <p style="color:#888; font-size:14px;">Submit your ideas to improve the forum!</p>
-    
+    <h2>💡 Community Ideas</h2>
+    <p style="color:#888; font-size:14px;">Share your suggestions!</p>
     <input id="suggestionTitle" placeholder="Suggestion Title" style="margin-top:15px;">
-    <textarea id="suggestionDesc" placeholder="Describe your suggestion..."></textarea><br>
-    <button id="submitSuggestion" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">Submit Suggestion</button>
-    
-    <h3 style="margin-top:30px;">Community Suggestions</h3>
+    <textarea id="suggestionDesc" placeholder="Describe your idea..."></textarea><br>
+    <button id="submitSuggestion" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">Submit</button>
+    <h3 style="margin-top:30px;">All Suggestions</h3>
     <div id="suggestionsList"></div>
   </div>
   
-  <!-- LEADERBOARD SECTION -->
   <div id="leaderboardSection" class="section hidden">
-    <h2>🏆 Leaderboard</h2>
-    <p style="color:#888; font-size:14px; margin-bottom:20px;">Top contributors ranked by activity and engagement!</p>
+    <h2>🏆 Top Contributors</h2>
+    <p style="color:#888; font-size:14px; margin-bottom:20px;">Ranked by activity and engagement!</p>
     <div id="leaderboardList"></div>
   </div>
   
   <button id="logoutBtn">Log Out</button>
 </div>
 
-<!-- Firebase SDKs v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
