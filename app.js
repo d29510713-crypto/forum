@@ -209,10 +209,18 @@ window.onload = function() {
         return;
       }
       
-      img.src=URL.createObjectURL(file); 
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
       img.classList.remove("hidden");
+      
+      // Clean up old object URL when new one is created
+      img.onload = function() {
+        URL.revokeObjectURL(objectUrl);
+      };
     } else {
       img.classList.add("hidden");
+      img.src = "";
     }
   }
 
@@ -231,25 +239,36 @@ window.onload = function() {
     try{
       let imageUrl = null;
       if(imageFile){
-        // Upload to Imgur (FREE!)
+        // Convert image to base64 for better compatibility
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        
+        const base64Data = await base64Promise;
+        
+        // Upload to Imgur with better error handling
         const formData = new FormData();
-        formData.append('image', imageFile);
+        formData.append('image', base64Data);
+        formData.append('type', 'base64');
         
         const imgurResponse = await fetch('https://api.imgur.com/3/image', {
           method: 'POST',
           headers: {
-            'Authorization': 'Client-ID 546c25a59c58ad7' // Public Imgur Client ID
+            'Authorization': 'Client-ID 546c25a59c58ad7'
           },
           body: formData
         });
         
         const imgurData = await imgurResponse.json();
         
-        if(imgurData.success) {
+        if(imgurData.success && imgurData.data && imgurData.data.link) {
           imageUrl = imgurData.data.link;
-          console.log("Image uploaded to Imgur:", imageUrl);
+          console.log("Image uploaded successfully:", imageUrl);
         } else {
-          throw new Error("Image upload failed");
+          throw new Error(imgurData.data?.error || "Image upload failed");
         }
       }
       
@@ -266,7 +285,8 @@ window.onload = function() {
         reportCount: 0,
         comments: [],
         pinned: false,
-        edited: false
+        edited: false,
+        bookmarkedBy: []
       });
       
       document.getElementById("postContent").value = "";
@@ -398,7 +418,14 @@ window.onload = function() {
             <span class="post-time">${new Date(post.timestamp).toLocaleString()} (${timeAgo})</span>
           </div>
           ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
-          ${post.imageUrl ? `<img src="${post.imageUrl}" class="post-image" alt="Post image" onclick="openImageModal('${post.imageUrl}')">` : ''}
+          ${post.imageUrl ? `
+            <img src="${post.imageUrl}" 
+                 class="post-image" 
+                 alt="Post image" 
+                 loading="lazy"
+                 onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\\"padding:20px; text-align:center; color:#888; background:rgba(0,0,0,0.3); border-radius:8px; margin:10px 0;\\">🖼️ Image failed to load</div>');"
+                 onclick="openImageModal('${post.imageUrl}')">
+          ` : ''}
           ${post.poll ? renderPoll(post.poll, postId) : ''}
           ${post.comments && post.comments.length > 0 ? `
             <div style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px;">
