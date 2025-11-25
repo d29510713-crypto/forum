@@ -416,7 +416,168 @@ window.onload = function() {
   }
 
   function loadUsers() {
-    document.getElementById("usersList").innerHTML = "<p style='text-align:center; color:#888;'>Users list coming soon...</p>";
+    const usersList = document.getElementById("usersList");
+    usersList.innerHTML = "<p style='text-align:center; color:#888;'>Loading users...</p>";
+    
+    db.collection("users").get().then(snapshot => {
+      usersList.innerHTML = "";
+      
+      const onlineUsers = [];
+      const offlineUsers = [];
+      
+      snapshot.forEach(doc => {
+        const user = doc.data();
+        const userId = doc.id;
+        const userData = { userId, ...user };
+        
+        if(user.status === 'online') {
+          onlineUsers.push(userData);
+        } else {
+          offlineUsers.push(userData);
+        }
+      });
+      
+      if(onlineUsers.length > 0) {
+        const onlineHeader = document.createElement("div");
+        onlineHeader.style.cssText = "color:#00d4ff; font-weight:bold; margin:15px 0 5px 0; font-size:14px;";
+        onlineHeader.innerHTML = `🟢 ONLINE — ${onlineUsers.length}`;
+        usersList.appendChild(onlineHeader);
+        onlineUsers.forEach(user => renderUserItem(user, usersList));
+      }
+      
+      if(offlineUsers.length > 0) {
+        const offlineHeader = document.createElement("div");
+        offlineHeader.style.cssText = "color:#888; font-weight:bold; margin:15px 0 5px 0; font-size:14px;";
+        offlineHeader.innerHTML = `⚫ OFFLINE — ${offlineUsers.length}`;
+        usersList.appendChild(offlineHeader);
+        offlineUsers.forEach(user => renderUserItem(user, usersList));
+      }
+    }).catch(e => {
+      usersList.innerHTML = "<p style='text-align:center; color:red;'>Error: " + e.message + "</p>";
+    });
+  }
+
+  function renderUserItem(user, container) {
+    const userId = user.userId;
+    const statusColor = user.status === 'online' ? '#00ff00' : '#888';
+    const statusDot = `<span style="display:inline-block; width:10px; height:10px; background:${statusColor}; border-radius:50%; margin-right:5px;"></span>`;
+    const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8a2be2&color=fff&size=64`;
+    
+    // Check if user is the owner
+    const isUserOwner = (user.email === "d29510713@gmail.com");
+    
+    const userDiv = document.createElement("div");
+    userDiv.className = "user-item";
+    userDiv.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(138, 43, 226, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 8px 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    `;
+    
+    userDiv.innerHTML = `
+      <img src="${avatar}" 
+           style="width:48px; height:48px; border-radius:50%; border:2px solid ${statusColor};"
+           onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8a2be2&color=fff&size=64'">
+      <div style="flex:1;">
+        <div>
+          ${statusDot}
+          <strong style="color:#fff; font-size:16px;">${user.username}</strong>
+          ${isUserOwner ? '<span style="color:#ff6b35; text-shadow: 0 0 10px rgba(255,107,53,0.8);"> 👑 OWNER</span>' : ''}
+          ${user.moderator && !isUserOwner ? '<span style="color:#00d4ff;"> 🛡️ MOD</span>' : ''}
+          ${user.banned ? '<span style="color:red;"> 🚫 BANNED</span>' : ''}
+          ${userId === currentUser.uid ? '<span style="color:#ffd700;"> (You)</span>' : ''}
+        </div>
+        ${user.customStatus ? `<div style="color:#888; font-size:13px; margin-top:3px;">${escapeHtml(user.customStatus)}</div>` : ''}
+        <div style="color:#888; font-size:12px; margin-top:3px;">
+          ${user.status === 'online' ? 'Online' : user.lastSeen ? `Last seen ${getTimeAgo(user.lastSeen)}` : 'Offline'}
+        </div>
+      </div>
+      ${(isOwner || isModerator) && userId !== currentUser.uid && !isUserOwner ? `
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          ${isOwner && !user.moderator ? `<button onclick="makeModerator('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Make Mod</button>` : ''}
+          ${isOwner && user.moderator ? `<button onclick="removeModerator('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Remove Mod</button>` : ''}
+          ${!user.banned ? `<button onclick="banUser('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Ban</button>` : ''}
+          ${user.banned ? `<button onclick="unbanUser('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Unban</button>` : ''}
+        </div>
+      ` : userId !== currentUser.uid && !isUserOwner ? `
+        <button onclick="openDMWithUser('${user.username}')" style="padding:6px 12px; font-size:12px; background:linear-gradient(135deg, #00d4ff, #0099cc);">💬 Message</button>
+      ` : isUserOwner && userId !== currentUser.uid ? `
+        <span style="color:#888; font-size:12px;">Cannot moderate owner</span>
+      ` : ''}
+    `;
+    
+    container.appendChild(userDiv);
+  }
+
+  window.openDMWithUser = function(username) {
+    document.getElementById("dmToUsername").value = username;
+    showTab('dms');
+  }
+
+  window.makeModerator = async function(userId, username){
+    if(!isOwner) {
+      alert("Only the owner can make moderators");
+      return;
+    }
+    if(!confirm(`Make ${username} a moderator?`)) return;
+    try{
+      await db.collection("users").doc(userId).update({moderator: true});
+      alert(`${username} is now a moderator!`);
+      loadUsers();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.removeModerator = async function(userId, username){
+    if(!isOwner) {
+      alert("Only the owner can remove moderators");
+      return;
+    }
+    if(!confirm(`Remove ${username} as moderator?`)) return;
+    try{
+      await db.collection("users").doc(userId).update({moderator: false});
+      alert(`${username} is no longer a moderator`);
+      loadUsers();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.banUser = async function(userId, username){
+    // Check if trying to ban owner
+    const userDoc = await db.collection("users").doc(userId).get();
+    if(userDoc.exists && userDoc.data().email === "d29510713@gmail.com") {
+      alert("❌ Cannot ban the owner!");
+      return;
+    }
+    
+    if(!confirm(`Ban ${username}?`)) return;
+    try{
+      await db.collection("users").doc(userId).update({banned: true});
+      alert(`${username} has been banned`);
+      loadUsers();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.unbanUser = async function(userId, username){
+    if(!confirm(`Unban ${username}?`)) return;
+    try{
+      await db.collection("users").doc(userId).update({banned: false, warnings: 0});
+      alert(`${username} has been unbanned`);
+      loadUsers();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
   }
 
   function loadDMs() {
@@ -428,11 +589,243 @@ window.onload = function() {
   }
 
   function loadSuggestions() {
-    document.getElementById("suggestionsList").innerHTML = "<p style='text-align:center; color:#888;'>Suggestions coming soon...</p>";
+    const suggestionsList = document.getElementById("suggestionsList");
+    suggestionsList.innerHTML = "<p style='text-align:center; color:#888;'>Loading suggestions...</p>";
+    
+    db.collection("suggestions").get().then(snapshot => {
+      const suggestions = [];
+      snapshot.forEach(doc => {
+        suggestions.push({ id: doc.id, ...doc.data() });
+      });
+      
+      suggestions.sort((a, b) => {
+        if(a.status === 'pending' && b.status !== 'pending') return -1;
+        if(a.status !== 'pending' && b.status === 'pending') return 1;
+        return (b.upvotes || 0) - (a.upvotes || 0);
+      });
+      
+      suggestionsList.innerHTML = "";
+      
+      suggestions.forEach(sug => {
+        const sugDiv = document.createElement("div");
+        sugDiv.className = "post";
+        
+        let statusColor = "#888";
+        let statusText = sug.status || 'pending';
+        if(statusText === 'approved') statusColor = "#00d4ff";
+        if(statusText === 'implemented') statusColor = "#00ff00";
+        if(statusText === 'rejected') statusColor = "#ff0000";
+        
+        const userUpvoted = sug.upvotedBy && sug.upvotedBy.includes(currentUser.uid);
+        
+        sugDiv.innerHTML = `
+          <div class="post-header">
+            <div>
+              <strong>${sug.author}</strong>
+              <span style="color:${statusColor}; font-weight:bold; margin-left:10px;">
+                ${statusText.toUpperCase()}
+              </span>
+            </div>
+            <span class="post-time">${new Date(sug.timestamp).toLocaleString()}</span>
+          </div>
+          <div class="post-content"><strong>${escapeHtml(sug.title)}</strong></div>
+          <div class="post-content">${escapeHtml(sug.description)}</div>
+          <div class="post-actions">
+            <button onclick="upvoteSuggestion('${sug.id}')" 
+              style="background:${userUpvoted ? 'linear-gradient(135deg, #ff6b35, #f7931e)' : ''}">
+              👍 ${sug.upvotes || 0}
+            </button>
+            ${isOwner || isModerator ? `
+              <button onclick="updateSuggestionStatus('${sug.id}', 'approved')">✅ Approve</button>
+              <button onclick="updateSuggestionStatus('${sug.id}', 'implemented')">🎉 Implement</button>
+              <button onclick="updateSuggestionStatus('${sug.id}', 'rejected')">❌ Reject</button>
+              <button onclick="deleteSuggestion('${sug.id}')">🗑️</button>
+            ` : ''}
+          </div>
+        `;
+        suggestionsList.appendChild(sugDiv);
+      });
+      
+      if(suggestionsList.innerHTML === "") {
+        suggestionsList.innerHTML = "<p style='text-align:center; color:#888;'>No suggestions yet</p>";
+      }
+    }).catch(e => {
+      suggestionsList.innerHTML = "<p style='text-align:center; color:red;'>Error: " + e.message + "</p>";
+    });
+  }
+
+  // Submit suggestion
+  const submitSuggestionBtn = document.getElementById("submitSuggestion");
+  if(submitSuggestionBtn) {
+    submitSuggestionBtn.onclick = async function() {
+      const title = document.getElementById("suggestionTitle").value;
+      const description = document.getElementById("suggestionDesc").value;
+      
+      if(!title || !description) return alert("Fill in all fields");
+      
+      try{
+        await db.collection("suggestions").add({
+          title,
+          description,
+          author: currentUsername,
+          authorId: currentUser.uid,
+          timestamp: Date.now(),
+          status: 'pending',
+          upvotes: 0,
+          upvotedBy: []
+        });
+        
+        document.getElementById("suggestionTitle").value = "";
+        document.getElementById("suggestionDesc").value = "";
+        alert("Suggestion submitted!");
+        loadSuggestions();
+      }catch(e){
+        alert("Error: " + e.message);
+      }
+    };
+  }
+
+  window.upvoteSuggestion = async function(sugId){
+    try{
+      const sugRef = db.collection("suggestions").doc(sugId);
+      const sugDoc = await sugRef.get();
+      const sug = sugDoc.data();
+      
+      let upvotedBy = sug.upvotedBy || [];
+      let upvotes = sug.upvotes || 0;
+      
+      if(upvotedBy.includes(currentUser.uid)){
+        upvotedBy = upvotedBy.filter(uid => uid !== currentUser.uid);
+        upvotes--;
+      } else {
+        upvotedBy.push(currentUser.uid);
+        upvotes++;
+      }
+      
+      await sugRef.update({ upvotes, upvotedBy });
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.updateSuggestionStatus = async function(sugId, status){
+    try{
+      await db.collection("suggestions").doc(sugId).update({ status });
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.deleteSuggestion = async function(sugId){
+    if(!confirm("Delete this suggestion?")) return;
+    try{
+      await db.collection("suggestions").doc(sugId).delete();
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
   }
 
   function loadLeaderboard() {
     document.getElementById("leaderboardList").innerHTML = "<p style='text-align:center; color:#888;'>Leaderboard coming soon...</p>";
+  }
+
+  // ================= POLLS =================
+  window.createPoll = async function(){
+    const question = prompt("Poll question:");
+    if(!question) return;
+    
+    const options = [];
+    for(let i = 0; i < 4; i++){
+      const opt = prompt(`Option ${i+1} (leave empty to finish):`);
+      if(!opt) break;
+      options.push({ text: opt, votes: 0 });
+    }
+    
+    if(options.length < 2) return alert("Need at least 2 options!");
+    
+    const category = document.getElementById("postCategory").value;
+    
+    try{
+      await db.collection("posts").add({
+        content: "",
+        category,
+        imageUrl: null,
+        author: currentUsername,
+        authorId: currentUser.uid,
+        timestamp: Date.now(),
+        likes: 0,
+        likedBy: [],
+        reported: false,
+        reportCount: 0,
+        comments: [],
+        pinned: false,
+        edited: false,
+        bookmarkedBy: [],
+        poll: {
+          question,
+          options,
+          voters: []
+        }
+      });
+      alert("Poll created!");
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // ================= PROFILE FUNCTIONS =================
+  window.setCustomStatus = async function() {
+    const status = prompt("Set your custom status:", "");
+    if(status === null) return;
+    
+    try {
+      await db.collection("users").doc(currentUser.uid).update({
+        customStatus: status.substring(0, 100)
+      });
+      alert("Status updated!");
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  window.changeProfilePicture = async function() {
+    const choice = prompt("Choose option:\n1. Upload image URL\n2. Generate new random avatar\n\nEnter 1 or 2:");
+    
+    if(choice === "1") {
+      const url = prompt("Enter image URL (direct link to image):");
+      if(!url) return;
+      
+      if(!url.startsWith('http://') && !url.startsWith('https://')) {
+        alert("Please enter a valid URL starting with http:// or https://");
+        return;
+      }
+      
+      try {
+        await db.collection("users").doc(currentUser.uid).update({
+          avatar: url
+        });
+        alert("Profile picture updated!");
+      } catch(e) {
+        alert("Error: " + e.message);
+      }
+    } else if(choice === "2") {
+      const colors = ['8a2be2', 'ff6b35', '00d4ff', 'ffd700', 'ff1493', '00ff00', 'ff69b4', '00ced1', 'ff4500'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const newAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUsername)}&background=${color}&color=fff&size=128&bold=true`;
+      
+      try {
+        await db.collection("users").doc(currentUser.uid).update({
+          avatar: newAvatar
+        });
+        alert("Profile picture updated!");
+      } catch(e) {
+        alert("Error: " + e.message);
+      }
+    }
   }
 
   console.log("All functions loaded successfully!");
