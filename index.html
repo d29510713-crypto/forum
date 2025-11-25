@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Toasty Black Hole Forum</title>
+<title>Toasty Forums</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -28,15 +28,41 @@
   </div>
 </div>
 <div id="forum" class="panel hidden">
-  <h1>🔥 Toasty Forums
+  <h1>🔥 Ultimate Toasty Black Hole Forum</h1>
   <div class="tabs">
     <button id="tabPosts" class="active">Posts</button>
     <button id="tabUsers">Users</button>
     <button id="tabDMs">DMs</button>
     <button id="tabUpdates">Updates</button>
+    <button id="tabSuggestions">Suggestions</button>
   </div>
+  
+  <!-- POSTS SECTION -->
   <div id="postsSection" class="section">
     <h2>Posts</h2>
+    
+    <!-- Filters and Sort -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+      <select id="categoryFilter" style="flex:1; min-width:150px;">
+        <option value="all">All Categories</option>
+        <option value="General">General</option>
+        <option value="Space">Space</option>
+        <option value="Gaming">Gaming</option>
+        <option value="News">News</option>
+        <option value="Announcements">Announcements</option>
+        <option value="Off-Topic">Off-Topic</option>
+        <option value="Tech">Tech</option>
+        <option value="Art">Art</option>
+        <option value="Memes">Memes</option>
+      </select>
+      <select id="sortPosts" style="flex:1; min-width:150px;">
+        <option value="newest">Newest First</option>
+        <option value="popular">Most Popular</option>
+        <option value="discussed">Most Discussed</option>
+      </select>
+    </div>
+    
+    <!-- Create Post -->
     <select id="postCategory">
       <option value="General">General</option>
       <option value="Space">Space</option>
@@ -49,17 +75,23 @@
       <option value="Memes">Memes</option>
     </select><br>
     <textarea id="postContent" placeholder="Write something..."></textarea><br>
-    <input type="file" id="postImage"><br>
+    <input type="file" id="postImage" accept="image/*"><br>
     <img id="previewImage" class="hidden">
-    <button id="postBtn">Post</button><br>
-    <input id="searchPost" placeholder="Search posts"><br>
+    <button id="postBtn">Post</button>
+    <button onclick="createPoll()" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">📊 Create Poll</button>
+    <br>
+    <input id="searchPost" placeholder="🔍 Search posts"><br>
     <div id="postsList"></div>
   </div>
+  
+  <!-- USERS SECTION -->
   <div id="usersSection" class="section hidden">
     <h2>Users</h2>
-    <input id="searchUser" placeholder="Search users by username"><br>
+    <input id="searchUser" placeholder="🔍 Search users by username"><br>
     <div id="usersList"></div>
   </div>
+  
+  <!-- DMS SECTION -->
   <div id="dmsSection" class="section hidden">
     <h2>Direct Messages</h2>
     <input id="dmToUsername" placeholder="Send to (username)">
@@ -67,6 +99,8 @@
     <button id="dmBtn">Send DM</button>
     <div id="dmsList"></div>
   </div>
+  
+  <!-- UPDATES SECTION -->
   <div id="updatesSection" class="section hidden">
     <h2>Updates & News</h2>
     <div id="updatesList"></div>
@@ -79,8 +113,23 @@
       <button id="banUserBtn" class="owner-btn">Ban User</button>
     </div>
   </div>
+  
+  <!-- SUGGESTIONS SECTION -->
+  <div id="suggestionsSection" class="section hidden">
+    <h2>💡 Suggestions</h2>
+    <p style="color:#888; font-size:14px;">Submit your ideas to improve the forum!</p>
+    
+    <input id="suggestionTitle" placeholder="Suggestion Title" style="margin-top:15px;">
+    <textarea id="suggestionDesc" placeholder="Describe your suggestion..."></textarea><br>
+    <button id="submitSuggestion" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">Submit Suggestion</button>
+    
+    <h3 style="margin-top:30px;">Community Suggestions</h3>
+    <div id="suggestionsList"></div>
+  </div>
+  
   <button id="logoutBtn">Log Out</button>
 </div>
+
 <!-- Firebase SDKs v8 (Compatible with your code) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
