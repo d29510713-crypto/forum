@@ -86,22 +86,57 @@ window.onload = function() {
     const pass=document.getElementById("regPass").value;
     const username=document.getElementById("regUsername").value;
     if(!email||!pass||!username) return alert("All fields required");
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!emailRegex.test(email)) return alert("Please enter a valid email address");
+    
+    // Check password strength
+    if(pass.length < 6) return alert("Password must be at least 6 characters");
+    
     const snap=await db.collection("users").where("username","==",username).get();
     if(!snap.empty) return alert("Username taken");
+    
     try{
       const userCred=await auth.createUserWithEmailAndPassword(email,pass);
+      
+      // Send email verification
+      await userCred.user.sendEmailVerification();
+      
       await db.collection("users").doc(userCred.user.uid).set({
         username,
         email,
         joinDate:Date.now(),
         banned:false,
         moderator:false,
-        warnings:0
+        warnings:0,
+        emailVerified:false,
+        avatar: getRandomAvatar(),
+        status: 'online',
+        customStatus: '',
+        lastLogin: Date.now()
       });
-      loginUser(userCred.user);
-    }catch(e){alert(e.message);}
+      
+      alert("Account created! Please check your email to verify your account.");
+      document.getElementById("registerBox").classList.add("hidden");
+      document.getElementById("loginBox").classList.remove("hidden");
+    }catch(e){
+      if(e.code === 'auth/email-already-in-use') {
+        alert("This email is already registered");
+      } else if(e.code === 'auth/invalid-email') {
+        alert("Invalid email address");
+      } else {
+        alert(e.message);
+      }
+    }
   }
   document.getElementById("registerBtn").onclick=register;
+
+  function getRandomAvatar(){
+    const colors = ['8a2be2', 'ff6b35', '00d4ff', 'ffd700', 'ff1493', '00ff00'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=${color}&color=fff&size=128&bold=true`;
+  }
 
   window.login = async function(){
     const email=document.getElementById("logEmail").value;
@@ -109,8 +144,26 @@ window.onload = function() {
     if(!email||!pass) return alert("Enter email and password");
     try{
       const userCred=await auth.signInWithEmailAndPassword(email,pass);
+      
+      // Check if email is verified
+      if(!userCred.user.emailVerified) {
+        alert("Please verify your email first. Check your inbox for the verification link.");
+        await auth.signOut();
+        return;
+      }
+      
       loginUser(userCred.user);
-    }catch(e){alert(e.message);}
+    }catch(e){
+      if(e.code === 'auth/user-not-found') {
+        alert("No account found with this email");
+      } else if(e.code === 'auth/wrong-password') {
+        alert("Incorrect password");
+      } else if(e.code === 'auth/invalid-email') {
+        alert("Invalid email address");
+      } else {
+        alert(e.message);
+      }
+    }
   }
   document.getElementById("loginBtn").onclick=login;
 
@@ -146,10 +199,15 @@ window.onload = function() {
       currentUsername = userData.username;
       isModerator = userData.moderator || false;
       
-      // Update last login
+      // Update user status and last login
       await db.collection("users").doc(user.uid).update({
-        lastLogin: Date.now()
+        lastLogin: Date.now(),
+        status: 'online',
+        emailVerified: user.emailVerified
       });
+      
+      // Set up presence system
+      setupPresence(user.uid);
     }
     
     isOwner = (user.email === "d29510713@gmail.com");
@@ -169,6 +227,63 @@ window.onload = function() {
     console.log("Logged in as:", user.email, "Moderator:", isModerator, "Owner:", isOwner);
     loadPosts();
     checkNotifications();
+    startRealtimeListeners();
+  }
+
+  // Presence system (online/offline)
+  function setupPresence(userId) {
+    // Update status to offline when user closes tab
+    window.addEventListener('beforeunload', () => {
+      db.collection("users").doc(userId).update({ status: 'offline' });
+    });
+    
+    // Keep user online
+    setInterval(() => {
+      if(currentUser) {
+        db.collection("users").doc(userId).update({ 
+          status: 'online',
+          lastSeen: Date.now()
+        });
+      }
+    }, 60000); // Update every minute
+  }
+
+  // Start realtime listeners for live updates
+  function startRealtimeListeners() {
+    // Listen for new posts
+    db.collection("posts").orderBy("timestamp", "desc").limit(1)
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added" && change.doc.data().authorId !== currentUser.uid) {
+            showNotification("New Post", `${change.doc.data().author} posted in ${change.doc.data().category}`);
+          }
+        });
+      });
+    
+    // Listen for new DMs
+    db.collection("dms").where("toId", "==", currentUser.uid)
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const dm = change.doc.data();
+            if(dm.timestamp > Date.now() - 5000) { // Only notify for recent messages
+              showNotification("New Message", `${dm.from}: ${dm.content.substring(0, 50)}`);
+            }
+          }
+        });
+      });
+  }
+
+  // Show browser notification
+  function showNotification(title, body) {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body, icon: '/favicon.ico' });
+    }
+  }
+
+  // Request notification permission on login
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
   }
 
   // Check for notifications
@@ -634,6 +749,10 @@ window.onload = function() {
       
       usersList.innerHTML = "";
       
+      // Separate online and offline users
+      const onlineUsers = [];
+      const offlineUsers = [];
+      
       snapshot.forEach(doc => {
         const user = doc.data();
         const userId = doc.id;
@@ -642,33 +761,100 @@ window.onload = function() {
           return;
         }
         
-        const userDiv = document.createElement("div");
-        userDiv.className = "user-item";
-        userDiv.innerHTML = `
-          <div>
-            <strong>${user.username}</strong>
-            ${user.moderator ? '<span style="color:#00d4ff;"> 🛡️ MOD</span>' : ''}
-            ${user.banned ? '<span style="color:red;"> 🚫 BANNED</span>' : ''}
-            <br>
-            <span>Joined: ${new Date(user.joinDate).toLocaleDateString()}</span>
-            ${user.warnings ? `<span style="color:orange;"> ⚠️ Warnings: ${user.warnings}/3</span>` : ''}
-          </div>
-          ${(isOwner || isModerator) && userId !== currentUser.uid ? `
-            <div style="display:flex; gap:5px;">
-              ${isOwner && !user.moderator ? `<button onclick="makeModerator('${userId}', '${user.username}')">Make Mod</button>` : ''}
-              ${isOwner && user.moderator ? `<button onclick="removeModerator('${userId}', '${user.username}')">Remove Mod</button>` : ''}
-              ${!user.banned ? `<button onclick="banUser('${userId}', '${user.username}')">Ban</button>` : ''}
-              ${user.banned ? `<button onclick="unbanUser('${userId}', '${user.username}')">Unban</button>` : ''}
-            </div>
-          ` : ''}
-        `;
-        usersList.appendChild(userDiv);
+        const userData = { userId, ...user };
+        
+        if(user.status === 'online') {
+          onlineUsers.push(userData);
+        } else {
+          offlineUsers.push(userData);
+        }
       });
+      
+      // Display online users first
+      if(onlineUsers.length > 0) {
+        const onlineHeader = document.createElement("div");
+        onlineHeader.style.cssText = "color:#00d4ff; font-weight:bold; margin:15px 0 5px 0; font-size:14px;";
+        onlineHeader.innerHTML = `🟢 ONLINE — ${onlineUsers.length}`;
+        usersList.appendChild(onlineHeader);
+        
+        onlineUsers.forEach(user => renderUserItem(user, usersList));
+      }
+      
+      // Display offline users
+      if(offlineUsers.length > 0) {
+        const offlineHeader = document.createElement("div");
+        offlineHeader.style.cssText = "color:#888; font-weight:bold; margin:15px 0 5px 0; font-size:14px;";
+        offlineHeader.innerHTML = `⚫ OFFLINE — ${offlineUsers.length}`;
+        usersList.appendChild(offlineHeader);
+        
+        offlineUsers.forEach(user => renderUserItem(user, usersList));
+      }
       
       if(usersList.innerHTML === "") usersList.innerHTML = "<p style='text-align:center; color:#888;'>No users found</p>";
     }catch(e){
       usersList.innerHTML = "<p style='text-align:center; color:red;'>Error loading users: " + e.message + "</p>";
     }
+  }
+
+  function renderUserItem(user, container) {
+    const userId = user.userId;
+    const statusColor = user.status === 'online' ? '#00ff00' : '#888';
+    const statusDot = `<span style="display:inline-block; width:10px; height:10px; background:${statusColor}; border-radius:50%; margin-right:5px;"></span>`;
+    
+    // Get avatar
+    const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8a2be2&color=fff&size=64`;
+    
+    const userDiv = document.createElement("div");
+    userDiv.className = "user-item";
+    userDiv.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(138, 43, 226, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 8px 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    `;
+    
+    userDiv.innerHTML = `
+      <img src="${avatar}" 
+           style="width:48px; height:48px; border-radius:50%; border:2px solid ${statusColor};"
+           onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8a2be2&color=fff&size=64'">
+      <div style="flex:1;">
+        <div>
+          ${statusDot}
+          <strong style="color:#fff; font-size:16px;">${user.username}</strong>
+          ${user.moderator ? '<span style="color:#00d4ff;"> 🛡️ MOD</span>' : ''}
+          ${user.banned ? '<span style="color:red;"> 🚫 BANNED</span>' : ''}
+          ${userId === currentUser.uid ? '<span style="color:#ffd700;"> (You)</span>' : ''}
+        </div>
+        ${user.customStatus ? `<div style="color:#888; font-size:13px; margin-top:3px;">${escapeHtml(user.customStatus)}</div>` : ''}
+        <div style="color:#888; font-size:12px; margin-top:3px;">
+          ${user.status === 'online' ? 'Online' : user.lastSeen ? `Last seen ${getTimeAgo(user.lastSeen)}` : 'Offline'}
+        </div>
+      </div>
+      ${(isOwner || isModerator) && userId !== currentUser.uid ? `
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          ${isOwner && !user.moderator ? `<button onclick="makeModerator('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Make Mod</button>` : ''}
+          ${isOwner && user.moderator ? `<button onclick="removeModerator('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Remove Mod</button>` : ''}
+          ${!user.banned ? `<button onclick="banUser('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Ban</button>` : ''}
+          ${user.banned ? `<button onclick="unbanUser('${userId}', '${user.username}')" style="padding:6px 12px; font-size:12px;">Unban</button>` : ''}
+        </div>
+      ` : userId !== currentUser.uid ? `
+        <button onclick="openDMWithUser('${user.username}')" style="padding:6px 12px; font-size:12px; background:linear-gradient(135deg, #00d4ff, #0099cc);">💬 Message</button>
+      ` : ''}
+    `;
+    
+    container.appendChild(userDiv);
+  }
+
+  // Open DM tab with username pre-filled
+  window.openDMWithUser = function(username) {
+    document.getElementById("dmToUsername").value = username;
+    showTab('dms');
   }
 
   // ================= SEARCH USERS =================
