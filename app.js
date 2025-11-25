@@ -410,36 +410,43 @@ window.onload = function() {
     try{
       let imageUrl = null;
       if(imageFile){
-        // Convert image to base64 for better compatibility
+        console.log("Starting image upload to Imgur...");
+        
+        // Convert image to base64
         const reader = new FileReader();
         const base64Promise = new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onloadend = () => {
+            const base64String = reader.result.split(',')[1];
+            resolve(base64String);
+          };
           reader.onerror = reject;
           reader.readAsDataURL(imageFile);
         });
         
         const base64Data = await base64Promise;
+        console.log("Image converted to base64");
         
-        // Upload to Imgur with better error handling
-        const formData = new FormData();
-        formData.append('image', base64Data);
-        formData.append('type', 'base64');
-        
-        const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+        // Upload to Imgur
+        const response = await fetch('https://api.imgur.com/3/upload', {
           method: 'POST',
           headers: {
-            'Authorization': 'Client-ID 546c25a59c58ad7'
+            'Authorization': 'Client-ID 546c25a59c58ad7',
+            'Content-Type': 'application/json'
           },
-          body: formData
+          body: JSON.stringify({
+            image: base64Data,
+            type: 'base64'
+          })
         });
         
-        const imgurData = await imgurResponse.json();
+        const result = await response.json();
+        console.log("Imgur response:", result);
         
-        if(imgurData.success && imgurData.data && imgurData.data.link) {
-          imageUrl = imgurData.data.link;
+        if(result.success && result.data && result.data.link) {
+          imageUrl = result.data.link;
           console.log("Image uploaded successfully:", imageUrl);
         } else {
-          throw new Error(imgurData.data?.error || "Image upload failed");
+          throw new Error(result.data?.error?.message || "Image upload failed. Please try again.");
         }
       }
       
@@ -466,13 +473,13 @@ window.onload = function() {
       document.getElementById("previewImage").src = "";
       
       postBtn.disabled = false;
-      postBtn.textContent = "Post";
+      postBtn.textContent = "📤 Post";
       
       alert("Post created successfully!");
       loadPosts();
     }catch(e){
       postBtn.disabled = false;
-      postBtn.textContent = "Post";
+      postBtn.textContent = "📤 Post";
       alert("Error creating post: " + e.message);
       console.error("Full error:", e);
     }
