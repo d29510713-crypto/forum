@@ -15,7 +15,7 @@ window.onload = function() {
   function showTab(tab){
     console.log("Switching to tab:", tab);
     
-    ['posts','users','dms','updates','suggestions'].forEach(t=>{
+    ['posts','users','dms','updates','suggestions','leaderboard'].forEach(t=>{
       const section = document.getElementById(t+'Section');
       const tabBtn = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
       
@@ -35,6 +35,7 @@ window.onload = function() {
     if(tab === 'dms') loadDMs();
     if(tab === 'updates') loadUpdates();
     if(tab === 'suggestions') loadSuggestions();
+    if(tab === 'leaderboard') loadLeaderboard();
   }
 
   const tabPosts = document.getElementById("tabPosts");
@@ -42,12 +43,14 @@ window.onload = function() {
   const tabDMs = document.getElementById("tabDMs");
   const tabUpdates = document.getElementById("tabUpdates");
   const tabSuggestions = document.getElementById("tabSuggestions");
+  const tabLeaderboard = document.getElementById("tabLeaderboard");
 
   if(tabPosts) tabPosts.onclick = () => showTab('posts');
   if(tabUsers) tabUsers.onclick = () => showTab('users');
   if(tabDMs) tabDMs.onclick = () => showTab('dms');
   if(tabUpdates) tabUpdates.onclick = () => showTab('updates');
   if(tabSuggestions) tabSuggestions.onclick = () => showTab('suggestions');
+  if(tabLeaderboard) tabLeaderboard.onclick = () => showTab('leaderboard');
 
   // ================= TOGGLE LOGIN/REGISTER =================
   document.getElementById("toggleToLogin").onclick = ()=>{
@@ -1487,6 +1490,173 @@ window.onload = function() {
       loadSuggestions();
     }catch(e){
       alert("Error: " + e.message);
+    }
+  }
+
+  // ================= LEADERBOARD =================
+  window.loadLeaderboard = async function(){
+    const leaderboardList = document.getElementById("leaderboardList");
+    if(!leaderboardList) return;
+    
+    leaderboardList.innerHTML = "<p style='text-align:center; color:#888;'>Calculating leaderboard...</p>";
+    
+    try{
+      // Get all users
+      const usersSnapshot = await db.collection("users").get();
+      const users = [];
+      
+      for(const userDoc of usersSnapshot.docs){
+        const userData = userDoc.data();
+        const userId = userDoc.id;
+        
+        // Get user's posts
+        const postsSnapshot = await db.collection("posts").where("authorId", "==", userId).get();
+        let totalLikes = 0;
+        let totalComments = 0;
+        let postCount = postsSnapshot.size;
+        
+        postsSnapshot.forEach(postDoc => {
+          const post = postDoc.data();
+          totalLikes += post.likes || 0;
+          totalComments += post.comments?.length || 0;
+        });
+        
+        // Get user's comments on others' posts
+        const allPostsSnapshot = await db.collection("posts").get();
+        let commentsMade = 0;
+        allPostsSnapshot.forEach(postDoc => {
+          const post = postDoc.data();
+          if(post.comments){
+            commentsMade += post.comments.filter(c => c.authorId === userId).length;
+          }
+        });
+        
+        // Calculate points
+        const points = (postCount * 10) + (totalLikes * 5) + (commentsMade * 2) + (totalComments * 1);
+        
+        users.push({
+          username: userData.username,
+          userId: userId,
+          email: userData.email,
+          moderator: userData.moderator,
+          postCount,
+          totalLikes,
+          commentsMade,
+          totalComments,
+          points,
+          joinDate: userData.joinDate
+        });
+      }
+      
+      // Sort by points
+      users.sort((a, b) => b.points - a.points);
+      
+      leaderboardList.innerHTML = "";
+      
+      users.forEach((user, index) => {
+        const rank = index + 1;
+        let rankIcon = "";
+        let rankColor = "#888";
+        
+        if(rank === 1) {
+          rankIcon = "🥇";
+          rankColor = "#ffd700";
+        } else if(rank === 2) {
+          rankIcon = "🥈";
+          rankColor = "#c0c0c0";
+        } else if(rank === 3) {
+          rankIcon = "🥉";
+          rankColor = "#cd7f32";
+        } else {
+          rankIcon = `#${rank}`;
+        }
+        
+        let roleBadge = "";
+        if(user.email === "d29510713@gmail.com") {
+          roleBadge = '<span style="color:#ff6b35; text-shadow: 0 0 10px rgba(255,107,53,0.8);"> 👑 OWNER</span>';
+        } else if(user.moderator) {
+          roleBadge = '<span style="color:#00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.6);"> 🛡️ MOD</span>';
+        }
+        
+        // Calculate level
+        const level = Math.floor(user.points / 100) + 1;
+        const pointsToNextLevel = ((level) * 100) - user.points;
+        const progressPercent = ((user.points % 100) / 100) * 100;
+        
+        const userDiv = document.createElement("div");
+        userDiv.className = "leaderboard-item";
+        userDiv.style.cssText = `
+          background: rgba(0, 0, 0, 0.6);
+          border: 2px solid rgba(138, 43, 226, 0.4);
+          border-radius: 12px;
+          padding: 15px;
+          margin: 10px 0;
+          transition: all 0.3s ease;
+        `;
+        
+        if(rank <= 3) {
+          userDiv.style.borderColor = rankColor;
+          userDiv.style.boxShadow = `0 0 20px ${rankColor}40`;
+        }
+        
+        userDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <span style="font-size:24px; color:${rankColor}; font-weight:bold; min-width:50px;">${rankIcon}</span>
+              <div>
+                <div style="font-size:18px; font-weight:bold; color:#00d4ff;">
+                  ${user.username}${roleBadge}
+                  ${user.userId === currentUser.uid ? '<span style="color:#ffd700;"> (You)</span>' : ''}
+                </div>
+                <div style="font-size:12px; color:#888; margin-top:3px;">
+                  Level ${level} • ${user.points} XP
+                  ${pointsToNextLevel > 0 ? `• ${pointsToNextLevel} XP to level ${level + 1}` : ''}
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right; font-size:13px;">
+              <div style="color:#00d4ff;">📝 ${user.postCount} posts</div>
+              <div style="color:#ff6b35;">❤️ ${user.totalLikes} likes</div>
+              <div style="color:#ffd700;">💬 ${user.commentsMade} comments</div>
+            </div>
+          </div>
+          <div style="margin-top:10px; background:rgba(0,0,0,0.4); border-radius:10px; height:8px; overflow:hidden;">
+            <div style="background:linear-gradient(90deg, #8a2be2, #00d4ff); height:100%; width:${progressPercent}%; transition:width 0.5s;"></div>
+          </div>
+          <div style="margin-top:8px; display:flex; gap:10px; font-size:11px; color:#888; flex-wrap:wrap;">
+            <span>🏆 Posts: +${user.postCount * 10} XP</span>
+            <span>❤️ Likes: +${user.totalLikes * 5} XP</span>
+            <span>💬 Comments: +${user.commentsMade * 2} XP</span>
+          </div>
+        `;
+        
+        leaderboardList.appendChild(userDiv);
+      });
+      
+      // Add XP info
+      const infoDiv = document.createElement("div");
+      infoDiv.style.cssText = `
+        background: rgba(138, 43, 226, 0.1);
+        border: 2px solid rgba(138, 43, 226, 0.3);
+        border-radius: 12px;
+        padding: 15px;
+        margin-top: 20px;
+        font-size: 13px;
+        color: #888;
+      `;
+      infoDiv.innerHTML = `
+        <strong style="color:#00d4ff; font-size:15px;">📊 How XP Works:</strong><br><br>
+        🔸 Create a post: <strong style="color:#00d4ff;">+10 XP</strong><br>
+        🔸 Receive a like: <strong style="color:#ff6b35;">+5 XP</strong><br>
+        🔸 Write a comment: <strong style="color:#ffd700;">+2 XP</strong><br>
+        🔸 Get a comment on your post: <strong style="color:#888;">+1 XP</strong><br><br>
+        <strong style="color:#00d4ff;">Level up every 100 XP!</strong>
+      `;
+      leaderboardList.appendChild(infoDiv);
+      
+    }catch(e){
+      leaderboardList.innerHTML = "<p style='text-align:center; color:red;'>Error loading leaderboard: " + e.message + "</p>";
+      console.error("Leaderboard error:", e);
     }
   }
 
