@@ -70,7 +70,63 @@ window.onload = function() {
     storageBucket: "toasty-89f07.appspot.com",
     messagingSenderId: "743787667064",
     appId: "1:743787667064:web:12284120fbbdd1e907d78d"
-  };
+    // Set custom status
+  window.setCustomStatus = async function() {
+    const status = prompt("Set your custom status:", "");
+    if(status === null) return; // User cancelled
+    
+    try {
+      await db.collection("users").doc(currentUser.uid).update({
+        customStatus: status.substring(0, 100) // Max 100 chars
+      });
+      alert("Status updated!");
+      loadUsers();
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Change profile picture
+  window.changeProfilePicture = async function() {
+    const choice = prompt("Choose option:\n1. Upload image URL\n2. Generate new random avatar\n\nEnter 1 or 2:");
+    
+    if(choice === "1") {
+      const url = prompt("Enter image URL (direct link to image):");
+      if(!url) return;
+      
+      // Validate URL
+      if(!url.startsWith('http://') && !url.startsWith('https://')) {
+        alert("Please enter a valid URL starting with http:// or https://");
+        return;
+      }
+      
+      try {
+        await db.collection("users").doc(currentUser.uid).update({
+          avatar: url
+        });
+        alert("Profile picture updated!");
+        loadUsers();
+      } catch(e) {
+        alert("Error: " + e.message);
+      }
+    } else if(choice === "2") {
+      const colors = ['8a2be2', 'ff6b35', '00d4ff', 'ffd700', 'ff1493', '00ff00', 'ff69b4', '00ced1', 'ff4500'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const newAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUsername)}&background=${color}&color=fff&size=128&bold=true`;
+      
+      try {
+        await db.collection("users").doc(currentUser.uid).update({
+          avatar: newAvatar
+        });
+        alert("Profile picture updated!");
+        loadUsers();
+      } catch(e) {
+        alert("Error: " + e.message);
+      }
+    }
+  }
+
+};
   firebase.initializeApp(firebaseConfig);
   const auth=firebase.auth();
   const db=firebase.firestore();
@@ -94,14 +150,16 @@ window.onload = function() {
     // Check password strength
     if(pass.length < 6) return alert("Password must be at least 6 characters");
     
-    const snap=await db.collection("users").where("username","==",username).get();
-    if(!snap.empty) return alert("Username taken");
-    
     try{
+      const snap=await db.collection("users").where("username","==",username).get();
+      if(!snap.empty) return alert("Username taken");
+      
       const userCred=await auth.createUserWithEmailAndPassword(email,pass);
       
-      // Send email verification
-      await userCred.user.sendEmailVerification();
+      // Generate avatar
+      const colors = ['8a2be2', 'ff6b35', '00d4ff', 'ffd700', 'ff1493', '00ff00'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=${color}&color=fff&size=128&bold=true`;
       
       await db.collection("users").doc(userCred.user.uid).set({
         username,
@@ -111,13 +169,17 @@ window.onload = function() {
         moderator:false,
         warnings:0,
         emailVerified:false,
-        avatar: getRandomAvatar(),
-        status: 'online',
+        avatar: avatar,
+        status: 'offline',
         customStatus: '',
         lastLogin: Date.now()
       });
       
-      alert("Account created! Please check your email to verify your account.");
+      // Send email verification
+      await userCred.user.sendEmailVerification();
+      await auth.signOut();
+      
+      alert("Account created! Please check your email and verify your account before logging in.");
       document.getElementById("registerBox").classList.add("hidden");
       document.getElementById("loginBox").classList.remove("hidden");
     }catch(e){
@@ -131,12 +193,6 @@ window.onload = function() {
     }
   }
   document.getElementById("registerBtn").onclick=register;
-
-  function getRandomAvatar(){
-    const colors = ['8a2be2', 'ff6b35', '00d4ff', 'ffd700', 'ff1493', '00ff00'];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=${color}&color=fff&size=128&bold=true`;
-  }
 
   window.login = async function(){
     const email=document.getElementById("logEmail").value;
@@ -1629,6 +1685,7 @@ window.onload = function() {
       }
     }catch(e){
       suggestionsList.innerHTML = "<p style='text-align:center; color:red;'>Error: " + e.message + "</p>";
+      console.error("Suggestions error:", e);
     }
   }
 
@@ -1657,6 +1714,7 @@ window.onload = function() {
       loadSuggestions();
     }catch(e){
       alert("Error: " + e.message);
+      console.error("Submit suggestion error:", e);
     }
   });
 
@@ -1706,7 +1764,50 @@ window.onload = function() {
     }
   }
 
-  // ================= LEADERBOARD =================
+  // Create poll
+  window.createPoll = async function(){
+    const question = prompt("Poll question:");
+    if(!question) return;
+    
+    const options = [];
+    for(let i = 0; i < 4; i++){
+      const opt = prompt(`Option ${i+1} (leave empty to finish):`);
+      if(!opt) break;
+      options.push({ text: opt, votes: 0 });
+    }
+    
+    if(options.length < 2) return alert("Need at least 2 options!");
+    
+    const category = document.getElementById("postCategory").value;
+    
+    try{
+      await db.collection("posts").add({
+        content: "",
+        category,
+        imageUrl: null,
+        author: currentUsername,
+        authorId: currentUser.uid,
+        timestamp: Date.now(),
+        likes: 0,
+        likedBy: [],
+        reported: false,
+        reportCount: 0,
+        comments: [],
+        pinned: false,
+        edited: false,
+        bookmarkedBy: [],
+        poll: {
+          question,
+          options,
+          voters: []
+        }
+      });
+      alert("Poll created!");
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
   window.loadLeaderboard = async function(){
     const leaderboardList = document.getElementById("leaderboardList");
     if(!leaderboardList) return;
