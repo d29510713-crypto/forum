@@ -201,23 +201,33 @@ window.onload = function() {
     try{
       const userCred=await auth.signInWithEmailAndPassword(email,pass);
       
-      // Check if email is verified
+      // Check if email is verified (give warning but allow login)
       if(!userCred.user.emailVerified) {
-        alert("Please verify your email first. Check your inbox for the verification link.");
-        await auth.signOut();
-        return;
+        const proceed = confirm("⚠️ Your email is not verified yet.\n\nClick OK to continue anyway, or Cancel to verify first.\n\n(Check your email for verification link)");
+        if(!proceed) {
+          // Resend verification email
+          await userCred.user.sendEmailVerification();
+          alert("Verification email sent! Please check your inbox.");
+          await auth.signOut();
+          return;
+        }
       }
       
       loginUser(userCred.user);
     }catch(e){
+      console.error("Login error:", e);
       if(e.code === 'auth/user-not-found') {
-        alert("No account found with this email");
+        alert("❌ No account found with this email.\n\nPlease register first!");
       } else if(e.code === 'auth/wrong-password') {
-        alert("Incorrect password");
+        alert("❌ Incorrect password.\n\nTry again or use 'Forgot Password'");
       } else if(e.code === 'auth/invalid-email') {
-        alert("Invalid email address");
+        alert("❌ Invalid email address format");
+      } else if(e.code === 'auth/user-disabled') {
+        alert("❌ This account has been disabled");
+      } else if(e.code === 'auth/too-many-requests') {
+        alert("❌ Too many failed login attempts.\n\nPlease try again later or reset your password");
       } else {
-        alert(e.message);
+        alert("Login error: " + e.message);
       }
     }
   }
