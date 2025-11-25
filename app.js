@@ -15,7 +15,7 @@ window.onload = function() {
   function showTab(tab){
     console.log("Switching to tab:", tab);
     
-    ['posts','users','dms','updates'].forEach(t=>{
+    ['posts','users','dms','updates','suggestions'].forEach(t=>{
       const section = document.getElementById(t+'Section');
       const tabBtn = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
       
@@ -34,17 +34,20 @@ window.onload = function() {
     if(tab === 'users') loadUsers();
     if(tab === 'dms') loadDMs();
     if(tab === 'updates') loadUpdates();
+    if(tab === 'suggestions') loadSuggestions();
   }
 
   const tabPosts = document.getElementById("tabPosts");
   const tabUsers = document.getElementById("tabUsers");
   const tabDMs = document.getElementById("tabDMs");
   const tabUpdates = document.getElementById("tabUpdates");
+  const tabSuggestions = document.getElementById("tabSuggestions");
 
   if(tabPosts) tabPosts.onclick = () => showTab('posts');
   if(tabUsers) tabUsers.onclick = () => showTab('users');
   if(tabDMs) tabDMs.onclick = () => showTab('dms');
   if(tabUpdates) tabUpdates.onclick = () => showTab('updates');
+  if(tabSuggestions) tabSuggestions.onclick = () => showTab('suggestions');
 
   // ================= TOGGLE LOGIN/REGISTER =================
   document.getElementById("toggleToLogin").onclick = ()=>{
@@ -139,6 +142,11 @@ window.onload = function() {
       }
       currentUsername = userData.username;
       isModerator = userData.moderator || false;
+      
+      // Update last login
+      await db.collection("users").doc(user.uid).update({
+        lastLogin: Date.now()
+      });
     }
     
     isOwner = (user.email === "d29510713@gmail.com");
@@ -157,6 +165,23 @@ window.onload = function() {
     
     console.log("Logged in as:", user.email, "Moderator:", isModerator, "Owner:", isOwner);
     loadPosts();
+    checkNotifications();
+  }
+
+  // Check for notifications
+  async function checkNotifications() {
+    try {
+      const mentionsSnapshot = await db.collection("posts")
+        .where("content", ">=", `@${currentUsername}`)
+        .where("content", "<=", `@${currentUsername}\uf8ff`)
+        .get();
+      
+      if(mentionsSnapshot.size > 0) {
+        console.log(`You have ${mentionsSnapshot.size} mention(s)!`);
+      }
+    } catch(e) {
+      console.log("Notification check error:", e);
+    }
   }
 
   // ================= POST IMAGE PREVIEW =================
@@ -260,12 +285,12 @@ window.onload = function() {
   }
 
   // ================= LOAD POSTS =================
-  async function loadPosts(searchQuery = ""){
+  async function loadPosts(searchQuery = "", filterCategory = "", sortBy = "newest"){
     const postsList = document.getElementById("postsList");
     postsList.innerHTML = "<p style='text-align:center; color:#888;'>Loading posts...</p>";
     
     try{
-      let query = db.collection("posts").orderBy("timestamp", "desc").limit(50);
+      let query = db.collection("posts").limit(100);
       const snapshot = await query.get();
       
       // Get all user data for role badges
@@ -284,18 +309,52 @@ window.onload = function() {
         }
       }
       
-      postsList.innerHTML = "";
-      
+      // Convert to array and filter
+      let posts = [];
       snapshot.forEach(doc => {
         const post = doc.data();
-        const postId = doc.id;
         
-        // Filter by search query
+        // Filter by search
         if(searchQuery && !post.content.toLowerCase().includes(searchQuery.toLowerCase())){
           return;
         }
         
+        // Filter by category
+        if(filterCategory && filterCategory !== 'all' && post.category !== filterCategory){
+          return;
+        }
+        
+        posts.push({ id: doc.id, ...post });
+      });
+      
+      // Sort posts
+      if(sortBy === 'newest') {
+        posts.sort((a, b) => {
+          if(a.pinned && !b.pinned) return -1;
+          if(!a.pinned && b.pinned) return 1;
+          return b.timestamp - a.timestamp;
+        });
+      } else if(sortBy === 'popular') {
+        posts.sort((a, b) => {
+          if(a.pinned && !b.pinned) return -1;
+          if(!a.pinned && b.pinned) return 1;
+          return (b.likes || 0) - (a.likes || 0);
+        });
+      } else if(sortBy === 'discussed') {
+        posts.sort((a, b) => {
+          if(a.pinned && !b.pinned) return -1;
+          if(!a.pinned && b.pinned) return 1;
+          return (b.comments?.length || 0) - (a.comments?.length || 0);
+        });
+      }
+      
+      postsList.innerHTML = "";
+      
+      posts.forEach(post => {
+        const postId = post.id;
+        
         const isLiked = post.likedBy && post.likedBy.includes(currentUser.uid);
+        const isBookmarked = post.bookmarkedBy && post.bookmarkedBy.includes(currentUser.uid);
         const canModerate = isOwner || isModerator;
         const canDelete = post.authorId === currentUser.uid || canModerate;
         const canEdit = post.authorId === currentUser.uid;
@@ -317,6 +376,10 @@ window.onload = function() {
         // Pin badge
         const pinBadge = post.pinned ? '<span style="color:#ffd700;">📌 PINNED</span>' : '';
         
+        // Trending badge (high engagement)
+        const engagement = (post.likes || 0) + ((post.comments?.length || 0) * 2);
+        const trendingBadge = engagement > 10 ? '<span style="color:#ff6b35;">🔥 TRENDING</span>' : '';
+        
         const postDiv = document.createElement("div");
         postDiv.className = "post";
         if(post.reported) postDiv.style.borderColor = "rgba(255, 0, 0, 0.6)";
@@ -324,36 +387,44 @@ window.onload = function() {
         
         postDiv.innerHTML = `
           <div class="post-header">
-            <strong>${post.author}${roleBadge}</strong> - ${post.category} ${pinBadge}
-            ${post.reported ? '<span style="color:red;"> ⚠ REPORTED</span>' : ''}
-            ${post.edited ? '<span style="color:#888;font-size:12px;"> (edited)</span>' : ''}
+            <div>
+              <strong>${post.author}${roleBadge}</strong> - ${post.category} ${pinBadge} ${trendingBadge}
+              ${post.reported ? '<span style="color:red;"> ⚠ REPORTED</span>' : ''}
+              ${post.edited ? '<span style="color:#888;font-size:11px;"> (edited)</span>' : ''}
+            </div>
             <span class="post-time">${new Date(post.timestamp).toLocaleString()} (${timeAgo})</span>
           </div>
           ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
           ${post.imageUrl ? `<img src="${post.imageUrl}" class="post-image" alt="Post image" onclick="openImageModal('${post.imageUrl}')">` : ''}
+          ${post.poll ? renderPoll(post.poll, postId) : ''}
           ${post.comments && post.comments.length > 0 ? `
-            <div style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px;">
+            <div style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px;">
               <strong style="color:#00d4ff;">💬 Comments (${post.comments.length}):</strong>
-              ${post.comments.map(c => `
-                <div style="margin:8px 0; padding:8px; background:rgba(0,0,0,0.2); border-left:2px solid #8a2be2; border-radius:5px;">
-                  <small style="color:#00d4ff;"><strong>${c.author}</strong> - ${new Date(c.timestamp).toLocaleString()}</small><br>
-                  <span style="color:#e0e0e0;">${escapeHtml(c.text)}</span>
+              ${post.comments.slice(0, 3).map(c => `
+                <div style="margin:6px 0; padding:6px; background:rgba(0,0,0,0.2); border-left:2px solid #8a2be2; border-radius:5px; font-size:12px;">
+                  <small style="color:#00d4ff;"><strong>${c.author}</strong></small><br>
+                  <span style="color:#e0e0e0;">${escapeHtml(c.text.substring(0, 100))}${c.text.length > 100 ? '...' : ''}</span>
                 </div>
               `).join('')}
+              ${post.comments.length > 3 ? `<small style="color:#888;">+ ${post.comments.length - 3} more comments</small>` : ''}
             </div>
           ` : ''}
           <div class="post-actions">
             <button onclick="likePost('${postId}')" style="background:${isLiked ? 'linear-gradient(135deg, #ff6b35, #f7931e)' : ''}">
               ${isLiked ? '❤️' : '👍'} ${post.likes || 0}
             </button>
-            <button onclick="commentOnPost('${postId}')">💬 Comment</button>
-            ${canEdit ? `<button onclick="editPost('${postId}', \`${escapeHtml(post.content || '').replace(/`/g, '\\`')}\`)">✏️ Edit</button>` : ''}
-            ${canDelete ? `<button onclick="deletePost('${postId}')">🗑️ Delete</button>` : ''}
+            <button onclick="commentOnPost('${postId}')">💬 ${post.comments?.length || 0}</button>
+            <button onclick="bookmarkPost('${postId}')" style="background:${isBookmarked ? 'linear-gradient(135deg, #ffd700, #ffa500)' : ''}">
+              ${isBookmarked ? '⭐' : '🔖'}
+            </button>
+            <button onclick="sharePost('${postId}')">📤 Share</button>
+            ${canEdit ? `<button onclick="editPost('${postId}', \`${escapeHtml(post.content || '').replace(/`/g, '\\`')}\`)">✏️</button>` : ''}
+            ${canDelete ? `<button onclick="deletePost('${postId}')">🗑️</button>` : ''}
             ${!canModerate && post.authorId !== currentUser.uid ? 
-              `<button onclick="reportPost('${postId}')">⚠️ Report</button>` : ''}
+              `<button onclick="reportPost('${postId}')">⚠️</button>` : ''}
             ${canModerate ? `
-              <button onclick="warnUser('${post.authorId}', '${post.author}')">⚠️ Warn</button>
-              ${!post.pinned ? `<button onclick="pinPost('${postId}')">📌 Pin</button>` : `<button onclick="unpinPost('${postId}')">📌 Unpin</button>`}
+              <button onclick="warnUser('${post.authorId}', '${post.author}')">⚠️</button>
+              ${!post.pinned ? `<button onclick="pinPost('${postId}')">📌</button>` : `<button onclick="unpinPost('${postId}')">📌</button>`}
             ` : ''}
           </div>
         `;
@@ -365,6 +436,32 @@ window.onload = function() {
       postsList.innerHTML = "<p style='text-align:center; color:red;'>Error loading posts: " + e.message + "</p>";
       console.error(e);
     }
+  }
+
+  // Render poll
+  function renderPoll(poll, postId) {
+    const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.votes || 0), 0);
+    const userVoted = poll.voters && poll.voters.includes(currentUser.uid);
+    
+    return `
+      <div style="margin:12px 0; padding:12px; background:rgba(138,43,226,0.1); border-radius:8px; border:1px solid rgba(138,43,226,0.3);">
+        <strong style="color:#00d4ff;">📊 ${poll.question}</strong>
+        ${poll.options.map((opt, idx) => {
+          const percentage = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
+          return `
+            <div style="margin:8px 0;">
+              <button onclick="voteOnPoll('${postId}', ${idx})" 
+                ${userVoted ? 'disabled' : ''}
+                style="width:100%; text-align:left; padding:8px; font-size:12px; position:relative; overflow:hidden;">
+                <div style="position:absolute; left:0; top:0; height:100%; width:${percentage}%; background:rgba(138,43,226,0.3); z-index:0;"></div>
+                <span style="position:relative; z-index:1;">${opt.text} - ${opt.votes || 0} (${percentage}%)</span>
+              </button>
+            </div>
+          `;
+        }).join('')}
+        <small style="color:#888;">Total votes: ${totalVotes}</small>
+      </div>
+    `;
   }
 
   // Escape HTML to prevent XSS
@@ -765,8 +862,13 @@ window.onload = function() {
           like: 0,
           love: 0,
           fire: 0,
-          rocket: 0
-        }
+          rocket: 0,
+          star: 0,
+          thinking: 0
+        },
+        userReactions: {},
+        comments: [],
+        views: 0
       });
       
       document.getElementById("updateTitle").value = "";
@@ -831,17 +933,110 @@ window.onload = function() {
     }
   }
 
-  // React to update
+  // React to update (one reaction per user)
   window.reactToUpdate = async function(updateId, reactionType){
     try{
       const updateRef = db.collection("updates").doc(updateId);
       const updateDoc = await updateRef.get();
       const update = updateDoc.data();
       
-      const reactions = update.reactions || { like: 0, love: 0, fire: 0, rocket: 0 };
-      reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+      const reactions = update.reactions || { like: 0, love: 0, fire: 0, rocket: 0, star: 0, thinking: 0 };
+      const userReactions = update.userReactions || {};
+      const previousReaction = userReactions[currentUser.uid];
       
-      await updateRef.update({ reactions });
+      // Remove previous reaction
+      if(previousReaction) {
+        reactions[previousReaction] = Math.max(0, (reactions[previousReaction] || 0) - 1);
+      }
+      
+      // Add new reaction (or remove if same)
+      if(previousReaction === reactionType) {
+        delete userReactions[currentUser.uid];
+      } else {
+        reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+        userReactions[currentUser.uid] = reactionType;
+      }
+      
+      await updateRef.update({ reactions, userReactions });
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Comment on update
+  window.commentOnUpdate = async function(updateId){
+    const commentText = prompt("Write your comment:");
+    if(!commentText) return;
+    
+    try{
+      const updateRef = db.collection("updates").doc(updateId);
+      const updateDoc = await updateRef.get();
+      const update = updateDoc.data();
+      
+      const comments = update.comments || [];
+      comments.push({
+        author: currentUsername,
+        authorId: currentUser.uid,
+        text: commentText,
+        timestamp: Date.now(),
+        likes: 0,
+        likedBy: []
+      });
+      
+      await updateRef.update({ comments });
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Like comment on update
+  window.likeComment = async function(updateId, commentIndex){
+    try{
+      const updateRef = db.collection("updates").doc(updateId);
+      const updateDoc = await updateRef.get();
+      const update = updateDoc.data();
+      
+      const comments = update.comments || [];
+      const comment = comments[commentIndex];
+      
+      if(!comment) return;
+      
+      const likedBy = comment.likedBy || [];
+      const likes = comment.likes || 0;
+      
+      if(likedBy.includes(currentUser.uid)){
+        // Unlike
+        comment.likedBy = likedBy.filter(uid => uid !== currentUser.uid);
+        comment.likes = Math.max(0, likes - 1);
+      } else {
+        // Like
+        comment.likedBy = [...likedBy, currentUser.uid];
+        comment.likes = likes + 1;
+      }
+      
+      comments[commentIndex] = comment;
+      await updateRef.update({ comments });
+      loadUpdates();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Delete comment on update
+  window.deleteComment = async function(updateId, commentIndex){
+    if(!confirm("Delete this comment?")) return;
+    
+    try{
+      const updateRef = db.collection("updates").doc(updateId);
+      const updateDoc = await updateRef.get();
+      const update = updateDoc.data();
+      
+      const comments = update.comments || [];
+      comments.splice(commentIndex, 1);
+      
+      await updateRef.update({ comments });
       loadUpdates();
     }catch(e){
       alert("Error: " + e.message);
@@ -1071,6 +1266,228 @@ window.onload = function() {
     modal.addEventListener('remove', () => {
       document.body.style.overflow = 'auto';
     });
+  }
+
+  // ================= NEW FEATURES =================
+  
+  // Bookmark post
+  window.bookmarkPost = async function(postId){
+    try{
+      const postRef = db.collection("posts").doc(postId);
+      const postDoc = await postRef.get();
+      const post = postDoc.data();
+      
+      let bookmarkedBy = post.bookmarkedBy || [];
+      
+      if(bookmarkedBy.includes(currentUser.uid)){
+        bookmarkedBy = bookmarkedBy.filter(uid => uid !== currentUser.uid);
+      } else {
+        bookmarkedBy.push(currentUser.uid);
+      }
+      
+      await postRef.update({ bookmarkedBy });
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Share post
+  window.sharePost = function(postId){
+    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    
+    if(navigator.share) {
+      navigator.share({
+        title: 'Check out this post!',
+        url: url
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard!');
+    }
+  }
+
+  // Vote on poll
+  window.voteOnPoll = async function(postId, optionIndex){
+    try{
+      const postRef = db.collection("posts").doc(postId);
+      const postDoc = await postRef.get();
+      const post = postDoc.data();
+      
+      if(!post.poll) return;
+      
+      const voters = post.poll.voters || [];
+      if(voters.includes(currentUser.uid)) {
+        alert("You already voted!");
+        return;
+      }
+      
+      post.poll.options[optionIndex].votes = (post.poll.options[optionIndex].votes || 0) + 1;
+      post.poll.voters = [...voters, currentUser.uid];
+      
+      await postRef.update({ poll: post.poll });
+      loadPosts();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Filter and sort posts
+  document.getElementById("categoryFilter")?.addEventListener('change', (e) => {
+    const search = document.getElementById("searchPost").value;
+    const sort = document.getElementById("sortPosts")?.value || 'newest';
+    loadPosts(search, e.target.value, sort);
+  });
+
+  document.getElementById("sortPosts")?.addEventListener('change', (e) => {
+    const search = document.getElementById("searchPost").value;
+    const category = document.getElementById("categoryFilter")?.value || 'all';
+    loadPosts(search, category, e.target.value);
+  });
+
+  // ================= SUGGESTIONS SYSTEM =================
+  window.loadSuggestions = async function(){
+    const suggestionsList = document.getElementById("suggestionsList");
+    if(!suggestionsList) return;
+    
+    suggestionsList.innerHTML = "<p style='text-align:center; color:#888;'>Loading suggestions...</p>";
+    
+    try{
+      const snapshot = await db.collection("suggestions").get();
+      
+      const suggestions = [];
+      snapshot.forEach(doc => {
+        suggestions.push({ id: doc.id, ...doc.data() });
+      });
+      
+      suggestions.sort((a, b) => {
+        if(a.status === 'pending' && b.status !== 'pending') return -1;
+        if(a.status !== 'pending' && b.status === 'pending') return 1;
+        return (b.upvotes || 0) - (a.upvotes || 0);
+      });
+      
+      suggestionsList.innerHTML = "";
+      
+      suggestions.forEach(sug => {
+        const sugDiv = document.createElement("div");
+        sugDiv.className = "post";
+        
+        let statusColor = "#888";
+        let statusText = sug.status || 'pending';
+        if(statusText === 'approved') statusColor = "#00d4ff";
+        if(statusText === 'implemented') statusColor = "#00ff00";
+        if(statusText === 'rejected') statusColor = "#ff0000";
+        
+        const userUpvoted = sug.upvotedBy && sug.upvotedBy.includes(currentUser.uid);
+        
+        sugDiv.innerHTML = `
+          <div class="post-header">
+            <div>
+              <strong>${sug.author}</strong>
+              <span style="color:${statusColor}; font-weight:bold; margin-left:10px;">
+                ${statusText.toUpperCase()}
+              </span>
+            </div>
+            <span class="post-time">${new Date(sug.timestamp).toLocaleString()}</span>
+          </div>
+          <div class="post-content"><strong>${escapeHtml(sug.title)}</strong></div>
+          <div class="post-content">${escapeHtml(sug.description)}</div>
+          <div class="post-actions">
+            <button onclick="upvoteSuggestion('${sug.id}')" 
+              style="background:${userUpvoted ? 'linear-gradient(135deg, #ff6b35, #f7931e)' : ''}">
+              👍 ${sug.upvotes || 0}
+            </button>
+            ${isOwner || isModerator ? `
+              <button onclick="updateSuggestionStatus('${sug.id}', 'approved')">✅ Approve</button>
+              <button onclick="updateSuggestionStatus('${sug.id}', 'implemented')">🎉 Implement</button>
+              <button onclick="updateSuggestionStatus('${sug.id}', 'rejected')">❌ Reject</button>
+              <button onclick="deleteSuggestion('${sug.id}')">🗑️</button>
+            ` : ''}
+          </div>
+        `;
+        suggestionsList.appendChild(sugDiv);
+      });
+      
+      if(suggestionsList.innerHTML === "") {
+        suggestionsList.innerHTML = "<p style='text-align:center; color:#888;'>No suggestions yet</p>";
+      }
+    }catch(e){
+      suggestionsList.innerHTML = "<p style='text-align:center; color:red;'>Error: " + e.message + "</p>";
+    }
+  }
+
+  // Submit suggestion
+  document.getElementById("submitSuggestion")?.addEventListener('click', async () => {
+    const title = document.getElementById("suggestionTitle").value;
+    const description = document.getElementById("suggestionDesc").value;
+    
+    if(!title || !description) return alert("Fill in all fields");
+    
+    try{
+      await db.collection("suggestions").add({
+        title,
+        description,
+        author: currentUsername,
+        authorId: currentUser.uid,
+        timestamp: Date.now(),
+        status: 'pending',
+        upvotes: 0,
+        upvotedBy: []
+      });
+      
+      document.getElementById("suggestionTitle").value = "";
+      document.getElementById("suggestionDesc").value = "";
+      alert("Suggestion submitted!");
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  });
+
+  // Upvote suggestion
+  window.upvoteSuggestion = async function(sugId){
+    try{
+      const sugRef = db.collection("suggestions").doc(sugId);
+      const sugDoc = await sugRef.get();
+      const sug = sugDoc.data();
+      
+      let upvotedBy = sug.upvotedBy || [];
+      let upvotes = sug.upvotes || 0;
+      
+      if(upvotedBy.includes(currentUser.uid)){
+        upvotedBy = upvotedBy.filter(uid => uid !== currentUser.uid);
+        upvotes--;
+      } else {
+        upvotedBy.push(currentUser.uid);
+        upvotes++;
+      }
+      
+      await sugRef.update({ upvotes, upvotedBy });
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Update suggestion status
+  window.updateSuggestionStatus = async function(sugId, status){
+    try{
+      await db.collection("suggestions").doc(sugId).update({ status });
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
+
+  // Delete suggestion
+  window.deleteSuggestion = async function(sugId){
+    if(!confirm("Delete this suggestion?")) return;
+    try{
+      await db.collection("suggestions").doc(sugId).delete();
+      loadSuggestions();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
   }
 
 };
