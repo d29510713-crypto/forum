@@ -1,5 +1,8 @@
 window.onload = function() {
 
+  window.onload = function() {
+  console.log("App loaded!");
+
   // ================= STARS =================
   for(let i=0;i<150;i++){
     const s=document.createElement("div");
@@ -195,14 +198,21 @@ window.onload = function() {
   document.getElementById("registerBtn").onclick=register;
 
   window.login = async function(){
+    console.log("Login function called");
     const email=document.getElementById("logEmail").value;
     const pass=document.getElementById("logPass").value;
+    console.log("Email:", email, "Password length:", pass.length);
+    
     if(!email||!pass) return alert("Enter email and password");
+    
     try{
+      console.log("Attempting to sign in...");
       const userCred=await auth.signInWithEmailAndPassword(email,pass);
+      console.log("Sign in successful, user:", userCred.user.email);
       
       // Check if email is verified (give warning but allow login)
       if(!userCred.user.emailVerified) {
+        console.log("Email not verified");
         const proceed = confirm("⚠️ Your email is not verified yet.\n\nClick OK to continue anyway, or Cancel to verify first.\n\n(Check your email for verification link)");
         if(!proceed) {
           // Resend verification email
@@ -213,6 +223,7 @@ window.onload = function() {
         }
       }
       
+      console.log("Calling loginUser...");
       loginUser(userCred.user);
     }catch(e){
       console.error("Login error:", e);
@@ -231,7 +242,15 @@ window.onload = function() {
       }
     }
   }
-  document.getElementById("loginBtn").onclick=login;
+  
+  // Make sure button is connected
+  const loginBtn = document.getElementById("loginBtn");
+  if(loginBtn) {
+    console.log("Login button found, attaching handler");
+    loginBtn.onclick = login;
+  } else {
+    console.error("Login button NOT found!");
+  }
 
   document.getElementById("forgotPass").onclick=async function(){
     const email=document.getElementById("logEmail").value;
