@@ -1,136 +1,392 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Space Forum</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-    body {
-      font-family: 'Courier New', monospace;
-      background: #000;
-      color: #fff;
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
+body {
+  font-family: 'Courier New', monospace;
+  background: #000;
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
 
-    #blackhole {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, #000 0%, #0a0030 80%, transparent 100%);
-      border-radius: 50%;
-      z-index: 0;
-      box-shadow: 0 0 50px rgba(138, 43, 226, 0.5),
-                  inset 0 0 60px rgba(138, 43, 226, 0.2);
-      animation: pulse 4s ease-in-out infinite;
-    }
+/* BLACK HOLE */
+#blackhole {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #000 0%, #0a0030 80%, transparent 100%);
+  border-radius: 50%;
+  z-index: 0;
+  box-shadow: 0 0 50px rgba(138, 43, 226, 0.5),
+              inset 0 0 60px rgba(138, 43, 226, 0.2);
+  animation: pulse 4s ease-in-out infinite;
+}
 
-    @keyframes pulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.1); }
-    }
+@keyframes pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+}
 
-    #stars {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      pointer-events: none;
-    }
+/* STARS */
+#stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
 
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
-      animation: twinkle 3s infinite;
-    }
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 3s infinite;
+}
 
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 1; }
-    }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
 
-    #mainContainer {
-      position: relative;
-      z-index: 2;
-      max-width: 1000px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
+/* MAIN CONTAINER */
+#mainContainer {
+  position: relative;
+  z-index: 2;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
 
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+/* LOGO/HEADER */
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
 
-    .header h1 {
-      font-size: 3em;
-      color: #8a2be2;
-      text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
-      margin-bottom: 10px;
-    }
+.header h1 {
+  font-size: 3em;
+  color: #8a2be2;
+  text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+  margin-bottom: 10px;
+}
 
-    #loginBox, #registerBox {
-      background: rgba(10, 0, 30, 0.95);
-      border: 2px solid rgba(138, 43, 226, 0.7);
-      border-radius: 20px;
-      padding: 30px;
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
-    }
+/* AUTH BOXES */
+#loginBox, #registerBox {
+  background: rgba(10, 0, 30, 0.95);
+  border: 2px solid rgba(138, 43, 226, 0.7);
+  border-radius: 20px;
+  padding: 30px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+}
 
-    #loginBox h2, #registerBox h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #9d4edd;
-    }
+#loginBox h2, #registerBox h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #9d4edd;
+}
 
-    input[type="text"],
-    input[type="email"],
-    input[type="password"] {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      background: rgba(0, 0, 0, 0.5);
-      border: 2px solid rgba(138, 43, 226, 0.5);
-      border-radius: 8px;
-      color: #fff;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-    }
+/* FORM ELEMENTS */
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(138, 43, 226, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
 
-    input:focus {
-      outline: none;
-      border-color: #8a2be2;
-      box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
-    }
+input:focus {
+  outline: none;
+  border-color: #8a2be2;
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+}
 
-    button {
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      padding: 10px 20px;
-      transition: all 0.3s;
-      background: linear-gradient(135deg, #8a2be2, #4b0082);
-      color: #fff;
-      border: 2px solid rgba(138, 43, 226, 0.8);
-      font-family: 'Courier New', monospace;
-      margin: 5px;
-      font-size: 14px
+/* BUTTONS */
+button {
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 10px 20px;
+  transition: all 0.3s;
+  background: linear-gradient(135deg, #8a2be2, #4b0082);
+  color: #fff;
+  border: 2px solid rgba(138, 43, 226, 0.8);
+  font-family: 'Courier New', monospace;
+  margin: 5px;
+  font-size: 14px;
+}
+
+button:hover {
+  background: linear-gradient(135deg, #9d4edd, #5a0099);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(138, 43, 226, 0.6);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.link-btn {
+  background: none !important;
+  border: none !important;
+  color: #9d4edd !important;
+  text-decoration: underline;
+  padding: 5px !important;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.link-btn:hover {
+  color: #8a2be2 !important;
+  transform: none !important;
+}
+
+/* FORUM SECTION */
+#forum {
+  width: 100%;
+}
+
+.forum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  background: rgba(10, 0, 30, 0.8);
+  padding: 15px;
+  border-radius: 15px;
+  border: 2px solid rgba(138, 43, 226, 0.5);
+}
+
+#coinDisplay {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+/* TABS */
+#tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+#tabs button {
+  flex: 1;
+  min-width: 100px;
+}
+
+/* SECTIONS */
+.tabSection {
+  width: 100%;
+  background: rgba(10, 0, 30, 0.9);
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+  border: 2px solid rgba(138, 43, 226, 0.5);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* POSTS */
+.post {
+  background: rgba(10, 0, 30, 0.9);
+  border: 2px solid rgba(138, 43, 226, 0.7);
+  border-radius: 15px;
+  padding: 15px 20px;
+  margin: 15px 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+}
+
+.post:hover {
+  border-color: #9d4edd;
+  box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+  transform: translateY(-2px);
+}
+
+.post strong {
+  color: #9d4edd;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.post p {
+  line-height: 1.6;
+  color: #fff;
+}
+
+/* USER ITEMS */
+.user-item {
+  background: rgba(10, 0, 30, 0.8);
+  border: 1px solid rgba(138, 43, 226, 0.5);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.user-item strong {
+  color: #fff;
+}
+
+.user-item span {
+  background: linear-gradient(135deg, #8a2be2, #4b0082);
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.85em;
+  color: #fff;
+}
+
+/* UPDATE ITEMS */
+.update-item {
+  background: rgba(10, 0, 30, 0.9);
+  border: 2px solid rgba(138, 43, 226, 0.6);
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.update-item h3 {
+  color: #9d4edd;
+  margin-bottom: 10px;
+}
+
+.update-item div {
+  color: #fff;
+  line-height: 1.6;
+}
+
+/* DM ITEMS */
+.dm-item {
+  background: rgba(10, 0, 30, 0.8);
+  border: 1px solid rgba(138, 43, 226, 0.5);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.dm-item strong {
+  color: #9d4edd;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.dm-item div {
+  color: #fff;
+}
+
+/* TEXTAREA */
+textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(138, 43, 226, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  min-height: 80px;
+  font-size: 14px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #8a2be2;
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+}
+
+/* SELECT */
+select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(138, 43, 226, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+select:focus {
+  outline: none;
+  border-color: #8a2be2;
+}
+
+select option {
+  background: #1a0040;
+  color: #fff;
+}
+
+/* CANVAS */
+#plinkoCanvas {
+  width: 100%;
+  max-width: 600px;
+  height: 500px;
+  border: 2px solid rgba(138, 43, 226, 0.7);
+  border-radius: 15px;
+  margin: 20px auto;
+  display: block;
+  background: #0a0030;
+}
+
+.form-group {
+  margin: 15px 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #9d4edd;
+  font-weight: bold;
+}
+
+.section-title {
+  color: #9d4edd;
+  font-size: 1.5em;
+  margin-bottom: 15px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+}
+
+/* Paragraph text alignment */
+p {
+  text-align: center;
+  color: #fff;
+}
+
+/* Login/Register toggle buttons container */
+#loginBox p, #registerBox p {
+  margin-top: 15px;
+}
