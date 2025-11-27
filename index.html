@@ -30,8 +30,7 @@
       background: radial-gradient(circle, #000 0%, #0a0030 80%, transparent 100%);
       border-radius: 50%;
       z-index: 0;
-      box-shadow: 0 0 50px rgba(138, 43, 226, 0.5),
-                  inset 0 0 60px rgba(138, 43, 226, 0.2);
+      box-shadow: 0 0 50px rgba(138, 43, 226, 0.5), inset 0 0 60px rgba(138, 43, 226, 0.2);
       animation: pulse 4s ease-in-out infinite;
     }
 
@@ -102,9 +101,7 @@
       color: #9d4edd;
     }
 
-    input[type="text"],
-    input[type="email"],
-    input[type="password"] {
+    input[type="text"], input[type="email"], input[type="password"] {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
@@ -133,4 +130,697 @@
       border: 2px solid rgba(138, 43, 226, 0.8);
       font-family: 'Courier New', monospace;
       margin: 5px;
-      font-size: 14px
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #9d4edd, #5a0099);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(138, 43, 226, 0.6);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .link-btn {
+      background: none !important;
+      border: none !important;
+      color: #9d4edd !important;
+      text-decoration: underline;
+      padding: 5px !important;
+      cursor: pointer;
+      box-shadow: none !important;
+    }
+
+    .link-btn:hover {
+      color: #8a2be2 !important;
+      transform: none !important;
+    }
+
+    #forum {
+      width: 100%;
+    }
+
+    .forum-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      background: rgba(10, 0, 30, 0.8);
+      padding: 15px;
+      border-radius: 15px;
+      border: 2px solid rgba(138, 43, 226, 0.5);
+    }
+
+    #coinDisplay {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    #tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    #tabs button {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .tabSection {
+      width: 100%;
+      background: rgba(10, 0, 30, 0.9);
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+      border: 2px solid rgba(138, 43, 226, 0.5);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .post {
+      background: rgba(10, 0, 30, 0.9);
+      border: 2px solid rgba(138, 43, 226, 0.7);
+      border-radius: 15px;
+      padding: 15px 20px;
+      margin: 15px 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+    }
+
+    .post:hover {
+      border-color: #9d4edd;
+      box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+      transform: translateY(-2px);
+    }
+
+    .post strong {
+      color: #9d4edd;
+      display: block;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .post p {
+      line-height: 1.6;
+      color: #fff;
+    }
+
+    .user-item {
+      background: rgba(10, 0, 30, 0.8);
+      border: 1px solid rgba(138, 43, 226, 0.5);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .user-item strong {
+      color: #fff;
+    }
+
+    .user-item span {
+      background: linear-gradient(135deg, #8a2be2, #4b0082);
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+      color: #fff;
+    }
+
+    .update-item {
+      background: rgba(10, 0, 30, 0.9);
+      border: 2px solid rgba(138, 43, 226, 0.6);
+      border-radius: 12px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .update-item h3 {
+      color: #9d4edd;
+      margin-bottom: 10px;
+    }
+
+    .update-item div {
+      color: #fff;
+      line-height: 1.6;
+    }
+
+    .dm-item {
+      background: rgba(10, 0, 30, 0.8);
+      border: 1px solid rgba(138, 43, 226, 0.5);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+    }
+
+    .dm-item strong {
+      color: #9d4edd;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .dm-item div {
+      color: #fff;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(138, 43, 226, 0.5);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+      min-height: 80px;
+      font-size: 14px;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #8a2be2;
+      box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(138, 43, 226, 0.5);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #8a2be2;
+    }
+
+    select option {
+      background: #1a0040;
+      color: #fff;
+    }
+
+    #plinkoCanvas {
+      width: 100%;
+      max-width: 600px;
+      height: 500px;
+      border: 2px solid rgba(138, 43, 226, 0.7);
+      border-radius: 15px;
+      margin: 20px auto;
+      display: block;
+      background: #0a0030;
+    }
+
+    .form-group {
+      margin: 15px 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #9d4edd;
+      font-weight: bold;
+    }
+
+    .section-title {
+      color: #9d4edd;
+      font-size: 1.5em;
+      margin-bottom: 15px;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+    }
+
+    p {
+      text-align: center;
+      color: #fff;
+    }
+
+    #loginBox p, #registerBox p {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div id="blackhole"></div>
+  <div id="stars"></div>
+
+  <div id="mainContainer">
+    <div class="header">
+      <h1>🌌 SPACE FORUM 🌌</h1>
+    </div>
+
+    <!-- LOGIN BOX -->
+    <div id="loginBox">
+      <h2>Login</h2>
+      <input type="email" id="logEmail" placeholder="Email">
+      <input type="password" id="logPass" placeholder="Password">
+      <button id="loginBtn">Login</button>
+      <p>
+        Don't have an account? 
+        <button class="link-btn" id="toggleToRegister">Register here</button>
+      </p>
+    </div>
+
+    <!-- REGISTER BOX -->
+    <div id="registerBox" class="hidden">
+      <h2>Register</h2>
+      <input type="text" id="regUsername" placeholder="Username">
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regPass" placeholder="Password">
+      <button id="registerBtn">Register</button>
+      <p>
+        Already have an account? 
+        <button class="link-btn" id="toggleToLogin">Login here</button>
+      </p>
+    </div>
+
+    <!-- FORUM -->
+    <div id="forum" class="hidden">
+      <div class="forum-header">
+        <div id="coinDisplay">🪙 0 Coins</div>
+        <button id="logoutBtn">Logout</button>
+      </div>
+
+      <div id="tabs">
+        <button>Posts</button>
+        <button>Users</button>
+        <button>Updates</button>
+        <button>DMs</button>
+        <button>Suggestions</button>
+        <button>Plinko</button>
+      </div>
+
+      <!-- POSTS SECTION -->
+      <div class="tabSection">
+        <h2 class="section-title">Forum Posts</h2>
+        <div class="form-group">
+          <label>Category:</label>
+          <select id="postCategory">
+            <option>General</option>
+            <option>Games</option>
+            <option>Tech</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Content:</label>
+          <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+        </div>
+        <button id="postBtn">Post</button>
+        <div id="postsList"></div>
+      </div>
+
+      <!-- USERS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Users</h2>
+        <div id="usersList"></div>
+      </div>
+
+      <!-- UPDATES SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Updates</h2>
+        <button id="addUpdateBtn" class="hidden">Add Update (Owner Only)</button>
+        <div id="updatesList"></div>
+      </div>
+
+      <!-- DMS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Direct Messages</h2>
+        <div class="form-group">
+          <label>To Username:</label>
+          <input type="text" id="dmToUsername" placeholder="Username">
+        </div>
+        <div class="form-group">
+          <label>Message:</label>
+          <textarea id="dmContent" placeholder="Your message"></textarea>
+        </div>
+        <button id="dmBtn">Send DM</button>
+        <div id="dmsList"></div>
+      </div>
+
+      <!-- SUGGESTIONS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Suggestions</h2>
+        <div class="form-group">
+          <textarea id="suggestionInput" placeholder="Share your suggestions..."></textarea>
+        </div>
+        <button id="submitSuggestionBtn">Submit Suggestion</button>
+        <div id="suggestionsList"></div>
+      </div>
+
+      <!-- PLINKO SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Plinko Game</h2>
+        <button id="claimDailyCoins">Claim Daily Coins (+10)</button>
+        <canvas id="plinkoCanvas" width="600" height="500"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
+  <script>
+    // Create stars
+    function createStars() {
+      const starsContainer = document.getElementById('stars');
+      for (let i = 0; i < 100; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        starsContainer.appendChild(star);
+      }
+    }
+    createStars();
+
+    window.onload = function () {
+      const firebaseConfig = {
+        apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+        authDomain: "toasty-89f07.firebaseapp.com",
+        projectId: "toasty-89f07",
+        storageBucket: "toasty-89f07.appspot.com",
+        messagingSenderId: "743787667064",
+        appId: "1:743787667064:web:12284120fbbdd1e907d78d"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+      const storage = firebase.storage();
+
+      const ownerEmail = "d29510713@gmail.com";
+      let currentUser = null;
+
+      const loginBox = document.getElementById("loginBox");
+      const registerBox = document.getElementById("registerBox");
+      const forum = document.getElementById("forum");
+      const logoutBtn = document.getElementById("logoutBtn");
+
+      const tabs = document.querySelectorAll("#tabs button");
+      const sections = document.querySelectorAll(".tabSection");
+
+      const postsList = document.getElementById("postsList");
+      const usersList = document.getElementById("usersList");
+      const updatesList = document.getElementById("updatesList");
+      const addUpdateBtn = document.getElementById("addUpdateBtn");
+      const dmsList = document.getElementById("dmsList");
+      const suggestionsList = document.getElementById("suggestionsList");
+
+      const coinDisplay = document.getElementById("coinDisplay");
+
+      tabs.forEach((tab, idx) => {
+        tab.addEventListener("click", () => {
+          sections.forEach(s => s.classList.add("hidden"));
+          sections[idx].classList.remove("hidden");
+        });
+      });
+
+      document.getElementById("loginBtn").onclick = () => {
+        const email = document.getElementById("logEmail").value;
+        const pass = document.getElementById("logPass").value;
+        auth.signInWithEmailAndPassword(email, pass)
+          .then(() => console.log("Logged in"))
+          .catch(err => alert(err.message));
+      };
+
+      document.getElementById("registerBtn").onclick = () => {
+        const email = document.getElementById("regEmail").value;
+        const pass = document.getElementById("regPass").value;
+        const username = document.getElementById("regUsername").value;
+
+        auth.createUserWithEmailAndPassword(email, pass)
+          .then(res => {
+            const uid = res.user.uid;
+            db.collection("users").doc(uid).set({
+              email,
+              username,
+              coins: 0,
+              role: email === ownerEmail ? "owner" : "user"
+            });
+            console.log("Registered");
+          })
+          .catch(err => alert(err.message));
+      };
+
+      document.getElementById("toggleToRegister").onclick = () => {
+        loginBox.classList.add("hidden");
+        registerBox.classList.remove("hidden");
+      };
+      document.getElementById("toggleToLogin").onclick = () => {
+        registerBox.classList.add("hidden");
+        loginBox.classList.remove("hidden");
+      };
+
+      logoutBtn.onclick = () => auth.signOut();
+
+      auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          currentUser = user;
+          loginBox.classList.add("hidden");
+          registerBox.classList.add("hidden");
+          forum.classList.remove("hidden");
+
+          const userDoc = await db.collection("users").doc(user.uid).get();
+          const role = userDoc.data().role;
+
+          if (role === "owner") addUpdateBtn?.classList.remove("hidden");
+          else addUpdateBtn?.classList.add("hidden");
+
+          loadUsers();
+          loadPosts();
+          loadUpdates();
+          loadCoins();
+          loadDMs();
+          loadSuggestions();
+          initPlinko();
+        } else {
+          currentUser = null;
+          loginBox.classList.remove("hidden");
+          registerBox.classList.add("hidden");
+          forum.classList.add("hidden");
+        }
+      });
+
+      async function loadUsers() {
+        const snapshot = await db.collection("users").get();
+        usersList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.className = "user-item";
+          div.innerHTML = `<strong>${data.username}</strong> <span>${data.role}</span>`;
+
+          if (currentUser) {
+            const currentDoc = db.collection("users").doc(currentUser.uid);
+            currentDoc.get().then(curUser => {
+              if (curUser.data().role === "owner") {
+                const btn = document.createElement("button");
+                btn.textContent = "Toggle Mod";
+                btn.onclick = () => {
+                  const newRole = data.role === "mod" ? "user" : "mod";
+                  db.collection("users").doc(doc.id).update({ role: newRole }).then(loadUsers);
+                };
+                div.appendChild(btn);
+              }
+            });
+          }
+
+          usersList.appendChild(div);
+        });
+      }
+
+      document.getElementById("postBtn").onclick = async () => {
+        const content = document.getElementById("postContent").value;
+        const category = document.getElementById("postCategory").value;
+        if (!content) return;
+
+        await db.collection("posts").add({
+          uid: currentUser.uid,
+          content,
+          category,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById("postContent").value = "";
+        loadPosts();
+      };
+
+      async function loadPosts() {
+        const snapshot = await db.collection("posts").orderBy("timestamp", "desc").get();
+        postsList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const p = doc.data();
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `<strong>${p.category}</strong><p>${p.content}</p>`;
+
+          const currentDoc = db.collection("users").doc(currentUser.uid);
+          currentDoc.get().then(curUser => {
+            if (["owner","mod"].includes(curUser.data().role)) {
+              const btn = document.createElement("button");
+              btn.textContent = "Delete";
+              btn.onclick = () => db.collection("posts").doc(doc.id).delete().then(loadPosts);
+              div.appendChild(btn);
+            }
+          });
+
+          postsList.appendChild(div);
+        });
+      }
+
+      addUpdateBtn?.addEventListener("click", () => {
+        const title = prompt("Enter update title:");
+        const content = prompt("Enter update content:");
+        if (!title || !content) return;
+        db.collection("updates").add({ title, content, timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+          .then(loadUpdates);
+      });
+
+      async function loadUpdates() {
+        const snapshot = await db.collection("updates").orderBy("timestamp","desc").get();
+        updatesList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const u = doc.data();
+          const div = document.createElement("div");
+          div.className = "update-item";
+          div.innerHTML = `<h3>${u.title}</h3><div>${u.content}</div>`;
+          updatesList.appendChild(div);
+        });
+      }
+
+      async function loadCoins() {
+        const doc = await db.collection("users").doc(currentUser.uid).get();
+        coinDisplay.textContent = `🪙 ${doc.data().coins || 0} Coins`;
+      }
+
+      document.getElementById("claimDailyCoins")?.addEventListener("click", async () => {
+        const ref = db.collection("users").doc(currentUser.uid);
+        const doc = await ref.get();
+        let coins = doc.data().coins || 0;
+        coins += 10;
+        await ref.update({ coins });
+        loadCoins();
+      });
+
+      document.getElementById("dmBtn").onclick = async () => {
+        const toUsername = document.getElementById("dmToUsername").value;
+        const content = document.getElementById("dmContent").value;
+        if (!toUsername || !content) return;
+
+        const snap = await db.collection("users").where("username","==",toUsername).get();
+        if (snap.empty) return alert("User not found");
+
+        const toUid = snap.docs[0].id;
+        await db.collection("dms").add({
+          from: currentUser.uid,
+          to: toUid,
+          content,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById("dmContent").value = "";
+        loadDMs();
+      };
+
+      async function loadDMs() {
+        const snapshot = await db.collection("dms").orderBy("timestamp","desc").get();
+        dmsList.innerHTML = "";
+        
+        const usersSnap = await db.collection("users").get();
+        const usernameMap = {};
+        usersSnap.forEach(doc => {
+          usernameMap[doc.id] = doc.data().username;
+        });
+
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          if (d.to === currentUser.uid || d.from === currentUser.uid) {
+            const div = document.createElement("div");
+            div.className = "dm-item";
+            const isFrom = d.from === currentUser.uid;
+            const otherUid = isFrom ? d.to : d.from;
+            const otherUsername = usernameMap[otherUid] || otherUid;
+            div.innerHTML = `<strong>${isFrom ? "To" : "From"}: ${otherUsername}</strong><div>${d.content}</div>`;
+            dmsList.appendChild(div);
+          }
+        });
+      }
+
+      document.getElementById("submitSuggestionBtn").onclick = async () => {
+        const text = document.getElementById("suggestionInput").value;
+        if (!text) return;
+        await db.collection("suggestions").add({
+          uid: currentUser.uid,
+          content: text,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById("suggestionInput").value = "";
+        loadSuggestions();
+      };
+
+      async function loadSuggestions() {
+        const snapshot = await db.collection("suggestions").orderBy("timestamp","desc").get();
+        suggestionsList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const s = doc.data();
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `<p>${s.content}</p>`;
+          suggestionsList.appendChild(div);
+        });
+      }
+
+      function initPlinko() {
+        const canvas = document.getElementById("plinkoCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        
+        ctx.fillStyle = "#0a0030";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "#8a2be2";
+        for (let row = 0; row < 10; row++) {
+          for (let col = 0; col < row + 3; col++) {
+            const x = canvas.width / 2 + (col - row / 2) * 50 - 25;
+            const y = 50 + row * 40;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px monospace";
+        const multipliers = [0.5, 1, 2, 5, 10, 5, 2, 1, 0.5];
+        for (let i = 0; i < multipliers.length; i++) {
+          const x = 50 + i * 60;
+          ctx.fillText(multipliers[i] + "x", x, 480);
+        }
+        
+        ctx.fillStyle = "#9d4edd";
+        ctx.font = "16px monospace";
+        ctx.fillText("Click 'Claim Daily Coins' to play!", 150, 30);
+      }
+    };
+  </script>
+</body>
+</html>
