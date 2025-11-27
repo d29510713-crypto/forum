@@ -252,6 +252,141 @@ function createStars(count=200){
     star.style.left = Math.random()*100+"%";
     star.style.width = star.style.height = (Math.random()*2+1)+"px";
     starsEl.appendChild(star);
+
+    // ===================== PLINKO GAME =====================
+const canvas = document.getElementById("plinkoCanvas");
+const ctxPlinko = canvas.getContext("2d");
+
+const COLS = 9;
+const ROWS = 10;
+const PEG_RADIUS = 5;
+const SLOT_HEIGHT = 40;
+const BALL_RADIUS = 8;
+const slotsCoins = [5, 10, 15, 20, 15, 10, 5, 10, 5]; // Coins per slot
+
+let pegs = [];
+let balls = [];
+let animating = false;
+
+// Create pegs positions
+function createPegs(){
+  pegs = [];
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      const offset = (row%2===0)?0:20;
+      pegs.push({
+        x: col*40 + offset + 20,
+        y: row*40 + 50
+      });
+    }
+  }
+}
+
+// Draw pegs
+function drawPegs(){
+  ctxPlinko.fillStyle="#fff";
+  pegs.forEach(p=>{
+    ctxPlinko.beginPath();
+    ctxPlinko.arc(p.x,p.y,PEG_RADIUS,0,Math.PI*2);
+    ctxPlinko.fill();
+  });
+}
+
+// Ball class
+class Ball {
+  constructor(x){
+    this.x = x;
+    this.y = 0;
+    this.vx = 0;
+    this.vy = 2;
+    this.landed = false;
+  }
+  update(){
+    if(this.landed) return;
+    this.vy += 0.2; // gravity
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Collide with pegs
+    pegs.forEach(p=>{
+      const dx = this.x - p.x;
+      const dy = this.y - p.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist < PEG_RADIUS+BALL_RADIUS){
+        this.vx = (Math.random()-0.5)*4;
+        this.vy *= -0.5;
+        this.y -= 2;
+      }
+    });
+
+    // Collide with sides
+    if(this.x < BALL_RADIUS){ this.x = BALL_RADIUS; this.vx*=-0.5; }
+    if(this.x > canvas.width-BALL_RADIUS){ this.x = canvas.width-BALL_RADIUS; this.vx*=-0.5; }
+
+    // Check if landed in slots
+    if(this.y > canvas.height - SLOT_HEIGHT){
+      this.landed = true;
+      this.vx = 0;
+      this.vy = 0;
+
+      const slotWidth = canvas.width / COLS;
+      let slot = Math.floor(this.x / slotWidth);
+      if(slot < 0) slot = 0;
+      if(slot >= slotsCoins.length) slot = slotsCoins.length-1;
+
+      const coins = slotsCoins[slot];
+      alert(`You won ${coins} coins!`);
+      addCoins(coins);
+    }
+  }
+  draw(){
+    ctxPlinko.fillStyle="#ff6b35";
+    ctxPlinko.beginPath();
+    ctxPlinko.arc(this.x,this.y,BALL_RADIUS,0,Math.PI*2);
+    ctxPlinko.fill();
+  }
+}
+
+function addCoins(amount){
+  const userRef = db.collection("users").doc(currentUser.uid);
+  userRef.get().then(doc=>{
+    let c = doc.data().coins || 0;
+    userRef.update({ coins: c + amount });
+    updateCoinDisplay();
+    loadLeaderboard();
+  });
+}
+
+// Drop ball on click
+canvas.addEventListener("click",(e)=>{
+  if(animating) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  balls.push(new Ball(x));
+  animating = true;
+  animate();
+});
+
+// Animation loop
+function animate(){
+  ctxPlinko.clearRect(0,0,canvas.width,canvas.height);
+  drawPegs();
+  balls.forEach(b=>{
+    b.update();
+    b.draw();
+  });
+
+  if(balls.some(b=>!b.landed)){
+    requestAnimationFrame(animate);
+  } else {
+    balls = [];
+    animating = false;
+  }
+}
+
+createPegs();
+drawPegs();
+
   }
 }
 createStars();
