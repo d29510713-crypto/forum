@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div id="blackhole"></div>
 <div id="stars"></div>
 
@@ -18,15 +19,14 @@
     <input id="regPass" type="password" placeholder="Password">
     <input id="regUsername" placeholder="Username">
     <button id="registerBtn">Register</button>
-    <p style="cursor:pointer;" id="toggleToLogin">Already have an account? Login</p>
+    <p id="toggleToLogin" style="cursor:pointer;">Already have an account? Login</p>
   </div>
   <div id="loginBox" class="hidden">
     <h2>Login</h2>
     <input id="logEmail" placeholder="Email">
     <input id="logPass" type="password" placeholder="Password">
     <button id="loginBtn">Login</button>
-    <p style="cursor:pointer;" id="toggleToRegister">Don't have an account? Register</p>
-    <p class="forgot" id="forgotPass">Forgot Password?</p>
+    <p id="toggleToRegister" style="cursor:pointer;">Don't have an account? Register</p>
   </div>
 </div>
 
@@ -36,9 +36,7 @@
     <h1>🔥 Toasty Forums</h1>
     <div style="display:flex; align-items:center; gap:15px;">
       <span id="coinDisplay" style="font-size:20px; font-weight:bold; color:#ffd700;">🪙 0 Coins</span>
-      <button id="claimDailyCoins" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">
-        🎁 Daily Coins
-      </button>
+      <button onclick="claimDailyCoins()" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">🎁 Daily Coins</button>
       <button id="logoutBtn">Logout</button>
     </div>
   </div>
@@ -47,80 +45,40 @@
   <div class="tabs">
     <button id="tabPosts" class="active">📝 Posts</button>
     <button id="tabUsers">👥 Users</button>
-    <button id="tabDMs">💬 DMs</button>
-    <button id="tabUpdates">📢 Updates</button>
-    <button id="tabSuggestions">💡 Suggestions</button>
     <button id="tabGames">🎮 Games</button>
   </div>
 
   <!-- POSTS SECTION -->
   <div id="postsSection" class="section">
     <h2>Posts</h2>
-    <select id="postCategory">
-      <option value="General">General</option>
-      <option value="Space">Space</option>
-      <option value="Gaming">Gaming</option>
-      <option value="News">News</option>
-      <option value="Announcements">Announcements</option>
-      <option value="Off-Topic">Off-Topic</option>
-      <option value="Tech">Tech</option>
-      <option value="Art">Art</option>
-      <option value="Memes">Memes</option>
-    </select><br>
-    <textarea id="postContent" placeholder="Write something... (+5 coins)"></textarea><br>
-    <button id="postBtn">Post</button><br>
-    <div id="postsList"></div>
+    <textarea id="newPostText" placeholder="Write something... (+5 coins)"></textarea><br>
+    <button onclick="addPost()">Post</button>
+    <div id="postsContainer"></div>
   </div>
 
   <!-- USERS SECTION -->
   <div id="usersSection" class="section hidden">
     <h2>Users</h2>
-    <div id="usersList"></div>
-  </div>
-
-  <!-- DMS SECTION -->
-  <div id="dmsSection" class="section hidden">
-    <h2>Direct Messages</h2>
-    <div id="dmsList"></div>
-  </div>
-
-  <!-- UPDATES SECTION -->
-  <div id="updatesSection" class="section hidden">
-    <h2>📢 Forum Updates</h2>
-    <div id="ownerControls" class="hidden">
-      <h3>Owner Controls</h3>
-      <button id="clearForumBtn" class="owner-btn">Clear All Content</button>
-      <button id="banUserBtn" class="owner-btn">Ban User</button>
-      <button id="makeModBtn" class="owner-btn">Make Moderator</button>
-    </div>
-    <div id="updatesList"></div>
-  </div>
-
-  <!-- SUGGESTIONS SECTION -->
-  <div id="suggestionsSection" class="section hidden">
-    <h2>💡 Feature Suggestions</h2>
-    <input type="text" id="suggestionTitle" placeholder="Title">
-    <textarea id="suggestionDescription" placeholder="Describe your suggestion"></textarea>
-    <button id="submitSuggestionBtn">Submit Suggestion (+10 coins)</button>
-    <div id="suggestionsList"></div>
+    <div id="usersContainer"></div>
   </div>
 
   <!-- GAMES SECTION -->
   <div id="gamesSection" class="section hidden">
-    <h2>🎮 Casino Games</h2>
-    <div class="game-box">
-      <h3>🎯 PLINKO</h3>
-      <input type="number" id="plinkoBet" placeholder="Min 10" value="10">
-      <button onclick="playPlinko()">DROP BALL</button>
-      <div id="plinkoBoard" style="position:relative; height:400px; margin-top:20px; background:rgba(0,0,0,0.3); border-radius:10px;"></div>
+    <h2>🎮 Plinko</h2>
+    <button onclick="startPlinko()">Start Plinko</button>
+    <div id="plinkoBoard" style="position:relative; height:400px; width:300px; margin-top:20px; background:#111; border-radius:10px; overflow:hidden;">
+      <div id="plinkoBall" style="position:absolute; width:20px; height:20px; border-radius:50%; background:#ffd700; top:0; left:140px;"></div>
     </div>
   </div>
+
 </div>
 
 <!-- Firebase SDKs v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- Custom JS -->
 <script src="app.js"></script>
 </body>
 </html>
