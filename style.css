@@ -1,28 +1,175 @@
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Courier New', monospace; background:#000; color:#fff; min-height:100vh; display:flex; justify-content:center; align-items:center; overflow-x:hidden; }
-.panel { max-width:900px; width:90%; margin:20px auto; padding:30px; background:rgba(10,0,30,0.85); border:2px solid rgba(138,43,226,0.6); border-radius:20px; text-align:center; position:relative; z-index:10; }
-h1,h2 { margin-bottom:15px; }
-input,textarea,select,button { margin:5px 0; padding:10px; width:100%; border-radius:8px; border:2px solid rgba(138,43,226,0.5); background:rgba(0,0,0,0.5); color:#fff; }
-button { cursor:pointer; transition:all 0.3s ease; }
-button:hover { box-shadow:0 0 20px rgba(138,43,226,0.7); }
-.hidden { display:none !important; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-/* Tabs */
-.tabs { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-bottom:20px; }
-.tabs button { flex:1; min-width:120px; background:rgba(0,0,0,0.4); border:2px solid rgba(138,43,226,0.4); }
-.tabs button.active { background:linear-gradient(135deg,#8a2be2,#4b0082); }
+body {
+  font-family: 'Courier New', monospace;
+  background: #000;
+  color: #fff;
+  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  position: relative;
+  padding: 20px;
+}
 
-/* Posts/Users/DMs/Updates/Suggestions styling */
-.post,.user-item,.dm-item,.update-item,.suggestion-item { background:rgba(0,0,0,0.6); border-radius:12px; padding:10px; margin:10px 0; text-align:left; }
-.post-image{ max-width:100%; border-radius:8px; margin-top:5px; }
+/* ================= ANIMATED BLACK HOLE ================= */
+#blackhole {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle at center, 
+    rgba(138, 43, 226, 0.5) 0%, 
+    rgba(75, 0, 130, 0.3) 30%, 
+    rgba(0, 0, 0, 0.9) 70%, 
+    transparent 100%);
+  border-radius: 50%;
+  animation: pulsate 5s ease-in-out infinite, rotate 30s linear infinite;
+  z-index: 0;
+  box-shadow: 0 0 80px rgba(138,43,226,0.6), inset 0 0 60px rgba(138,43,226,0.3);
+}
 
-/* Stars + Black Hole */
-#stars { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
-.star { position:absolute; background:white; border-radius:50%; width:2px; height:2px; animation:twinkle 3s infinite; }
-@keyframes twinkle { 0%,100%{opacity:0.3;}50%{opacity:1;} }
-#blackhole { position:fixed; top:50%; left:50%; width:600px; height:600px; transform:translate(-50%,-50%); background:radial-gradient(circle,#8a2be2,#000); border-radius:50%; z-index:0; animation:pulsate 4s infinite; }
-@keyframes pulsate { 0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.1);} }
+@keyframes pulsate {
+  0%,100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+}
+@keyframes rotate {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
 
-/* Scrollbar */
-::-webkit-scrollbar { width:10px; }
-::-webkit-scrollbar-thumb { background:linear-gradient(135deg,#8a2be2,#4b0082); border-radius:5px; }
+/* ================= STARS ================= */
+#stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 3s ease-in-out infinite;
+  box-shadow: 0 0 3px rgba(255,255,255,0.8);
+}
+@keyframes twinkle {
+  0%,100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ================= PANEL ================= */
+.panel {
+  position: relative;
+  z-index: 10;
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 30px 40px;
+  background: rgba(10,0,30,0.9);
+  border: 2px solid rgba(138,43,226,0.6);
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(138,43,226,0.4), inset 0 0 60px rgba(138,43,226,0.1);
+  backdrop-filter: blur(12px);
+}
+
+/* ================= HEADINGS ================= */
+h1, h2 {
+  text-align: center;
+  text-shadow: 0 0 15px rgba(138,43,226,0.7);
+}
+
+h1 {
+  color: #ff6b35;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+}
+h2 {
+  color: #00d4ff;
+  margin-bottom: 20px;
+}
+
+/* ================= BUTTONS ================= */
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  background: linear-gradient(135deg, #8a2be2, #4b0082);
+  border: 2px solid rgba(138,43,226,0.8);
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+button:hover {
+  background: linear-gradient(135deg,#9d4edd,#5a0099);
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(138,43,226,0.7);
+}
+
+/* ================= INPUTS ================= */
+input, textarea, select {
+  width: 100%;
+  padding: 12px 15px;
+  margin: 8px 0;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid rgba(138,43,226,0.5);
+  border-radius: 12px;
+  color: #fff;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 15px rgba(0,212,255,0.5);
+}
+
+/* ================= LAYOUT ================= */
+#box, #forum {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 900px;
+}
+
+.tabSection {
+  display: none;
+}
+.tabSection.active {
+  display: block;
+}
+
+/* ================= USERS ================= */
+.user-item, .post, .update-item {
+  position: relative;
+  z-index: 10;
+  background: rgba(0,0,0,0.7);
+  border: 2px solid rgba(138,43,226,0.4);
+  border-radius: 15px;
+  padding: 15px;
+  margin: 10px 0;
+  overflow-wrap: break-word;
+  box-shadow: 0 0 15px rgba(138,43,226,0.3);
+}
+
+/* ================= LOGOUT ================= */
+#logoutBtn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+/* ================= RESPONSIVE ================= */
+@media(max-width:768px){
+  .panel { padding: 20px; margin: 10px; }
+  h1 { font-size: 1.8em; }
+}
