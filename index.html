@@ -1,123 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Toasty Forums</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>🔥 Toasty Forums</title>
+  <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase v8 (REQUIRED for your code) -->
+  <!-- Firebase v8 (REQUIRED) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 </head>
 <body>
+  <div id="blackhole"></div>
+  <div id="stars"></div>
 
-<!-- STAR BACKGROUND -->
-<div id="stars"></div>
+  <!-- LOGIN/REGISTER PANEL -->
+  <div id="box" class="panel">
+    <h1>🔥 Toasty Forums</h1>
 
-<!-- LOGIN + REGISTER -->
-<div id="box">
-  <!-- LOGIN -->
-  <div id="loginBox">
-    <h2>Login</h2>
-    <input id="logEmail" placeholder="Email">
-    <input id="logPass" type="password" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
+    <div id="loginBox">
+      <h2>Login</h2>
+      <input id="logEmail" placeholder="Email" />
+      <input id="logPass" type="password" placeholder="Password" />
+      <button id="loginBtn">Login</button>
+      <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
+    </div>
+
+    <div id="registerBox" class="hidden">
+      <h2>Register</h2>
+      <input id="regEmail" placeholder="Email" />
+      <input id="regPass" type="password" placeholder="Password" />
+      <input id="regUsername" placeholder="Username" />
+      <button id="registerBtn">Register</button>
+      <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
+    </div>
   </div>
 
-  <!-- REGISTER -->
-  <div id="registerBox" class="hidden">
-    <h2>Register</h2>
-    <input id="regEmail" placeholder="Email">
-    <input id="regPass" type="password" placeholder="Password">
-    <input id="regUsername" placeholder="Username">
-    <button id="registerBtn">Register</button>
-    <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
+  <!-- MAIN FORUM -->
+  <div id="forum" class="panel hidden">
+    <div id="header" style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>🔥 Toasty Forums</h2>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <span id="coinDisplay" style="font-weight:bold; color:#ffd700;">🪙 0 Coins</span>
+        <button id="claimDailyBtn">🎁 Daily</button>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button id="tabPosts" class="active">📝 Posts</button>
+      <button id="tabUsers">👥 Users</button>
+      <button id="tabDMs">💬 DMs</button>
+      <button id="tabUpdates">📢 Updates</button>
+      <button id="tabSuggestions">💡 Suggestions</button>
+      <button id="tabGames">🎮 Games</button>
+      <button id="tabLeaderboard">🏆 Leaderboard</button>
+      <button id="tabActivity">📊 Activity</button>
+      <button id="tabProfile">👤 My Profile</button>
+    </div>
+
+    <!-- SECTIONS -->
+    <div id="postsSection" class="section">
+      <h3>Create Post</h3>
+      <select id="postCategory">
+        <option value="General">General</option>
+        <option value="Gaming">Gaming</option>
+        <option value="News">News</option>
+        <option value="Announcements">Announcements</option>
+        <option value="Off-Topic">Off-Topic</option>
+      </select>
+      <textarea id="postContent" placeholder="Write something... (+5 coins)"></textarea>
+      <input type="file" id="postImage" accept="image/*" />
+      <img id="previewImage" class="hidden" alt="preview" />
+      <button id="postBtn">Post (+5 coins)</button>
+      <div id="postsList" style="margin-top:16px;"></div>
+    </div>
+
+    <div id="usersSection" class="section hidden">
+      <h3>Users</h3>
+      <div id="usersList"></div>
+    </div>
+
+    <div id="dmsSection" class="section hidden">
+      <h3>Direct Messages</h3>
+      <input id="dmToUsername" placeholder="Send to (username)" />
+      <textarea id="dmContent" placeholder="Message..."></textarea>
+      <button id="dmBtn">Send DM</button>
+      <div id="dmsList" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="updatesSection" class="section hidden">
+      <h3>Updates</h3>
+      <div id="updatesList"></div>
+    </div>
+
+    <div id="suggestionsSection" class="section hidden">
+      <h3>Suggestions</h3>
+      <input id="suggestionTitle" placeholder="Title" />
+      <textarea id="suggestionDescription" placeholder="Describe it..."></textarea>
+      <button id="submitSuggestionBtn">Submit Suggestion (+10 coins)</button>
+      <div id="suggestionsList" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="gamesSection" class="section hidden">
+      <h3>Games — Plinko</h3>
+      <div id="plinkoWrap" style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+        <canvas id="plinkoCanvas" width="400" height="420" style="border-radius:10px;"></canvas>
+        <div style="min-width:180px;">
+          <label>Bet:</label>
+          <input id="plinkoBet" type="number" value="10" min="10" />
+          <button id="plinkoDropBtn">Drop Ball</button>
+          <p style="margin-top:8px;">Notes: Minimum bet 10 coins.</p>
+          <div id="plinkoResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="leaderboardSection" class="section hidden">
+      <h3>Leaderboard</h3>
+      <div id="leaderboardList"></div>
+    </div>
+
+    <div id="activitySection" class="section hidden">
+      <h3>Activity Leaderboard</h3>
+      <div id="activityList"></div>
+    </div>
+
+    <div id="profileSection" class="section hidden">
+      <h3>My Profile</h3>
+      <input id="profileBio" placeholder="Short bio" />
+      <input id="profileAvatar" type="file" accept="image/*" />
+      <img id="profileAvatarPreview" class="hidden" alt="avatar preview" />
+      <button id="saveProfileBtn">Save Profile</button>
+      <div id="myProfileInfo" style="margin-top:12px;"></div>
+    </div>
   </div>
-</div>
 
-<!-- FORUM -->
-<div id="forum" class="hidden">
-
-  <div id="topBar">
-    <span id="coinDisplay">🪙 0 Coins</span>
-    <button id="logoutBtn">Logout</button>
-  </div>
-
-  <!-- TABS -->
-  <div id="tabs">
-    <button id="tabPosts">Posts</button>
-    <button id="tabUsers">Users</button>
-    <button id="tabDms">DMs</button>
-    <button id="tabUpdates">Updates</button>
-    <button id="tabSuggestions">Suggestions</button>
-    <button id="tabGames">Games</button>
-    <button id="tabLeaderboard">Leaderboard</button>
-    <button id="tabActivity">Activity</button>
-  </div>
-
-  <!-- SECTIONS -->
-  <div id="postsSection" class="tabSection">
-    <h2>Create Post</h2>
-    <textarea id="postContent" placeholder="Write something..."></textarea>
-    <select id="postCategory">
-      <option>General</option>
-      <option>Fun</option>
-      <option>Help</option>
-    </select><br>
-    <input type="file" id="postImage">
-    <img id="previewImage" class="hidden">
-    <button id="postBtn">Post</button>
-    <div id="postsList"></div>
-  </div>
-
-  <div id="usersSection" class="tabSection hidden">
-    <h2>Users</h2>
-    <div id="usersList"></div>
-  </div>
-
-  <div id="dmsSection" class="tabSection hidden">
-    <h2>DMs</h2>
-    <input id="dmToUsername" placeholder="Send to username">
-    <textarea id="dmContent" placeholder="Message"></textarea>
-    <button id="dmBtn">Send</button>
-    <div id="dmsList"></div>
-  </div>
-
-  <div id="updatesSection" class="tabSection hidden">
-    <h2>Updates</h2>
-    <div id="updatesList"></div>
-  </div>
-
-  <div id="suggestionsSection" class="tabSection hidden">
-    <h2>Suggestions</h2>
-    <textarea id="suggestionInput" placeholder="Your suggestion..."></textarea>
-    <button id="submitSuggestionBtn">Submit</button>
-    <div id="suggestionsList"></div>
-  </div>
-
-  <div id="gamesSection" class="tabSection hidden">
-    <h2>Games</h2>
-    <button onclick="claimDailyCoins()">Claim Daily Coins</button>
-    <canvas id="plinkoCanvas" width="400" height="500"></canvas>
-  </div>
-
-  <div id="leaderboardSection" class="tabSection hidden">
-    <h2>Leaderboard</h2>
-    <div id="leaderboardList"></div>
-  </div>
-
-  <div id="activitySection" class="tabSection hidden">
-    <h2>Activity Leaderboard</h2>
-    <div id="activityList"></div>
-  </div>
-
-</div>
-
-<!-- YOUR SCRIPT -->
-<script src="app.js"></script>
-
+  <!-- App script -->
+  <script src="app.js"></script>
 </body>
 </html>
