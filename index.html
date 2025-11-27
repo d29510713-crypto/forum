@@ -1,158 +1,257 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Toasty Forum</title>
-<link rel="stylesheet" href="style.css">
+    <title>Toasty Forum</title>
+    <style>
+        body {
+            font-family: Arial;
+            background:#fff4e5;
+            padding:20px;
+            color:#333;
+        }
+        h1, h2, h3 { color:#ff7a00; }
+        #loginBox, #registerBox, #forumBox, #adminBox, #updateBox { max-width:700px; margin:auto; }
+        input, textarea {
+            width:100%; padding:10px; margin:5px 0; border:1px solid #ccc; border-radius:5px;
+        }
+        button {
+            background:#ff7a00; color:white; border:none; padding:10px 15px;
+            border-radius:5px; cursor:pointer; margin-top:5px;
+        }
+        .post, .updatePost { background:white; padding:10px; border-radius:5px; margin-top:10px; }
+        .adminControls button { background:red; }
+        #bannedNotice { color:red; font-weight:bold; }
+    </style>
 </head>
 <body>
-<div id="blackhole"></div>
-<div id="stars"></div>
+    <h1>Toasty Forum</h1>
 
-<!-- LOGIN/REGISTER -->
-<div id="box" class="panel">
-  <h1>🔥 Welcome to Toasty</h1>
-  <div id="registerBox">
-    <h2>Create Account</h2>
-    <p style="color:#888; font-size:14px;">⚠️ You must verify your email before logging in</p>
-    <input id="regEmail" placeholder="Email" type="email">
-    <input id="regPass" type="password" placeholder="Password (min 6 characters)">
-    <input id="regUsername" placeholder="Username">
-    <button id="registerBtn">Register</button>
-    <p style="cursor:pointer; color:#00d4ff;" id="toggleToLogin">Already have an account? <strong>Login</strong></p>
-  </div>
-  <div id="loginBox" class="hidden">
-    <h2>Welcome Back!</h2>
-    <p style="color:#888; font-size:14px;">Login to your verified account</p>
-    <input id="logEmail" placeholder="Email" type="email">
-    <input id="logPass" type="password" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p style="cursor:pointer; color:#00d4ff;" id="toggleToRegister">Need an account? <strong>Register</strong></p>
-    <p class="forgot" id="forgotPass">Forgot Password?</p>
-  </div>
-</div>
+    <!-- LOGIN -->
+    <div id="loginBox">
+        <h2>Login</h2>
+        <input id="loginUser" placeholder="Username">
+        <button onclick="login()">Login</button>
+        <p><a href="#" onclick="showRegister()">Register instead</a></p>
+    </div>
 
-<!-- MAIN FORUM -->
-<div id="forum" class="panel hidden">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-    <h1 style="margin:0;">🔥 Toasty Forums</h1>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button onclick="changeProfilePicture()" style="padding:8px 20px; background:linear-gradient(135deg, #ff6b35, #f7931e);">
-        🖼️ Change Avatar
-      </button>
-      <button onclick="setCustomStatus()" style="padding:8px 20px; background:linear-gradient(135deg, #8a2be2, #4b0082);">
-        ⚙️ Set Status
-      </button>
+    <!-- REGISTER -->
+    <div id="registerBox" style="display:none;">
+        <h2>Register</h2>
+        <input id="regUser" placeholder="Username">
+        <button onclick="register()">Register</button>
+        <p><a href="#" onclick="showLogin()">Login instead</a></p>
     </div>
-  </div>
-  
-  <div class="tabs">
-    <button id="tabPosts" class="active">📝 Posts</button>
-    <button id="tabUsers">👥 Users</button>
-    <button id="tabDMs">💬 DMs</button>
-    <button id="tabUpdates">📢 Updates</button>
-    <button id="tabSuggestions">💡 Ideas</button>
-    <button id="tabLeaderboard">🏆 Ranks</button>
-  </div>
-  
-  <!-- POSTS -->
-  <div id="postsSection" class="section">
-    <h2>Posts</h2>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-      <select id="categoryFilter" style="flex:1; min-width:150px;">
-        <option value="all">All Categories</option>
-        <option value="General">General</option>
-        <option value="Space">Space</option>
-        <option value="Gaming">Gaming</option>
-        <option value="News">News</option>
-        <option value="Announcements">Announcements</option>
-        <option value="Off-Topic">Off-Topic</option>
-        <option value="Tech">Tech</option>
-        <option value="Art">Art</option>
-        <option value="Memes">Memes</option>
-      </select>
-      <select id="sortPosts" style="flex:1; min-width:150px;">
-        <option value="newest">Newest First</option>
-        <option value="popular">Most Popular</option>
-        <option value="discussed">Most Discussed</option>
-      </select>
-    </div>
-    <select id="postCategory">
-      <option value="General">General</option>
-      <option value="Space">Space</option>
-      <option value="Gaming">Gaming</option>
-      <option value="News">News</option>
-      <option value="Announcements">Announcements</option>
-      <option value="Off-Topic">Off-Topic</option>
-      <option value="Tech">Tech</option>
-      <option value="Art">Art</option>
-      <option value="Memes">Memes</option>
-    </select><br>
-    <textarea id="postContent" placeholder="Share something with the community..."></textarea><br>
-    <input type="file" id="postImage" accept="image/*"><br>
-    <img id="previewImage" class="hidden">
-    <button id="postBtn">📤 Post</button>
-    <button onclick="createPoll()" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">📊 Create Poll</button>
-    <br>
-    <input id="searchPost" placeholder="🔍 Search posts"><br>
-    <div id="postsList"></div>
-  </div>
-  
-  <!-- USERS -->
-  <div id="usersSection" class="section hidden">
-    <h2>Community Members</h2>
-    <input id="searchUser" placeholder="🔍 Search users"><br>
-    <div id="usersList"></div>
-  </div>
-  
-  <!-- DMS -->
-  <div id="dmsSection" class="section hidden">
-    <h2>Direct Messages</h2>
-    <input id="dmToUsername" placeholder="Username">
-    <textarea id="dmContent" placeholder="Type your message..."></textarea><br>
-    <button id="dmBtn">Send Message</button>
-    <div id="dmsList"></div>
-  </div>
-  
-  <!-- UPDATES -->
-  <div id="updatesSection" class="section hidden">
-    <h2>Updates & Announcements</h2>
-    <div id="updatesList"></div>
-    <div id="ownerControls" class="hidden">
-      <h3>Admin Controls</h3>
-      <input id="updateTitle" placeholder="Update Title">
-      <textarea id="updateContent" placeholder="Update Content"></textarea><br>
-      <button id="createUpdateBtn" class="owner-btn">Post Update</button>
-      <button id="clearForumBtn" class="owner-btn">Clear Forum</button>
-      <button id="banUserBtn" class="owner-btn">Ban User</button>
-    </div>
-  </div>
-  
-  <!-- SUGGESTIONS -->
-  <div id="suggestionsSection" class="section hidden">
-    <h2>💡 Community Ideas</h2>
-    <p style="color:#888; font-size:14px;">Share your suggestions for improving the forum!</p>
-    <input id="suggestionTitle" placeholder="Suggestion Title" style="margin-top:15px;">
-    <textarea id="suggestionDesc" placeholder="Describe your idea..."></textarea><br>
-    <button id="submitSuggestion" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">Submit Idea</button>
-    <h3 style="margin-top:30px;">All Suggestions</h3>
-    <div id="suggestionsList"></div>
-  </div>
-  
-  <!-- LEADERBOARD -->
-  <div id="leaderboardSection" class="section hidden">
-    <h2>🏆 Top Contributors</h2>
-    <p style="color:#888; font-size:14px; margin-bottom:20px;">Ranked by activity and engagement!</p>
-    <div id="leaderboardList"></div>
-  </div>
-  
-  <button id="logoutBtn">Log Out</button>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="app.js"></script>
+    <!-- FORUM -->
+    <div id="forumBox" style="display:none;">
+        <h2>Forum</h2>
+        <p>Logged in as <span id="displayUser"></span> (<span id="displayRole"></span>)</p>
+        <textarea id="postText" placeholder="Write a message..."></textarea>
+        <button onclick="postMessage()">Post</button>
+        <h3>Messages</h3>
+        <div id="messages"></div>
+    </div>
+
+    <!-- OWNER/ADMIN PANEL -->
+    <div id="adminBox" style="display:none;">
+        <h2>Admin / Owner Panel</h2>
+        <h3>Banned Users</h3>
+        <div id="bannedList"></div>
+
+        <h3>Role Control (Owner Only)</h3>
+        <input id="promoteUser" placeholder="Username to promote to Admin">
+        <button onclick="promoteAdmin()">Promote</button>
+    </div>
+
+    <!-- OWNER UPDATE POSTS -->
+    <div id="updateBox" style="display:none;">
+        <h2>Updates</h2>
+        <textarea id="updateText" placeholder="Write an update..."></textarea>
+        <button onclick="postUpdate()">Post Update</button>
+        <h3>All Updates</h3>
+        <div id="updateFeed"></div>
+    </div>
+
+<script>
+// ----------------------------
+// STORAGE SETUP
+// ----------------------------
+let users = JSON.parse(localStorage.getItem("users")) || {};
+let messages = JSON.parse(localStorage.getItem("messages")) || [];
+let updates = JSON.parse(localStorage.getItem("updates")) || [];
+let banned = JSON.parse(localStorage.getItem("banned")) || [];
+let currentUser = localStorage.getItem("currentUser") || null;
+
+// CENSORED WORDS — blocks *everything*, including slurs, disguised words, spacing variations
+const censoredWords = [
+    "fuck","shit","bitch","cunt","nigger","nigga","fag","retard","whore","slut",
+    "kys","kill yourself","spic","chink","beaner","tranny","dyke","cracker",
+];
+
+function censor(text) {
+    let clean = text.toLowerCase();
+    for (let w of censoredWords) {
+        let regex = new RegExp(w.replace(/[-/\^$*+?.()|[\]{}]/g, "\$&"), "gi");
+        clean = clean.replace(regex, "[CENSORED]");
+    }
+    return clean;
+}
+
+// ----------------------------
+// LOGIN / REGISTER UI
+// ----------------------------
+function showRegister(){
+    loginBox.style.display = "none";
+    registerBox.style.display = "block";
+}
+function showLogin(){
+    registerBox.style.display = "none";
+    loginBox.style.display = "block";
+}
+
+// ----------------------------
+// REGISTER
+// ----------------------------
+function register(){
+    let u = regUser.value.trim();
+    if (!u) return alert("Enter username");
+    if (users[u]) return alert("Username already exists!");
+
+    // Set first registered user as OWNER
+    let role = Object.keys(users).length === 0 ? "owner" : "member";
+
+    users[u] = {
+        role: role,
+        lastNameChange: 0
+    };
+
+    save();
+    alert("Registered! Now login.");
+    showLogin();
+}
+
+// ----------------------------
+// LOGIN
+// ----------------------------
+function login(){
+    let u = loginUser.value.trim();
+    if (!users[u]) return alert("User not found");
+    if (banned.includes(u)) return alert("You are banned from Toasty Forum.");
+
+    currentUser = u;
+    localStorage.setItem("currentUser", currentUser);
+    loadForum();
+}
+
+// ----------------------------
+// LOAD FORUM
+// ----------------------------
+function loadForum(){
+    loginBox.style.display = "none";
+    registerBox.style.display = "none";
+    forumBox.style.display = "block";
+
+    let role = users[currentUser].role;
+    displayUser.textContent = currentUser;
+    displayRole.textContent = role;
+
+    adminBox.style.display = (role === "owner" || role === "admin") ? "block" : "none";
+    updateBox.style.display = (role === "owner") ? "block" : "none";
+
+    renderMessages();
+    renderUpdates();
+    renderBanned();
+}
+
+// ----------------------------
+// POST MESSAGE
+// ----------------------------
+function postMessage(){
+    if (!currentUser) return;
+
+    let msg = postText.value.trim();
+    if (!msg) return;
+
+    msg = censor(msg);
+
+    messages.push({ user: currentUser, text: msg });
+    save();
+    postText.value = "";
+    renderMessages();
+}
+
+function renderMessages(){
+    messages = messages.filter(m => !banned.includes(m.user));
+    localStorage.setItem("messages", JSON.stringify(messages));
+
+    messagesDiv = document.getElementById("messages");
+    messagesDiv.innerHTML = "";
+
+    messages.forEach(m => {
+        let div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `<strong>${m.user}</strong>: ${m.text}`;
+
+        if ((users[currentUser].role === "admin" || users[currentUser].role === "owner") && m.user !== currentUser) {
+            let b = document.createElement("button");
+            b.textContent = "Ban";
+            b.onclick = () => banUser(m.user);
+            div.appendChild(b);
+        }
+        messagesDiv.appendChild(div);
+    });
+}
+
+// ----------------------------
+// BAN SYSTEM
+// ----------------------------
+function banUser(u){
+    if (!confirm("Ban user?")) return;
+    banned.push(u);
+    save();
+    renderMessages();
+    renderBanned();
+}
+
+function renderBanned(){
+    bannedList.innerHTML = banned.map(b => `<p>${b}</p>`).join("");
+}
+
+
+function promoteAdmin(){
+    if (users[currentUser].role !== "owner") return alert("Only owner can promote admins.");
+    let u = promoteUser.value.trim();
+    if (!users[u]) return alert("User not found");
+    users[u].role = "admin";
+    save();
+    alert("Promoted!");
+}
+
+
+function postUpdate(){
+    let u = updateText.value.trim();
+    if (!u) return;
+
+    updates.push({ text: u, time: Date.now() });
+    save();
+    updateText.value = "";
+    renderUpdates();
+}
+
+function renderUpdates(){
+    updateFeed.innerHTML = updates
+        .map(u => `<div class='updatePost'>${u.text}</div>`) 
+        .join("");
+}
+
+
+function save(){
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("messages", JSON.stringify(messages));
+    localStorage.setItem("updates", JSON.stringify(updates));
+    localStorage.setItem("banned", JSON.stringify(banned));
+}
+
+</script>
 </body>
 </html>
