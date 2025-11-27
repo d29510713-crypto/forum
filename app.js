@@ -17,14 +17,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ================= WINDOW ONLOAD =================
-window.onload = function () {
-  initStars();
-  initTabs();
-  initLoginRegister();
-  initDailyCoins();
-};
-
 // ================= STARS =================
 function initStars() {
   const starsContainer = document.getElementById("stars");
@@ -42,7 +34,7 @@ function initStars() {
 
 // ================= TABS =================
 function initTabs() {
-  const tabs = ["posts", "users", "dms", "updates", "suggestions", "games"];
+  const tabs = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard"];
   tabs.forEach(tab => {
     const tabBtn = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabBtn) tabBtn.onclick = () => showTab(tab);
@@ -50,24 +42,25 @@ function initTabs() {
 }
 
 function showTab(tab) {
-  ["posts", "users", "dms", "updates", "suggestions", "games"].forEach(t => {
+  const allSections = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard"];
+  allSections.forEach(t => {
     const section = document.getElementById(t + "Section");
     const tabBtn = document.getElementById("tab" + t.charAt(0).toUpperCase() + t.slice(1));
     if (section) section.classList.add("hidden");
     if (tabBtn) tabBtn.classList.remove("active");
   });
-
   const selectedSection = document.getElementById(tab + "Section");
   const selectedTab = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
   if (selectedSection) selectedSection.classList.remove("hidden");
   if (selectedTab) selectedTab.classList.add("active");
 
+  // Load content dynamically
   if (tab === "posts") loadPosts();
   if (tab === "users") loadUsers();
   if (tab === "dms") loadDMs();
   if (tab === "updates") loadUpdates();
   if (tab === "suggestions") loadSuggestions();
-  if (tab === "games") loadLeaderboard();
+  if (tab === "leaderboard") loadLeaderboard();
 }
 
 // ================= LOGIN / REGISTER =================
@@ -168,6 +161,7 @@ async function loginUser(user) {
   loadUpdates();
   loadSuggestions();
   loadLeaderboard();
+  showTab("posts");
 }
 
 // ================= DAILY COINS =================
@@ -179,7 +173,7 @@ function initDailyCoins() {
     const userDoc = await db.collection("users").doc(currentUser.uid).get();
     if (userDoc.exists) {
       const data = userDoc.data();
-      coinsDisplay.textContent = `🪙 Coins: ${data.coins || 0}`;
+      coinsDisplay.textContent = `🪙 ${data.coins || 0} Coins`;
     }
   }
 
@@ -218,145 +212,121 @@ function initDailyCoins() {
 
 // ================= POSTS =================
 async function loadPosts() {
-  const postsContainer = document.getElementById("postsList");
-  if (!postsContainer) return;
-  postsContainer.innerHTML = "";
+  const container = document.getElementById("postsList");
+  if (!container) return;
+  container.innerHTML = "";
   const snapshot = await db.collection("posts").orderBy("timestamp", "desc").get();
   snapshot.forEach(doc => {
     const post = doc.data();
-    if (!post.content) return; // skip empty
     const div = document.createElement("div");
     div.className = "post";
     div.innerHTML = `
-      <strong>${post.author}</strong>: ${post.content}
-      <div id="comments-${doc.id}"></div>
-      <input placeholder="Comment" id="commentInput-${doc.id}"/>
-      <button onclick="addComment('${doc.id}')">Post Comment</button>
+      <strong>${post.author}</strong>: ${post.content || post.text || "No content"}<br>
+      ${post.imageUrl ? `<img src="${post.imageUrl}" style="max-width:200px; display:block; margin:5px 0;">` : ""}
     `;
-    postsContainer.appendChild(div);
-    loadComments(doc.id);
+    container.appendChild(div);
   });
-}
-
-// Comments
-async function loadComments(postId) {
-  const commentsContainer = document.getElementById(`comments-${postId}`);
-  if (!commentsContainer) return;
-  commentsContainer.innerHTML = "";
-  const snapshot = await db.collection("posts").doc(postId).collection("comments").orderBy("timestamp").get();
-  snapshot.forEach(doc => {
-    const c = doc.data();
-    const div = document.createElement("div");
-    div.className = "comment";
-    div.innerHTML = `<strong>${c.author}</strong>: ${c.text}`;
-    commentsContainer.appendChild(div);
-  });
-}
-
-async function addComment(postId) {
-  const input = document.getElementById(`commentInput-${postId}`);
-  const text = input.value;
-  if (!text) return alert("Cannot comment empty");
-  await db.collection("posts").doc(postId).collection("comments").add({
-    text,
-    author: currentUsername,
-    timestamp: Date.now()
-  });
-  input.value = "";
-  loadComments(postId);
 }
 
 // ================= USERS =================
 async function loadUsers() {
-  const usersContainer = document.getElementById("usersList");
-  if (!usersContainer) return;
-  usersContainer.innerHTML = "";
-  const snapshot = await db.collection("users").orderBy("coins","desc").get();
+  const container = document.getElementById("usersList");
+  if (!container) return;
+  container.innerHTML = "";
+  const snapshot = await db.collection("users").get();
   snapshot.forEach(doc => {
     const u = doc.data();
     const div = document.createElement("div");
-    div.innerHTML = `${u.username} (${u.coins || 0} coins) ${u.moderator ? "(Mod)" : ""}`;
-    usersContainer.appendChild(div);
+    div.textContent = `${u.username} ${u.moderator ? "(Mod)" : ""}`;
+    container.appendChild(div);
   });
-}
-
-// ================= LEADERBOARD =================
-async function loadLeaderboard() {
-  const leaderboardContainer = document.getElementById("gamesSection");
-  if (!leaderboardContainer) return;
-  // could add top 10 users
 }
 
 // ================= DMS =================
 async function loadDMs() {
-  const dmsContainer = document.getElementById("dmsList");
-  if (!dmsContainer || !currentUser) return;
-  dmsContainer.innerHTML = "";
-  const snapshot = await db.collection("dms").where("participants","array-contains",currentUser.uid).orderBy("timestamp","desc").get();
+  const container = document.getElementById("dmsList");
+  if (!container) return;
+  container.innerHTML = "";
+  const snapshot = await db.collection("dms").where("participants", "array-contains", currentUser.uid).orderBy("timestamp", "desc").get();
   snapshot.forEach(doc => {
     const dm = doc.data();
-    const otherUser = dm.participants.filter(uid=>uid!==currentUser.uid)[0];
+    const otherUser = dm.participants.filter(uid => uid !== currentUser.uid)[0];
     const div = document.createElement("div");
-    div.innerHTML = `<strong>DM with ${otherUser}</strong>: ${dm.lastMessage}`;
-    dmsContainer.appendChild(div);
+    div.textContent = `DM with ${otherUser}: ${dm.lastMessage}`;
+    container.appendChild(div);
   });
 }
 
 // ================= UPDATES =================
 async function loadUpdates() {
-  const updatesContainer = document.getElementById("updatesList");
-  if (!updatesContainer) return;
-  updatesContainer.innerHTML = "";
-  const snapshot = await db.collection("updates").orderBy("timestamp","desc").get();
-  snapshot.forEach(doc=>{
+  const container = document.getElementById("updatesList");
+  if (!container) return;
+  container.innerHTML = "";
+  const snapshot = await db.collection("updates").orderBy("timestamp", "desc").get();
+  snapshot.forEach(doc => {
     const u = doc.data();
     const div = document.createElement("div");
     div.innerHTML = `<strong>${u.title}</strong>: ${u.text}`;
-    updatesContainer.appendChild(div);
+    container.appendChild(div);
   });
 }
 
 // ================= SUGGESTIONS =================
 async function loadSuggestions() {
-  const suggestionsContainer = document.getElementById("suggestionsList");
-  if (!suggestionsContainer) return;
-  suggestionsContainer.innerHTML = "";
-  const snapshot = await db.collection("suggestions").orderBy("timestamp","desc").get();
-  snapshot.forEach(doc=>{
+  const container = document.getElementById("suggestionsList");
+  if (!container) return;
+  container.innerHTML = "";
+  const snapshot = await db.collection("suggestions").orderBy("timestamp", "desc").get();
+  snapshot.forEach(doc => {
     const s = doc.data();
     const div = document.createElement("div");
     div.innerHTML = `<strong>${s.title}</strong>: ${s.description}`;
-    suggestionsContainer.appendChild(div);
+    container.appendChild(div);
   });
 }
 
-// ================= PLINKO =================
+// ================= LEADERBOARD =================
+async function loadLeaderboard() {
+  const container = document.getElementById("leaderboardList");
+  if (!container) return;
+  container.innerHTML = "";
+  const snapshot = await db.collection("users").orderBy("coins", "desc").limit(10).get();
+  snapshot.forEach(doc => {
+    const u = doc.data();
+    const div = document.createElement("div");
+    div.textContent = `${u.username}: ${u.coins || 0} 🪙`;
+    container.appendChild(div);
+  });
+}
+
+// ================= PLINKO GAME =================
 function playPlinko() {
   const board = document.getElementById("plinkoBoard");
-  board.innerHTML = ""; // clear board
-
+  board.innerHTML = ""; // clear previous
   const ball = document.createElement("div");
+  ball.style.position = "absolute";
+  ball.style.top = "0px";
+  ball.style.left = Math.random() * (board.offsetWidth - 20) + "px";
   ball.style.width = "20px";
   ball.style.height = "20px";
   ball.style.borderRadius = "50%";
-  ball.style.background = "#ff0";
-  ball.style.position = "absolute";
-  ball.style.top = "0px";
-  ball.style.left = "50%";
+  ball.style.background = "#ffd700";
+  ball.style.transition = "top 2s ease, left 2s ease";
   board.appendChild(ball);
 
-  let pos = 0;
-  let left = 50;
-  const interval = setInterval(()=>{
-    if(pos>=380){
-      clearInterval(interval);
-      // calculate multiplier
-      alert("Plinko finished!");
-      return;
-    }
-    pos += 5;
-    left += Math.random()*10-5; // random horizontal movement
-    ball.style.top = pos+"px";
-    ball.style.left = left+"px";
-  },50);
+  // Simulate bouncing
+  setTimeout(() => {
+    const slots = [0.05, 0.2, 0.5, 0.8, 0.95]; // relative positions
+    const rand = slots[Math.floor(Math.random() * slots.length)];
+    ball.style.top = board.offsetHeight - 20 + "px";
+    ball.style.left = board.offsetWidth * rand + "px";
+  }, 50);
 }
+
+// ================= WINDOW ONLOAD =================
+window.onload = function () {
+  initStars();
+  initTabs();
+  initLoginRegister();
+  initDailyCoins();
+};
