@@ -1,175 +1,125 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* ================= GLOBAL ================= */
+* { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: 'Courier New', monospace;
-  background: #000;
-  color: #fff;
-  overflow-x: hidden;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  position: relative;
-  padding: 20px;
+  background:#000;
+  color:#fff;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  position:relative;
+  padding:20px;
+  overflow-x:hidden;
 }
 
-/* ================= ANIMATED BLACK HOLE ================= */
+/* ================= BLACK HOLE ================= */
 #blackhole {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle at center, 
-    rgba(138, 43, 226, 0.5) 0%, 
-    rgba(75, 0, 130, 0.3) 30%, 
-    rgba(0, 0, 0, 0.9) 70%, 
-    transparent 100%);
-  border-radius: 50%;
-  animation: pulsate 5s ease-in-out infinite, rotate 30s linear infinite;
-  z-index: 0;
-  box-shadow: 0 0 80px rgba(138,43,226,0.6), inset 0 0 60px rgba(138,43,226,0.3);
-}
-
-@keyframes pulsate {
-  0%,100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.1); }
-}
-@keyframes rotate {
-  from { filter: hue-rotate(0deg); }
-  to { filter: hue-rotate(360deg); }
+  position:fixed;
+  top:50%;
+  left:50%;
+  width:600px;
+  height:600px;
+  background:black;
+  border-radius:50%;
+  z-index:0;
+  box-shadow: 0 0 60px rgba(255,255,255,0.3) inset;
 }
 
 /* ================= STARS ================= */
 #stars {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:0;
 }
 .star {
-  position: absolute;
-  background: white;
-  border-radius: 50%;
-  animation: twinkle 3s ease-in-out infinite;
-  box-shadow: 0 0 3px rgba(255,255,255,0.8);
-}
-@keyframes twinkle {
-  0%,100% { opacity: 0.3; }
-  50% { opacity: 1; }
+  position:absolute;
+  background:white;
+  border-radius:50%;
+  box-shadow:0 0 3px rgba(255,255,255,0.8);
 }
 
 /* ================= PANEL ================= */
 .panel {
-  position: relative;
-  z-index: 10;
-  max-width: 900px;
-  margin: 20px auto;
-  padding: 30px 40px;
-  background: rgba(10,0,30,0.9);
-  border: 2px solid rgba(138,43,226,0.6);
-  border-radius: 20px;
-  box-shadow: 0 0 40px rgba(138,43,226,0.4), inset 0 0 60px rgba(138,43,226,0.1);
-  backdrop-filter: blur(12px);
+  position:relative;
+  z-index:10;
+  width:100%;
+  max-width:900px;
+  background: rgba(10,0,30,0.95);
+  border:2px solid rgba(138,43,226,0.6);
+  border-radius:20px;
+  box-shadow:0 0 40px rgba(138,43,226,0.4);
+  padding:30px;
+  margin:20px auto;
 }
 
-/* ================= HEADINGS ================= */
-h1, h2 {
-  text-align: center;
-  text-shadow: 0 0 15px rgba(138,43,226,0.7);
+/* ================= TABS ================= */
+#tabs { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:20px; }
+.tabBtn {
+  flex:1; min-width:100px;
+  padding:10px;
+  background: rgba(0,0,0,0.5);
+  border:2px solid rgba(138,43,226,0.4);
+  border-radius:12px;
+  cursor:pointer;
+  text-align:center;
+  color:#fff;
+  transition:0.3s;
 }
+.tabBtn.active { background:linear-gradient(135deg,#8a2be2,#4b0082); border-color:#00d4ff; }
 
-h1 {
-  color: #ff6b35;
-  margin-bottom: 30px;
-  font-size: 2.5em;
-}
-h2 {
-  color: #00d4ff;
-  margin-bottom: 20px;
+/* ================= INPUTS ================= */
+input, textarea, select {
+  width:100%; padding:10px;
+  margin:8px 0;
+  background: rgba(0,0,0,0.6);
+  border:2px solid rgba(138,43,226,0.5);
+  border-radius:10px;
+  color:#fff;
 }
 
 /* ================= BUTTONS ================= */
 button {
-  padding: 10px 20px;
-  margin: 5px;
-  background: linear-gradient(135deg, #8a2be2, #4b0082);
-  border: 2px solid rgba(138,43,226,0.8);
-  border-radius: 12px;
-  color: #fff;
-  font-family: 'Courier New', monospace;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.3s ease;
+  padding:10px 20px;
+  margin:5px;
+  background:linear-gradient(135deg,#8a2be2,#4b0082);
+  border:2px solid rgba(138,43,226,0.8);
+  border-radius:12px;
+  color:#fff;
+  cursor:pointer;
+  transition:0.3s;
 }
 button:hover {
-  background: linear-gradient(135deg,#9d4edd,#5a0099);
-  transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(138,43,226,0.7);
+  background:linear-gradient(135deg,#9d4edd,#5a0099);
+  transform:translateY(-2px);
+  box-shadow:0 0 20px rgba(138,43,226,0.7);
 }
 
-/* ================= INPUTS ================= */
-input, textarea, select {
-  width: 100%;
-  padding: 12px 15px;
-  margin: 8px 0;
-  background: rgba(0,0,0,0.6);
-  border: 2px solid rgba(138,43,226,0.5);
-  border-radius: 12px;
-  color: #fff;
-}
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 15px rgba(0,212,255,0.5);
-}
+/* ================= SECTIONS ================= */
+.tabSection { display:none; }
+.tabSection.active { display:block; }
 
-/* ================= LAYOUT ================= */
-#box, #forum {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 900px;
-}
-
-.tabSection {
-  display: none;
-}
-.tabSection.active {
-  display: block;
-}
-
-/* ================= USERS ================= */
+/* ================= USERS, POSTS, UPDATES ================= */
 .user-item, .post, .update-item {
-  position: relative;
-  z-index: 10;
   background: rgba(0,0,0,0.7);
-  border: 2px solid rgba(138,43,226,0.4);
-  border-radius: 15px;
-  padding: 15px;
-  margin: 10px 0;
-  overflow-wrap: break-word;
-  box-shadow: 0 0 15px rgba(138,43,226,0.3);
+  border:2px solid rgba(138,43,226,0.4);
+  border-radius:15px;
+  padding:15px;
+  margin:10px 0;
+  overflow-wrap:break-word;
+  box-shadow:0 0 15px rgba(138,43,226,0.3);
 }
 
 /* ================= LOGOUT ================= */
-#logoutBtn {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
-}
+#logoutBtn { position:fixed; top:20px; right:20px; z-index:10; }
 
 /* ================= RESPONSIVE ================= */
 @media(max-width:768px){
-  .panel { padding: 20px; margin: 10px; }
-  h1 { font-size: 1.8em; }
+  .panel { padding:20px; margin:10px; }
+  #tabs { flex-direction:column; }
+  .tabBtn { width:100%; }
 }
