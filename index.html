@@ -1,47 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>🔥 Toasty Forums</title>
+
+  <!-- Your CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase v8 (REQUIRED) -->
+  <!-- Firebase v8 SDKs (required for the app.js that follows) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 </head>
 <body>
+  <!-- decorative background -->
   <div id="blackhole"></div>
   <div id="stars"></div>
 
-  <!-- LOGIN/REGISTER PANEL -->
+  <!-- LOGIN / REGISTER BOX -->
   <div id="box" class="panel">
     <h1>🔥 Toasty Forums</h1>
 
+    <!-- LOGIN -->
     <div id="loginBox">
       <h2>Login</h2>
       <input id="logEmail" placeholder="Email" />
       <input id="logPass" type="password" placeholder="Password" />
-      <button id="loginBtn">Login</button>
-      <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="loginBtn">Login</button>
+        <button id="toggleToRegister" style="background:transparent; border: none; color:#00d4ff; cursor:pointer;">Create account</button>
+      </div>
     </div>
 
+    <!-- REGISTER -->
     <div id="registerBox" class="hidden">
       <h2>Register</h2>
       <input id="regEmail" placeholder="Email" />
       <input id="regPass" type="password" placeholder="Password" />
       <input id="regUsername" placeholder="Username" />
-      <button id="registerBtn">Register</button>
-      <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="registerBtn">Register</button>
+        <button id="toggleToLogin" style="background:transparent; border: none; color:#00d4ff; cursor:pointer;">Back to login</button>
+      </div>
     </div>
   </div>
 
-  <!-- MAIN FORUM -->
+  <!-- MAIN APP PANEL -->
   <div id="forum" class="panel hidden">
-    <div id="header" style="display:flex; justify-content:space-between; align-items:center;">
-      <h2>🔥 Toasty Forums</h2>
-      <div style="display:flex; gap:12px; align-items:center;">
+    <div id="header" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <h2 style="margin:0;">🔥 Toasty Forums</h2>
+        <div id="currentUserBadge" style="font-size:14px; color:#00d4ff;"></div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center;">
         <span id="coinDisplay" style="font-weight:bold; color:#ffd700;">🪙 0 Coins</span>
         <button id="claimDailyBtn">🎁 Daily</button>
         <button id="logoutBtn">Logout</button>
@@ -49,7 +63,7 @@
     </div>
 
     <!-- TABS -->
-    <div class="tabs">
+    <div class="tabs" style="margin-top:18px;">
       <button id="tabPosts" class="active">📝 Posts</button>
       <button id="tabUsers">👥 Users</button>
       <button id="tabDMs">💬 DMs</button>
@@ -62,8 +76,11 @@
     </div>
 
     <!-- SECTIONS -->
+    <!-- POSTS -->
     <div id="postsSection" class="section">
       <h3>Create Post</h3>
+
+      <label for="postCategory">Category</label>
       <select id="postCategory">
         <option value="General">General</option>
         <option value="Gaming">Gaming</option>
@@ -71,18 +88,29 @@
         <option value="Announcements">Announcements</option>
         <option value="Off-Topic">Off-Topic</option>
       </select>
+
       <textarea id="postContent" placeholder="Write something... (+5 coins)"></textarea>
+
+      <label for="postImage">Attach image (optional)</label>
       <input type="file" id="postImage" accept="image/*" />
       <img id="previewImage" class="hidden" alt="preview" />
-      <button id="postBtn">Post (+5 coins)</button>
-      <div id="postsList" style="margin-top:16px;"></div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="postBtn">Post (+5 coins)</button>
+        <input id="searchPost" placeholder="Search posts" style="flex:1;" />
+      </div>
+
+      <div id="postsList" style="margin-top:18px;"></div>
     </div>
 
+    <!-- USERS -->
     <div id="usersSection" class="section hidden">
       <h3>Users</h3>
-      <div id="usersList"></div>
+      <input id="searchUser" placeholder="Search users" />
+      <div id="usersList" style="margin-top:12px;"></div>
     </div>
 
+    <!-- DMS -->
     <div id="dmsSection" class="section hidden">
       <h3>Direct Messages</h3>
       <input id="dmToUsername" placeholder="Send to (username)" />
@@ -91,11 +119,24 @@
       <div id="dmsList" style="margin-top:12px;"></div>
     </div>
 
+    <!-- UPDATES -->
     <div id="updatesSection" class="section hidden">
       <h3>Updates</h3>
       <div id="updatesList"></div>
+      <!-- owner-only quick create update form (visible only to owner/mod in JS) -->
+      <div id="createUpdateArea" class="hidden" style="margin-top:12px;">
+        <input id="updateTitle" placeholder="Update title" />
+        <textarea id="updateContent" placeholder="Update content"></textarea>
+        <select id="updatePriority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <button id="createUpdateBtn">Publish Update</button>
+      </div>
     </div>
 
+    <!-- SUGGESTIONS -->
     <div id="suggestionsSection" class="section hidden">
       <h3>Suggestions</h3>
       <input id="suggestionTitle" placeholder="Title" />
@@ -104,41 +145,48 @@
       <div id="suggestionsList" style="margin-top:12px;"></div>
     </div>
 
+    <!-- GAMES -->
     <div id="gamesSection" class="section hidden">
       <h3>Games — Plinko</h3>
-      <div id="plinkoWrap" style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-        <canvas id="plinkoCanvas" width="400" height="420" style="border-radius:10px;"></canvas>
-        <div style="min-width:180px;">
-          <label>Bet:</label>
-          <input id="plinkoBet" type="number" value="10" min="10" />
+      <div id="plinkoWrap" style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
+        <canvas id="plinkoCanvas" width="380" height="420"></canvas>
+        <div style="min-width:200px;">
+          <label for="plinkoBet">Bet</label>
+          <input id="plinkoBet" type="number" min="10" value="10" />
           <button id="plinkoDropBtn">Drop Ball</button>
-          <p style="margin-top:8px;">Notes: Minimum bet 10 coins.</p>
-          <div id="plinkoResult"></div>
+          <div id="plinkoResult" style="margin-top:12px;"></div>
+          <p style="font-size:13px; color:#888; margin-top:10px;">Plinko awards random coins (1–100). Minimum bet 10 coins.</p>
         </div>
       </div>
     </div>
 
+    <!-- LEADERBOARD -->
     <div id="leaderboardSection" class="section hidden">
       <h3>Leaderboard</h3>
       <div id="leaderboardList"></div>
     </div>
 
+    <!-- ACTIVITY -->
     <div id="activitySection" class="section hidden">
       <h3>Activity Leaderboard</h3>
       <div id="activityList"></div>
     </div>
 
+    <!-- PROFILE -->
     <div id="profileSection" class="section hidden">
       <h3>My Profile</h3>
-      <input id="profileBio" placeholder="Short bio" />
+      <label for="profileAvatar">Avatar</label>
       <input id="profileAvatar" type="file" accept="image/*" />
       <img id="profileAvatarPreview" class="hidden" alt="avatar preview" />
+      <label for="profileBio">Bio</label>
+      <input id="profileBio" placeholder="Short bio" />
       <button id="saveProfileBtn">Save Profile</button>
       <div id="myProfileInfo" style="margin-top:12px;"></div>
     </div>
   </div>
 
-  <!-- App script -->
+  <!-- Combined JS entrypoint -->
+  <!-- app.js (I will provide next) -->
   <script src="app.js"></script>
 </body>
 </html>
