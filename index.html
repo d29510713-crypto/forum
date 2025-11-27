@@ -375,6 +375,81 @@
     #loginBox p, #registerBox p {
       margin-top: 15px;
     }
+
+    .game-card, .shop-item {
+      background: rgba(10, 0, 30, 0.9);
+      border: 2px solid rgba(138, 43, 226, 0.6);
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .game-card h3, .shop-item h3 {
+      color: #9d4edd;
+      margin-bottom: 10px;
+    }
+
+    .comment-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(138, 43, 226, 0.3);
+    }
+
+    .comment {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 8px;
+      font-size: 0.9em;
+    }
+
+    .comment strong {
+      color: #9d4edd;
+    }
+
+    .like-btn {
+      background: none;
+      border: 1px solid rgba(138, 43, 226, 0.5);
+      padding: 5px 10px;
+      font-size: 0.9em;
+      margin: 2px;
+    }
+
+    .like-btn.liked {
+      background: rgba(138, 43, 226, 0.3);
+      border-color: #8a2be2;
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75em;
+      margin-left: 5px;
+    }
+
+    .badge-vip {
+      background: linear-gradient(135deg, #ffd700, #ffed4e);
+      color: #000;
+      font-weight: bold;
+    }
+
+    .badge-mod {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      color: #fff;
+    }
+
+    .badge-owner {
+      background: linear-gradient(135deg, #8a2be2, #9d4edd);
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -423,8 +498,8 @@
         <button>Users</button>
         <button>Updates</button>
         <button>DMs</button>
-        <button>Suggestions</button>
-        <button>Plinko</button>
+        <button>Games</button>
+        <button>Shop</button>
       </div>
 
       <!-- POSTS SECTION -->
@@ -477,7 +552,7 @@
 
       <!-- SUGGESTIONS SECTION -->
       <div class="tabSection hidden">
-        <h2 class="section-title">Suggestions</h2>
+        <h2 class="section-title">Suggestions & Feedback</h2>
         <div class="form-group">
           <textarea id="suggestionInput" placeholder="Share your suggestions..."></textarea>
         </div>
@@ -485,11 +560,113 @@
         <div id="suggestionsList"></div>
       </div>
 
-      <!-- PLINKO SECTION -->
+      <!-- GAMES SECTION -->
       <div class="tabSection hidden">
-        <h2 class="section-title">Plinko Game</h2>
+        <h2 class="section-title">🎮 Game Arcade 🎮</h2>
         <button id="claimDailyCoins">Claim Daily Coins (+10)</button>
-        <canvas id="plinkoCanvas" width="600" height="500"></canvas>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+          
+          <!-- Plinko -->
+          <div class="game-card">
+            <h3>🎯 Plinko</h3>
+            <p>Drop a ball and multiply your coins!</p>
+            <input type="number" id="plinkoBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <button onclick="playPlinko()">Drop Ball (Cost: bet amount)</button>
+            <canvas id="plinkoCanvas" width="300" height="400" style="width: 100%; margin-top: 10px;"></canvas>
+          </div>
+
+          <!-- Coin Flip -->
+          <div class="game-card">
+            <h3>🪙 Coin Flip</h3>
+            <p>Heads or Tails? Double or nothing!</p>
+            <input type="number" id="coinflipBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+              <button onclick="playCoinFlip('heads')" style="flex: 1;">Heads</button>
+              <button onclick="playCoinFlip('tails')" style="flex: 1;">Tails</button>
+            </div>
+            <div id="coinflipResult" style="font-size: 3em; text-align: center; margin: 10px 0;">🪙</div>
+          </div>
+
+          <!-- Dice Roll -->
+          <div class="game-card">
+            <h3>🎲 Dice Roll</h3>
+            <p>Roll higher than 50 to win 2x!</p>
+            <input type="number" id="diceBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <button onclick="playDice()">Roll Dice</button>
+            <div id="diceResult" style="font-size: 2em; text-align: center; margin: 10px 0;">🎲</div>
+          </div>
+
+          <!-- Slots -->
+          <div class="game-card">
+            <h3>🎰 Slot Machine</h3>
+            <p>Match 3 symbols to win big!</p>
+            <input type="number" id="slotsBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <button onclick="playSlots()">Spin (Cost: bet amount)</button>
+            <div id="slotsResult" style="font-size: 3em; text-align: center; margin: 10px 0;">🍒 🍋 🍊</div>
+          </div>
+
+          <!-- Number Guess -->
+          <div class="game-card">
+            <h3>🔢 Number Guessing</h3>
+            <p>Guess a number between 1-10!</p>
+            <input type="number" id="guessBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <input type="number" id="guessNumber" placeholder="Your guess (1-10)" min="1" max="10" style="width: 100%; margin: 10px 0;">
+            <button onclick="playGuess()">Guess (10x payout!)</button>
+            <div id="guessResult" style="text-align: center; margin: 10px 0;"></div>
+          </div>
+
+          <!-- Rock Paper Scissors -->
+          <div class="game-card">
+            <h3>✊ Rock Paper Scissors</h3>
+            <p>Beat the computer!</p>
+            <input type="number" id="rpsBet" placeholder="Bet amount" min="1" style="width: 100%; margin: 10px 0;">
+            <div style="display: flex; gap: 5px; margin: 10px 0;">
+              <button onclick="playRPS('rock')" style="flex: 1;">✊</button>
+              <button onclick="playRPS('paper')" style="flex: 1;">✋</button>
+              <button onclick="playRPS('scissors')" style="flex: 1;">✌️</button>
+            </div>
+            <div id="rpsResult" style="text-align: center; margin: 10px 0;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SHOP SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">🛒 Coin Shop</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+          
+          <div class="shop-item">
+            <h3>🌟 VIP Badge</h3>
+            <p>Show off with a VIP badge next to your name!</p>
+            <p style="color: #ffd700; font-weight: bold;">Cost: 100 coins</p>
+            <button onclick="buyItem('vip', 100)">Purchase</button>
+          </div>
+
+          <div class="shop-item">
+            <h3>🎨 Custom Color</h3>
+            <p>Change your username color!</p>
+            <p style="color: #ffd700; font-weight: bold;">Cost: 50 coins</p>
+            <button onclick="buyItem('color', 50)">Purchase</button>
+          </div>
+
+          <div class="shop-item">
+            <h3>⭐ Post Pin</h3>
+            <p>Pin your post to the top for 24 hours!</p>
+            <p style="color: #ffd700; font-weight: bold;">Cost: 75 coins</p>
+            <button onclick="buyItem('pin', 75)">Purchase</button>
+          </div>
+
+          <div class="shop-item">
+            <h3>🎁 Gift Coins</h3>
+            <p>Send coins to another user!</p>
+            <input type="text" id="giftUsername" placeholder="Username" style="width: 100%; margin: 5px 0;">
+            <input type="number" id="giftAmount" placeholder="Amount" min="1" style="width: 100%; margin: 5px 0;">
+            <button onclick="giftCoins()">Send Gift</button>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
