@@ -36,7 +36,7 @@
     <h1>🔥 Toasty Forums</h1>
     <div style="display:flex; align-items:center; gap:15px;">
       <span id="coinDisplay" style="font-size:20px; font-weight:bold; color:#ffd700;">🪙 0 Coins</span>
-      <button onclick="claimDailyCoins()" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">
+      <button id="claimDailyCoins" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">
         🎁 Daily Coins
       </button>
       <button id="logoutBtn">Logout</button>
@@ -68,38 +68,26 @@
       <option value="Memes">Memes</option>
     </select><br>
     <textarea id="postContent" placeholder="Write something... (+5 coins)"></textarea><br>
-    <input type="file" id="postImage" accept="image/*"><br>
-    <img id="previewImage" class="hidden">
     <button id="postBtn">Post</button><br>
-    <input id="searchPost" placeholder="Search posts"><br>
     <div id="postsList"></div>
   </div>
 
   <!-- USERS SECTION -->
   <div id="usersSection" class="section hidden">
     <h2>Users</h2>
-    <input id="searchUser" placeholder="Search users by username"><br>
     <div id="usersList"></div>
   </div>
 
   <!-- DMS SECTION -->
   <div id="dmsSection" class="section hidden">
     <h2>Direct Messages</h2>
-    <input id="dmToUsername" placeholder="Send to (username)">
-    <textarea id="dmContent" placeholder="Message..."></textarea><br>
-    <button id="dmBtn">Send DM</button>
     <div id="dmsList"></div>
   </div>
 
   <!-- UPDATES SECTION -->
   <div id="updatesSection" class="section hidden">
     <h2>📢 Forum Updates</h2>
-    <div id="ownerControls" class="hidden" style="margin-bottom:20px;">
-      <h3>Create Update</h3>
-      <input type="text" id="updateTitle" placeholder="Update title..." style="width:100%; margin:5px 0;">
-      <textarea id="updateContent" placeholder="Update content..." style="width:100%; height:80px; margin:5px 0;"></textarea>
-      <button id="createUpdateBtn">Create Update</button>
-      <hr>
+    <div id="ownerControls" class="hidden">
       <h3>Owner Controls</h3>
       <button id="clearForumBtn" class="owner-btn">Clear All Content</button>
       <button id="banUserBtn" class="owner-btn">Ban User</button>
@@ -111,98 +99,28 @@
   <!-- SUGGESTIONS SECTION -->
   <div id="suggestionsSection" class="section hidden">
     <h2>💡 Feature Suggestions</h2>
-    <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:10px; margin-bottom:20px;">
-      <h3>Submit a Suggestion (+10 coins)</h3>
-      <input type="text" id="suggestionTitle" placeholder="Title..." style="width:100%; margin:5px 0;">
-      <textarea id="suggestionDescription" placeholder="Describe your suggestion..." style="width:100%; height:100px; margin:5px 0;"></textarea>
-      <button id="submitSuggestionBtn">Submit Suggestion</button>
-    </div>
+    <input type="text" id="suggestionTitle" placeholder="Title">
+    <textarea id="suggestionDescription" placeholder="Describe your suggestion"></textarea>
+    <button id="submitSuggestionBtn">Submit Suggestion (+10 coins)</button>
     <div id="suggestionsList"></div>
   </div>
 
   <!-- GAMES SECTION -->
   <div id="gamesSection" class="section hidden">
     <h2>🎮 Casino Games</h2>
-    <p style="text-align:center; color:#ffd700; margin-bottom:20px;">
-      Earn coins by posting, commenting, and voting! Spend them here!
-    </p>
-
-    <!-- PLINKO -->
     <div class="game-box">
       <h3>🎯 PLINKO</h3>
-      <p>Drop the ball and watch it bounce! Land in different slots for multipliers!</p>
-      <div style="margin:15px 0;">
-        <label>Bet Amount: </label>
-        <input type="number" id="plinkoBet" placeholder="Min 10" min="10" value="10" style="width:100px;">
-      </div>
-      <button onclick="playPlinko()" style="background:linear-gradient(135deg, #ff6b35, #f7931e);">
-        🎯 DROP BALL
-      </button>
-      <div id="plinkoBoard" style="position:relative; height:400px; margin-top:20px; background:rgba(0,0,0,0.3); border-radius:10px; overflow:hidden;">
-        <div style="text-align:center; padding:20px; color:#888;">
-          Drop the ball to play!<br>
-          Landing spots: 5x | 2x | 1x | 0.5x | 1x | 2x | 5x
-        </div>
-      </div>
-    </div>
-
-    <!-- DICE ROLL -->
-    <div class="game-box">
-      <h3>🎲 DICE ROLL</h3>
-      <p>Roll 5 or 6 to win 2x your bet!</p>
-      <div style="margin:15px 0;">
-        <label>Bet Amount: </label>
-        <input type="number" id="diceBet" placeholder="Min 5" min="5" value="5" style="width:100px;">
-      </div>
-      <button onclick="playDice()" style="background:linear-gradient(135deg, #8a2be2, #ff1493);">
-        🎲 ROLL DICE
-      </button>
-      <div id="diceResult" style="font-size:48px; text-align:center; margin-top:20px;"></div>
-    </div>
-
-    <!-- COIN FLIP -->
-    <div class="game-box">
-      <h3>🪙 COIN FLIP</h3>
-      <p>Heads or Tails? 50/50 chance to double your bet!</p>
-      <div style="margin:15px 0;">
-        <label>Bet Amount: </label>
-        <input type="number" id="flipBet" placeholder="Min 5" min="5" value="5" style="width:100px;">
-        <br><br>
-        <label>Choose: </label>
-        <select id="flipChoice" style="width:100px;">
-          <option value="heads">Heads</option>
-          <option value="tails">Tails</option>
-        </select>
-      </div>
-      <button onclick="playCoinFlip()" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">
-        🪙 FLIP COIN
-      </button>
-      <div id="flipResult" style="font-size:32px; text-align:center; margin-top:20px; font-weight:bold;"></div>
-    </div>
-
-    <!-- SLOTS -->
-    <div class="game-box">
-      <h3>🎰 SLOT MACHINE</h3>
-      <p>Match 3 symbols! 💎=10x | 7️⃣=7x | ⭐=5x | Others=3x | 2 Match=1.5x</p>
-      <div style="margin:15px 0;">
-        <label>Bet Amount: </label>
-        <input type="number" id="slotsBet" placeholder="Min 20" min="20" value="20" style="width:100px;">
-      </div>
-      <button onclick="playSlots()" style="background:linear-gradient(135deg, #ff1493, #8a2be2);">
-        🎰 SPIN SLOTS
-      </button>
-      <div id="slotsResult" style="font-size:64px; text-align:center; margin-top:20px; letter-spacing:20px;"></div>
+      <input type="number" id="plinkoBet" placeholder="Min 10" value="10">
+      <button onclick="playPlinko()">DROP BALL</button>
+      <div id="plinkoBoard" style="position:relative; height:400px; margin-top:20px; background:rgba(0,0,0,0.3); border-radius:10px;"></div>
     </div>
   </div>
-
 </div>
 
 <!-- Firebase SDKs v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<!-- Custom JS -->
 <script src="app.js"></script>
 </body>
 </html>
