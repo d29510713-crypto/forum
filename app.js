@@ -1,4 +1,4 @@
-// ===================== FIREBASE INIT =====================
+// ================= FIREBASE CONFIG =================
 const firebaseConfig = {
   apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
   authDomain: "toasty-89f07.firebaseapp.com",
@@ -8,290 +8,206 @@ const firebaseConfig = {
   appId: "1:743787667064:web:12284120fbbdd1e907d78d"
 };
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// ===================== GLOBAL VARIABLES =====================
+// ================= GLOBALS =================
 let currentUser = null;
 let currentUsername = "";
 let isOwner = false;
 let isModerator = false;
+const ownerEmail = "d29510713@gmail.com";
 
-// ===================== UI ELEMENTS =====================
+// ================= UI ELEMENTS =================
 const loginBox = document.getElementById("loginBox");
 const registerBox = document.getElementById("registerBox");
 const forum = document.getElementById("forum");
-const logoutBtn = document.getElementById("logoutBtn");
-const coinDisplay = document.getElementById("coinDisplay");
+const postsList = document.getElementById("postsList");
+const usersList = document.getElementById("usersList");
+const previewImage = document.getElementById("previewImage");
 
-const tabSections = document.querySelectorAll(".tabSection");
-const tabs = document.querySelectorAll("#tabs button");
+// ================= AUTH STATE =================
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    currentUsername = user.displayName || user.email.split("@")[0];
 
-// ===================== LOGIN / REGISTER =====================
+    loginBox.classList.add("hidden");
+    registerBox.classList.add("hidden");
+    forum.classList.remove("hidden");
+
+    if (user.email === ownerEmail) isOwner = true;
+
+    loadUsers();
+    loadPosts();
+    loadUpdates();
+  } else {
+    forum.classList.add("hidden");
+    loginBox.classList.remove("hidden");
+  }
+});
+
+// ================= LOGIN/REGISTER =================
 document.getElementById("loginBtn").addEventListener("click", () => {
   const email = document.getElementById("logEmail").value;
-  const password = document.getElementById("logPass").value;
-  auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      currentUser = userCredential.user;
-      loadUserProfile();
-    }).catch(err => alert(err.message));
+  const pass = document.getElementById("logPass").value;
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(err => alert(err.message));
 });
 
 document.getElementById("registerBtn").addEventListener("click", () => {
   const email = document.getElementById("regEmail").value;
-  const password = document.getElementById("regPass").value;
+  const pass = document.getElementById("regPass").value;
   const username = document.getElementById("regUsername").value;
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      currentUser = userCredential.user;
-      db.collection("users").doc(currentUser.uid).set({
-        username,
-        email,
-        coins: 0,
-        role: (email === "d29510713@gmail.com") ? "owner" : "user"
-      });
-      loadUserProfile();
-    }).catch(err => alert(err.message));
+
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(cred => cred.user.updateProfile({ displayName: username }))
+    .catch(err => alert(err.message));
 });
 
-document.getElementById("toggleToRegister").addEventListener("click", () => {
-  loginBox.classList.add("hidden");
-  registerBox.classList.remove("hidden");
+// ================= LOGOUT =================
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  auth.signOut();
 });
 
-document.getElementById("toggleToLogin").addEventListener("click", () => {
-  registerBox.classList.add("hidden");
-  loginBox.classList.remove("hidden");
-});
+// ================= TABS =================
+const tabs = document.querySelectorAll("#tabs button");
+const sections = document.querySelectorAll(".tabSection");
 
-logoutBtn.addEventListener("click", () => {
-  auth.signOut().then(() => {
-    currentUser = null;
-    forum.classList.add("hidden");
-    loginBox.classList.remove("hidden");
+tabs.forEach(btn => {
+  btn.addEventListener("click", () => {
+    sections.forEach(sec => sec.classList.add("hidden"));
+    document.getElementById(btn.id.replace("tab", "").toLowerCase() + "Section").classList.remove("hidden");
+    tabs.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
   });
 });
 
-// ===================== LOAD USER PROFILE =====================
-function loadUserProfile() {
-  db.collection("users").doc(currentUser.uid).get().then(doc => {
-    const data = doc.data();
-    currentUsername = data.username;
-    isOwner = data.role === "owner";
-    isModerator = data.role === "moderator";
-    updateCoinDisplay();
-    showForum();
-    loadUsersList();
-    loadLeaderboard();
-  });
-}
-
-function updateCoinDisplay() {
-  db.collection("users").doc(currentUser.uid).get().then(doc=>{
-    const coins = doc.data().coins || 0;
-    coinDisplay.textContent = `🪙 ${coins} Coins`;
-  });
-}
-
-// ===================== SHOW FORUM =====================
-function showForum() {
-  loginBox.classList.add("hidden");
-  registerBox.classList.add("hidden");
-  forum.classList.remove("hidden");
-}
-
-// ===================== TABS =====================
-tabs.forEach((tab, index) => {
-  tab.addEventListener("click", () => {
-    tabSections.forEach(sec => sec.classList.add("hidden"));
-    tabSections[index].classList.remove("hidden");
-    tabs.forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-  });
-});
-
-// ===================== USERS LIST =====================
-function loadUsersList() {
-  const usersList = document.getElementById("usersList");
-  usersList.innerHTML = "";
-  db.collection("users").orderBy("username").get().then(snapshot => {
-    snapshot.forEach(doc => {
-      const user = doc.data();
-      const div = document.createElement("div");
-      div.className = "user-item";
-      div.innerHTML = `<strong>${user.username}</strong> <span>${user.role || "user"}</span>`;
-      if(isOwner){
-        const modBtn = document.createElement("button");
-        modBtn.textContent = "Make Mod";
-        modBtn.addEventListener("click", ()=>{
-          db.collection("users").doc(doc.id).update({ role: "moderator" });
-          loadUsersList();
-        });
-        div.appendChild(modBtn);
-      }
-      usersList.appendChild(div);
-    });
-  });
-}
-
-// ===================== POSTS =====================
-const postsList = document.getElementById("postsList");
-document.getElementById("postBtn").addEventListener("click", ()=>{
+// ================= POST CREATION =================
+document.getElementById("postBtn").addEventListener("click", async () => {
   const content = document.getElementById("postContent").value;
   const category = document.getElementById("postCategory").value;
-  const imageInput = document.getElementById("postImage");
-  const postData = {
-    userId: currentUser.uid,
-    username: currentUsername,
+  const file = document.getElementById("postImage").files[0];
+
+  let imageUrl = "";
+  if (file) {
+    const storageRef = storage.ref(`posts/${Date.now()}_${file.name}`);
+    await storageRef.put(file);
+    imageUrl = await storageRef.getDownloadURL();
+  }
+
+  await db.collection("posts").add({
+    author: currentUsername,
+    uid: currentUser.uid,
     content,
     category,
+    imageUrl,
     timestamp: Date.now()
+  });
+
+  document.getElementById("postContent").value = "";
+  document.getElementById("postImage").value = "";
+  previewImage.classList.add("hidden");
+
+  loadPosts();
+});
+
+// ================= POST IMAGE PREVIEW =================
+document.getElementById("postImage").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewImage.src = reader.result;
+    previewImage.classList.remove("hidden");
   };
-  if(imageInput.files[0]){
-    const file = imageInput.files[0];
-    const storageRef = storage.ref(`posts/${currentUser.uid}_${Date.now()}`);
-    storageRef.put(file).then(snap => {
-      snap.ref.getDownloadURL().then(url=>{
-        postData.image = url;
-        db.collection("posts").add(postData).then(()=>loadPosts());
-      });
-    });
-  } else {
-    db.collection("posts").add(postData).then(()=>loadPosts());
-  }
+  reader.readAsDataURL(file);
 });
 
-function loadPosts() {
+// ================= LOAD POSTS =================
+async function loadPosts() {
   postsList.innerHTML = "";
-  db.collection("posts").orderBy("timestamp","desc").get().then(snapshot=>{
-    snapshot.forEach(doc=>{
-      const p = doc.data();
-      const div = document.createElement("div");
-      div.className = "post";
-      div.innerHTML = `<div class="post-header"><strong>${p.username}</strong> <span>${new Date(p.timestamp).toLocaleString()}</span></div>
-      <div class="post-content">${p.content}</div>
-      ${p.image?`<img class="post-image" src="${p.image}">`:""}`;
-      postsList.appendChild(div);
-    });
-  });
-}
-loadPosts();
-
-// ===================== SUGGESTIONS =====================
-document.getElementById("submitSuggestionBtn").addEventListener("click", ()=>{
-  const content = document.getElementById("suggestionInput").value;
-  db.collection("suggestions").add({ content, username: currentUsername, timestamp: Date.now() });
-  document.getElementById("suggestionInput").value="";
-});
-
-// ===================== LEADERBOARD =====================
-function loadLeaderboard(){
-  const leaderboardList = document.getElementById("leaderboardList");
-  leaderboardList.innerHTML="";
-  db.collection("users").orderBy("coins","desc").limit(10).get().then(snapshot=>{
-    snapshot.forEach(doc=>{
-      const u = doc.data();
-      const div = document.createElement("div");
-      div.textContent = `${u.username} - 🪙 ${u.coins}`;
-      leaderboardList.appendChild(div);
-    });
+  const snapshot = await db.collection("posts").orderBy("timestamp", "desc").get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const postDiv = document.createElement("div");
+    postDiv.className = "post";
+    postDiv.innerHTML = `
+      <div class="post-header"><strong>${data.author}</strong> | <span>${data.category}</span></div>
+      <div class="post-content">${data.content}</div>
+      ${data.imageUrl ? `<img src="${data.imageUrl}" class="post-image">` : ""}
+    `;
+    postsList.appendChild(postDiv);
   });
 }
 
-// ===================== PLINKO GAME =====================
-const canvas = document.getElementById("plinkoCanvas");
-const ctxPlinko = canvas.getContext("2d");
-const COLS = 9;
-const ROWS = 10;
-const PEG_RADIUS = 5;
-const SLOT_HEIGHT = 40;
-const BALL_RADIUS = 8;
-const slotsCoins = [5,10,15,20,15,10,5,10,5];
-let pegs = [], balls = [], animating=false;
+// ================= LOAD USERS =================
+async function loadUsers() {
+  usersList.innerHTML = "";
+  const snapshot = await db.collection("users").get();
 
-function createPegs(){
-  pegs=[];
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const offset = (r%2===0)?0:20;
-      pegs.push({ x: c*40 + offset + 20, y: r*40 + 50 });
+  // Add current user to db if not exists
+  if (currentUser) {
+    const userDoc = await db.collection("users").doc(currentUser.uid).get();
+    if (!userDoc.exists) {
+      await db.collection("users").doc(currentUser.uid).set({
+        username: currentUsername,
+        uid: currentUser.uid,
+        email: currentUser.email
+      });
     }
   }
-}
-function drawPegs(){
-  ctxPlinko.fillStyle="#fff";
-  pegs.forEach(p=>{ctxPlinko.beginPath(); ctxPlinko.arc(p.x,p.y,PEG_RADIUS,0,Math.PI*2); ctxPlinko.fill();});
-}
-class Ball{
-  constructor(x){ this.x=x; this.y=0; this.vx=0; this.vy=2; this.landed=false; }
-  update(){
-    if(this.landed) return;
-    this.vy += 0.2; this.x += this.vx; this.y += this.vy;
-    pegs.forEach(p=>{
-      const dx=this.x-p.x, dy=this.y-p.y, dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<PEG_RADIUS+BALL_RADIUS){ this.vx=(Math.random()-0.5)*4; this.vy*=-0.5; this.y-=2; }
-    });
-    if(this.x<BALL_RADIUS){ this.x=BALL_RADIUS; this.vx*=-0.5; }
-    if(this.x>canvas.width-BALL_RADIUS){ this.x=canvas.width-BALL_RADIUS; this.vx*=-0.5; }
-    if(this.y>canvas.height-SLOT_HEIGHT){
-      this.landed=true; this.vx=0; this.vy=0;
-      const slotWidth = canvas.width / COLS;
-      let slot = Math.floor(this.x/slotWidth);
-      if(slot<0) slot=0; if(slot>=slotsCoins.length) slot=slotsCoins.length-1;
-      const coins = slotsCoins[slot]; alert(`You won ${coins} coins!`); addCoins(coins);
-    }
-  }
-  draw(){ ctxPlinko.fillStyle="#ff6b35"; ctxPlinko.beginPath(); ctxPlinko.arc(this.x,this.y,BALL_RADIUS,0,Math.PI*2); ctxPlinko.fill();}
-}
-function addCoins(amount){
-  const userRef=db.collection("users").doc(currentUser.uid);
-  userRef.get().then(doc=>{
-    let c=doc.data().coins||0;
-    userRef.update({ coins: c+amount });
-    updateCoinDisplay();
-    loadLeaderboard();
+
+  const allUsers = await db.collection("users").get();
+  allUsers.forEach(doc => {
+    const u = doc.data();
+    const userDiv = document.createElement("div");
+    userDiv.className = "user-item";
+    userDiv.innerHTML = `<strong>${u.username}</strong> <span>${u.email}</span>`;
+    usersList.appendChild(userDiv);
   });
 }
-canvas.addEventListener("click",(e)=>{
-  if(animating) return;
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  balls.push(new Ball(x));
-  animating=true; animatePlinko();
-});
-function animatePlinko(){
-  ctxPlinko.clearRect(0,0,canvas.width,canvas.height);
-  drawPegs();
-  balls.forEach(b=>{b.update(); b.draw();});
-  if(balls.some(b=>!b.landed)){ requestAnimationFrame(animatePlinko); }
-  else { balls=[]; animating=false; }
-}
-createPegs(); drawPegs();
 
-// ===================== STARS & BLACKHOLE =====================
-const starsContainer = document.getElementById("stars");
-function createStars(num=200){
-  starsContainer.innerHTML="";
-  for(let i=0;i<num;i++){
-    const s = document.createElement("div");
-    s.className="star";
-    s.style.top = Math.random()*100 + "%";
-    s.style.left = Math.random()*100 + "%";
-    s.style.width = s.style.height = (Math.random()*2+1)+"px";
-    starsContainer.appendChild(s);
-  }
+// ================= UPDATES (OWNER ONLY) =================
+async function loadUpdates() {
+  const updatesList = document.getElementById("updatesList");
+  if (!updatesList) return;
+  updatesList.innerHTML = "";
+  const snapshot = await db.collection("updates").orderBy("timestamp", "desc").get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const updateDiv = document.createElement("div");
+    updateDiv.className = "update-item";
+    updateDiv.innerHTML = `<h3>${data.title}</h3><div>${data.content}</div>`;
+    updatesList.appendChild(updateDiv);
+  });
 }
-createStars();
 
-// Black hole
+// ================= STARS BACKGROUND =================
+for (let i = 0; i < 150; i++) {
+  const star = document.createElement("div");
+  star.className = "star";
+  star.style.top = Math.random() * 100 + "%";
+  star.style.left = Math.random() * 100 + "%";
+  star.style.width = Math.random() * 2 + 1 + "px";
+  star.style.height = Math.random() * 2 + 1 + "px";
+  document.getElementById("stars").appendChild(star);
+}
+
+// ================= BLACK HOLE =================
 const blackhole = document.createElement("div");
 blackhole.id = "blackhole";
-blackhole.style.background = "radial-gradient(circle, #000 0%, #111 60%, #000 100%)";
+blackhole.style.background = "radial-gradient(circle at center, #000 0%, #111 60%, transparent 100%)";
+blackhole.style.width = "400px";
+blackhole.style.height = "400px";
+blackhole.style.position = "fixed";
+blackhole.style.top = "50%";
+blackhole.style.left = "50%";
+blackhole.style.transform = "translate(-50%, -50%)";
+blackhole.style.borderRadius = "50%";
 blackhole.style.zIndex = "0";
+blackhole.style.boxShadow = "0 0 80px rgba(138,43,226,0.5), inset 0 0 50px rgba(138,43,226,0.3)";
 document.body.appendChild(blackhole);
-
-// ===================== WINDOW RESIZE =====================
-window.addEventListener("resize", createStars);
-
