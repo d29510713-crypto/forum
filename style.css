@@ -1,76 +1,43 @@
+/* Basic Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+
 body {
-  margin: 0;
-  font-family: 'Courier New', monospace;
-  background: #0c0c2b;
-  color: #fff;
-  overflow-x: hidden;
+    background: #1a1a2e;
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
 }
 
-#stars {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-}
+/* Stars background */
+#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+.star { position: absolute; border-radius: 50%; background: #fff; }
 
-.star {
-  position: absolute;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0.8;
-}
+/* Hidden class */
+.hidden { display: none !important; }
 
-.hidden { display: none; }
+/* Tabs */
+#tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+#tabs button { padding: 10px 15px; background: #222; border: none; color: #fff; cursor: pointer; border-radius: 5px; }
+#tabs button.active { background: linear-gradient(135deg, #ff6b35, #ff9e1b); color: #fff; }
 
-.login-register-box {
-  max-width: 400px;
-  margin: 80px auto;
-  padding: 20px;
-  background: rgba(30,30,60,0.85);
-  border-radius: 15px;
-  box-shadow: 0 0 20px #8a2be2;
-  text-align: center;
-}
+/* Forms */
+#loginBox, #registerBox, #postForm, #searchFilter { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+input, textarea, select { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #111; color: #fff; }
+textarea { resize: vertical; }
 
-.login-register-box input {
-  width: 90%;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-}
+/* Posts */
+.post { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #333; }
+.post img.post-image { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+.post-header { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 5px; }
 
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 15px;
-  font-weight: bold;
-  transition: all 0.2s;
-}
+/* Users */
+.user-item { display: flex; align-items: center; gap: 12px; background: #222; border: 1px solid #444; border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+.user-item img { border-radius: 50%; width: 48px; height: 48px; border: 2px solid #888; }
 
-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 10px #ff6b35;
-}
+/* Buttons */
+button { cursor: pointer; border: none; border-radius: 5px; transition: all 0.2s ease; }
+button:hover { opacity: 0.85; }
 
-.purple-btn { background: #8a2be2; color: #fff; }
-.purple-btn:hover { box-shadow: 0 0 15px #8a2be2; }
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-}
-
-.tabs { display: flex; gap: 10px; padding: 10px 20px; }
-.tab { background: rgba(138,43,226,0.3); color: #fff; flex: 1; }
-.tab.active { background: #8a2be2; box-shadow: 0 0 10px #8a2be2; }
-
-.section { padding: 20px; }
-.post { padding: 12px; margin: 8px 0; background: rgba(0,0,0,0.5); border-left: 4px solid #8a2be2; border-radius: 10px; }
-.post-header { font-weight: bold; margin-bottom: 5px; }
-.post-content { margin-bottom: 5px; }
-.owner-controls { margin-top: 20px; padding: 15px; background: rgba(50,0,50,0.6); border-radius: 12px; }
+/* Owner/moderator badges */
+span { font-weight: bold; }
