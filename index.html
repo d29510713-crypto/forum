@@ -2,118 +2,134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Toasty Forums</title>
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Firebase v8 SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Forum</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-  <!-- BACKGROUND -->
   <div id="blackhole"></div>
   <div id="stars"></div>
 
-  <!-- LOGIN + REGISTER -->
-  <div id="box" class="panel">
+  <div id="mainContainer">
+    <div class="header">
+      <h1>🌌 SPACE FORUM 🌌</h1>
+    </div>
+
+    <!-- LOGIN BOX -->
     <div id="loginBox">
       <h2>Login</h2>
-      <input id="logEmail" placeholder="Email">
-      <input id="logPass" type="password" placeholder="Password">
+      <input type="email" id="logEmail" placeholder="Email">
+      <input type="password" id="logPass" placeholder="Password">
       <button id="loginBtn">Login</button>
-      <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
+      <p style="text-align: center; margin-top: 15px;">
+        Don't have an account? 
+        <button class="link-btn" id="toggleToRegister">Register here</button>
+      </p>
     </div>
 
+    <!-- REGISTER BOX -->
     <div id="registerBox" class="hidden">
       <h2>Register</h2>
-      <input id="regEmail" placeholder="Email">
-      <input id="regPass" type="password" placeholder="Password">
-      <input id="regUsername" placeholder="Username">
+      <input type="text" id="regUsername" placeholder="Username">
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regPass" placeholder="Password">
       <button id="registerBtn">Register</button>
-      <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
+      <p style="text-align: center; margin-top: 15px;">
+        Already have an account? 
+        <button class="link-btn" id="toggleToLogin">Login here</button>
+      </p>
+    </div>
+
+    <!-- FORUM -->
+    <div id="forum" class="hidden">
+      <div class="forum-header">
+        <div id="coinDisplay">🪙 0 Coins</div>
+        <button id="logoutBtn">Logout</button>
+      </div>
+
+      <div id="tabs">
+        <button>Posts</button>
+        <button>Users</button>
+        <button>Updates</button>
+        <button>DMs</button>
+        <button>Suggestions</button>
+        <button>Plinko</button>
+      </div>
+
+      <!-- POSTS SECTION -->
+      <div class="tabSection">
+        <h2 class="section-title">Forum Posts</h2>
+        <div class="form-group">
+          <label>Category:</label>
+          <select id="postCategory">
+            <option>General</option>
+            <option>Games</option>
+            <option>Tech</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Content:</label>
+          <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+        </div>
+        <button id="postBtn">Post</button>
+        <div id="postsList"></div>
+      </div>
+
+      <!-- USERS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Users</h2>
+        <div id="usersList"></div>
+      </div>
+
+      <!-- UPDATES SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Updates</h2>
+        <button id="addUpdateBtn" class="hidden">Add Update (Owner Only)</button>
+        <div id="updatesList"></div>
+      </div>
+
+      <!-- DMS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Direct Messages</h2>
+        <div class="form-group">
+          <label>To Username:</label>
+          <input type="text" id="dmToUsername" placeholder="Username">
+        </div>
+        <div class="form-group">
+          <label>Message:</label>
+          <textarea id="dmContent" placeholder="Your message"></textarea>
+        </div>
+        <button id="dmBtn">Send DM</button>
+        <div id="dmsList"></div>
+      </div>
+
+      <!-- SUGGESTIONS SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Suggestions</h2>
+        <div class="form-group">
+          <textarea id="suggestionInput" placeholder="Share your suggestions..."></textarea>
+        </div>
+        <button id="submitSuggestionBtn">Submit Suggestion</button>
+        <div id="suggestionsList"></div>
+      </div>
+
+      <!-- PLINKO SECTION -->
+      <div class="tabSection hidden">
+        <h2 class="section-title">Plinko Game</h2>
+        <button id="claimDailyCoins">Claim Daily Coins (+10)</button>
+        <canvas id="plinkoCanvas" width="600" height="500"></canvas>
+      </div>
     </div>
   </div>
 
-  <!-- FORUM -->
-  <div id="forum" class="hidden panel">
-    <div id="topBar">
-      <span id="coinDisplay">🪙 0 Coins</span>
-      <button id="logoutBtn">Logout</button>
-    </div>
-
-    <!-- TABS -->
-    <div id="tabs" class="tabs">
-      <button id="tabPosts">Posts</button>
-      <button id="tabUsers">Users</button>
-      <button id="tabDms">DMs</button>
-      <button id="tabUpdates">Updates</button>
-      <button id="tabSuggestions">Suggestions</button>
-      <button id="tabGames">Games</button>
-      <button id="tabLeaderboard">Leaderboard</button>
-      <button id="tabActivity">Activity</button>
-    </div>
-
-    <!-- SECTIONS -->
-    <div id="postsSection" class="tabSection">
-      <h2>Create Post</h2>
-      <textarea id="postContent" placeholder="Write something..."></textarea>
-      <select id="postCategory">
-        <option>General</option>
-        <option>Fun</option>
-        <option>Help</option>
-      </select><br>
-      <input type="file" id="postImage">
-      <img id="previewImage" class="hidden">
-      <button id="postBtn">Post</button>
-      <div id="postsList"></div>
-    </div>
-
-    <div id="usersSection" class="tabSection hidden">
-      <h2>Users</h2>
-      <div id="usersList"></div>
-    </div>
-
-    <div id="dmsSection" class="tabSection hidden">
-      <h2>DMs</h2>
-      <input id="dmToUsername" placeholder="Send to username">
-      <textarea id="dmContent" placeholder="Message"></textarea>
-      <button id="dmBtn">Send</button>
-      <div id="dmsList"></div>
-    </div>
-
-    <div id="updatesSection" class="tabSection hidden">
-      <h2>Updates</h2>
-      <div id="updatesList"></div>
-      <button id="addUpdateBtn" class="owner-btn hidden">Add Update</button>
-    </div>
-
-    <div id="suggestionsSection" class="tabSection hidden">
-      <h2>Suggestions</h2>
-      <textarea id="suggestionInput" placeholder="Your suggestion..."></textarea>
-      <button id="submitSuggestionBtn">Submit</button>
-      <div id="suggestionsList"></div>
-    </div>
-
-    <div id="gamesSection" class="tabSection hidden">
-      <h2>Games</h2>
-      <button id="claimCoinsBtn">Claim Daily Coins</button>
-      <canvas id="plinkoCanvas" width="400" height="500"></canvas>
-    </div>
-
-    <div id="leaderboardSection" class="tabSection hidden">
-      <h2>Leaderboard</h2>
-      <div id="leaderboardList"></div>
-    </div>
-
-    <div id="activitySection" class="tabSection hidden">
-      <h2>Activity Leaderboard</h2>
-      <div id="activityList"></div>
-    </div>
-  </div>
-
+  <!-- FIREBASE SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  
+  <!-- Your JavaScript -->
   <script src="app.js"></script>
 </body>
 </html>
