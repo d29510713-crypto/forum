@@ -13,11 +13,11 @@
 </head>
 <body>
 
-<!-- STAR BACKGROUND -->
+<!-- BACKGROUND -->
 <div id="blackhole"></div>
 <div id="stars"></div>
 
-<!-- LOGIN / REGISTER -->
+<!-- AUTH BOX -->
 <div id="authBox" class="panel">
   <div id="loginBox">
     <h1>Login</h1>
@@ -40,6 +40,7 @@
 <!-- FORUM -->
 <div id="forum" class="hidden">
   <div class="panel">
+
     <div id="topBar">
       <span id="coinDisplay">🪙 0 Coins</span>
       <button id="logoutBtn">Logout</button>
@@ -47,7 +48,7 @@
 
     <!-- TABS -->
     <div class="tabs">
-      <button data-tab="postsSection">Posts</button>
+      <button data-tab="postsSection" class="active">Posts</button>
       <button data-tab="usersSection">Users</button>
       <button data-tab="dmsSection">DMs</button>
       <button data-tab="updatesSection">Updates</button>
@@ -88,6 +89,10 @@
     <div id="updatesSection" class="tabSection hidden">
       <h2>Updates</h2>
       <div id="updatesList"></div>
+      <div id="addUpdateBox" class="hidden">
+        <textarea id="updateContent" placeholder="Add update"></textarea>
+        <button id="addUpdateBtn">Add Update</button>
+      </div>
     </div>
 
     <div id="suggestionsSection" class="tabSection hidden">
