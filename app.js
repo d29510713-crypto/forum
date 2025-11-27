@@ -1,3 +1,17 @@
+// Create stars
+function createStars() {
+  const starsContainer = document.getElementById('stars');
+  for (let i = 0; i < 100; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDelay = Math.random() * 3 + 's';
+    starsContainer.appendChild(star);
+  }
+}
+createStars();
+
 window.onload = function () {
   // ================= FIREBASE INIT =================
   const firebaseConfig = {
@@ -159,7 +173,6 @@ window.onload = function () {
     });
     document.getElementById("postContent").value = "";
     loadPosts();
-    loadUsers();
   };
 
   async function loadPosts() {
@@ -245,12 +258,23 @@ window.onload = function () {
   async function loadDMs() {
     const snapshot = await db.collection("dms").orderBy("timestamp","desc").get();
     dmsList.innerHTML = "";
+    
+    // Get usernames map
+    const usersSnap = await db.collection("users").get();
+    const usernameMap = {};
+    usersSnap.forEach(doc => {
+      usernameMap[doc.id] = doc.data().username;
+    });
+
     snapshot.forEach(doc => {
       const d = doc.data();
       if (d.to === currentUser.uid || d.from === currentUser.uid) {
         const div = document.createElement("div");
         div.className = "dm-item";
-        div.innerHTML = `<strong>${d.from === currentUser.uid ? "To" : "From"}: ${d.from === currentUser.uid ? d.to : d.from}</strong><div>${d.content}</div>`;
+        const isFrom = d.from === currentUser.uid;
+        const otherUid = isFrom ? d.to : d.from;
+        const otherUsername = usernameMap[otherUid] || otherUid;
+        div.innerHTML = `<strong>${isFrom ? "To" : "From"}: ${otherUsername}</strong><div>${d.content}</div>`;
         dmsList.appendChild(div);
       }
     });
@@ -286,10 +310,34 @@ window.onload = function () {
     const canvas = document.getElementById("plinkoCanvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    
+    // Draw background
+    ctx.fillStyle = "#0a0030";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw pegs
     ctx.fillStyle = "#8a2be2";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < row + 3; col++) {
+        const x = canvas.width / 2 + (col - row / 2) * 50 - 25;
+        const y = 50 + row * 40;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // Draw slots at bottom
     ctx.fillStyle = "#fff";
-    ctx.font = "20px monospace";
-    ctx.fillText("Plinko Game Placeholder",50,250);
+    ctx.font = "14px monospace";
+    const multipliers = [0.5, 1, 2, 5, 10, 5, 2, 1, 0.5];
+    for (let i = 0; i < multipliers.length; i++) {
+      const x = 50 + i * 60;
+      ctx.fillText(multipliers[i] + "x", x, 480);
+    }
+    
+    ctx.fillStyle = "#9d4edd";
+    ctx.font = "16px monospace";
+    ctx.fillText("Click 'Claim Daily Coins' to play!", 150, 30);
   }
 };
