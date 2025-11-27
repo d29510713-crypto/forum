@@ -168,8 +168,51 @@ async function loginUser(user) {
 
 // ================= DAILY COINS =================
 function initDailyCoins() {
-  const coinsDisplay = document.getElementById("coinsDisplay");
+  const coinsDisplay = document.getElementById("coinDisplay"); // fixed
   const dailyCoinsBtn = document.getElementById("claimDailyCoins");
+
+  async function updateCoinsDisplay() {
+    if (!currentUser) return;
+    const userDoc = await db.collection("users").doc(currentUser.uid).get();
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      coinsDisplay.textContent = `🪙 Coins: ${data.coins || 0}`; // fixed
+    }
+  }
+
+  window.claimDailyCoins = async function () {
+    if (!currentUser) return alert("Log in first!");
+    const userRef = db.collection("users").doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) return;
+
+    const userData = userDoc.data();
+    const lastClaim = userData.lastDailyClaim || 0;
+    const now = Date.now();
+    if (now - lastClaim < 24 * 60 * 60 * 1000) {
+      const remaining = 24 * 60 * 60 * 1000 - (now - lastClaim);
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      alert(`Already claimed! Come back in ${hours}h ${minutes}m.`);
+      return;
+    }
+
+    const reward = Math.floor(Math.random() * 51) + 50;
+    await userRef.update({
+      coins: (userData.coins || 0) + reward,
+      lastDailyClaim: now
+    });
+
+    alert(`You received ${reward} coins!`);
+    updateCoinsDisplay();
+  };
+
+  if (dailyCoinsBtn) dailyCoinsBtn.onclick = claimDailyCoins;
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (currentUser) updateCoinsDisplay();
+  });
+}
 
   async function updateCoinsDisplay() {
     if (!currentUser) return;
