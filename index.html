@@ -13,33 +13,32 @@
 </head>
 <body>
 
-<!-- BACKGROUND -->
-<div id="blackhole"></div>
-<div id="stars"></div>
+  <!-- BACKGROUND -->
+  <div id="blackhole"></div>
+  <div id="stars"></div>
 
-<!-- AUTH BOX -->
-<div id="authBox" class="panel">
-  <div id="loginBox">
-    <h1>Login</h1>
-    <input id="logEmail" placeholder="Email">
-    <input id="logPass" type="password" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p id="toggleToRegister" class="clickable">Create an account</p>
+  <!-- LOGIN + REGISTER -->
+  <div id="box" class="panel">
+    <div id="loginBox">
+      <h2>Login</h2>
+      <input id="logEmail" placeholder="Email">
+      <input id="logPass" type="password" placeholder="Password">
+      <button id="loginBtn">Login</button>
+      <p id="toggleToRegister">Create an account</p>
+    </div>
+
+    <div id="registerBox" class="hidden">
+      <h2>Register</h2>
+      <input id="regEmail" placeholder="Email">
+      <input id="regPass" type="password" placeholder="Password">
+      <input id="regUsername" placeholder="Username">
+      <button id="registerBtn">Register</button>
+      <p id="toggleToLogin">Already have an account?</p>
+    </div>
   </div>
 
-  <div id="registerBox" class="hidden">
-    <h1>Register</h1>
-    <input id="regEmail" placeholder="Email">
-    <input id="regPass" type="password" placeholder="Password">
-    <input id="regUsername" placeholder="Username">
-    <button id="registerBtn">Register</button>
-    <p id="toggleToLogin" class="clickable">Already have an account?</p>
-  </div>
-</div>
-
-<!-- FORUM -->
-<div id="forum" class="hidden">
-  <div class="panel">
+  <!-- FORUM -->
+  <div id="forum" class="panel hidden">
 
     <div id="topBar">
       <span id="coinDisplay">🪙 0 Coins</span>
@@ -47,19 +46,19 @@
     </div>
 
     <!-- TABS -->
-    <div class="tabs">
-      <button data-tab="postsSection" class="active">Posts</button>
-      <button data-tab="usersSection">Users</button>
-      <button data-tab="dmsSection">DMs</button>
-      <button data-tab="updatesSection">Updates</button>
-      <button data-tab="suggestionsSection">Suggestions</button>
-      <button data-tab="gamesSection">Games</button>
-      <button data-tab="leaderboardSection">Leaderboard</button>
-      <button data-tab="activitySection">Activity</button>
+    <div id="tabs">
+      <button class="tabBtn active" data-target="postsSection">Posts</button>
+      <button class="tabBtn" data-target="usersSection">Users</button>
+      <button class="tabBtn" data-target="dmsSection">DMs</button>
+      <button class="tabBtn" data-target="updatesSection">Updates</button>
+      <button class="tabBtn" data-target="suggestionsSection">Suggestions</button>
+      <button class="tabBtn" data-target="gamesSection">Games</button>
+      <button class="tabBtn" data-target="leaderboardSection">Leaderboard</button>
+      <button class="tabBtn" data-target="activitySection">Activity</button>
     </div>
 
     <!-- SECTIONS -->
-    <div id="postsSection" class="tabSection">
+    <div id="postsSection" class="tabSection active">
       <h2>Create Post</h2>
       <textarea id="postContent" placeholder="Write something..."></textarea>
       <select id="postCategory">
@@ -73,12 +72,12 @@
       <div id="postsList"></div>
     </div>
 
-    <div id="usersSection" class="tabSection hidden">
+    <div id="usersSection" class="tabSection">
       <h2>Users</h2>
       <div id="usersList"></div>
     </div>
 
-    <div id="dmsSection" class="tabSection hidden">
+    <div id="dmsSection" class="tabSection">
       <h2>DMs</h2>
       <input id="dmToUsername" placeholder="Send to username">
       <textarea id="dmContent" placeholder="Message"></textarea>
@@ -86,41 +85,36 @@
       <div id="dmsList"></div>
     </div>
 
-    <div id="updatesSection" class="tabSection hidden">
+    <div id="updatesSection" class="tabSection">
       <h2>Updates</h2>
       <div id="updatesList"></div>
-      <div id="addUpdateBox" class="hidden">
-        <textarea id="updateContent" placeholder="Add update"></textarea>
-        <button id="addUpdateBtn">Add Update</button>
-      </div>
     </div>
 
-    <div id="suggestionsSection" class="tabSection hidden">
+    <div id="suggestionsSection" class="tabSection">
       <h2>Suggestions</h2>
       <textarea id="suggestionInput" placeholder="Your suggestion..."></textarea>
       <button id="submitSuggestionBtn">Submit</button>
       <div id="suggestionsList"></div>
     </div>
 
-    <div id="gamesSection" class="tabSection hidden">
+    <div id="gamesSection" class="tabSection">
       <h2>Games</h2>
-      <button id="dailyCoinBtn">Claim Daily Coins</button>
+      <button id="dailyCoinsBtn">Claim Daily Coins</button>
       <canvas id="plinkoCanvas" width="400" height="500"></canvas>
     </div>
 
-    <div id="leaderboardSection" class="tabSection hidden">
+    <div id="leaderboardSection" class="tabSection">
       <h2>Leaderboard</h2>
       <div id="leaderboardList"></div>
     </div>
 
-    <div id="activitySection" class="tabSection hidden">
+    <div id="activitySection" class="tabSection">
       <h2>Activity Leaderboard</h2>
       <div id="activityList"></div>
     </div>
 
   </div>
-</div>
 
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
