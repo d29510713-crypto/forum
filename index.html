@@ -4,132 +4,133 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Space Forum</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div id="blackhole"></div>
-  <div id="stars"></div>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <div id="mainContainer">
-    <div class="header">
-      <h1>🌌 SPACE FORUM 🌌</h1>
-    </div>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-    <!-- LOGIN BOX -->
-    <div id="loginBox">
-      <h2>Login</h2>
-      <input type="email" id="logEmail" placeholder="Email">
-      <input type="password" id="logPass" placeholder="Password">
-      <button id="loginBtn">Login</button>
-      <p style="text-align: center; margin-top: 15px;">
-        Don't have an account? 
-        <button class="link-btn" id="toggleToRegister">Register here</button>
-      </p>
-    </div>
+    #blackhole {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, #000 0%, #0a0030 80%, transparent 100%);
+      border-radius: 50%;
+      z-index: 0;
+      box-shadow: 0 0 50px rgba(138, 43, 226, 0.5),
+                  inset 0 0 60px rgba(138, 43, 226, 0.2);
+      animation: pulse 4s ease-in-out infinite;
+    }
 
-    <!-- REGISTER BOX -->
-    <div id="registerBox" class="hidden">
-      <h2>Register</h2>
-      <input type="text" id="regUsername" placeholder="Username">
-      <input type="email" id="regEmail" placeholder="Email">
-      <input type="password" id="regPass" placeholder="Password">
-      <button id="registerBtn">Register</button>
-      <p style="text-align: center; margin-top: 15px;">
-        Already have an account? 
-        <button class="link-btn" id="toggleToLogin">Login here</button>
-      </p>
-    </div>
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+    }
 
-    <!-- FORUM -->
-    <div id="forum" class="hidden">
-      <div class="forum-header">
-        <div id="coinDisplay">🪙 0 Coins</div>
-        <button id="logoutBtn">Logout</button>
-      </div>
+    #stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
 
-      <div id="tabs">
-        <button>Posts</button>
-        <button>Users</button>
-        <button>Updates</button>
-        <button>DMs</button>
-        <button>Suggestions</button>
-        <button>Plinko</button>
-      </div>
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
 
-      <!-- POSTS SECTION -->
-      <div class="tabSection">
-        <h2 class="section-title">Forum Posts</h2>
-        <div class="form-group">
-          <label>Category:</label>
-          <select id="postCategory">
-            <option>General</option>
-            <option>Games</option>
-            <option>Tech</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Content:</label>
-          <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-        </div>
-        <button id="postBtn">Post</button>
-        <div id="postsList"></div>
-      </div>
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
 
-      <!-- USERS SECTION -->
-      <div class="tabSection hidden">
-        <h2 class="section-title">Users</h2>
-        <div id="usersList"></div>
-      </div>
+    #mainContainer {
+      position: relative;
+      z-index: 2;
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
 
-      <!-- UPDATES SECTION -->
-      <div class="tabSection hidden">
-        <h2 class="section-title">Updates</h2>
-        <button id="addUpdateBtn" class="hidden">Add Update (Owner Only)</button>
-        <div id="updatesList"></div>
-      </div>
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
 
-      <!-- DMS SECTION -->
-      <div class="tabSection hidden">
-        <h2 class="section-title">Direct Messages</h2>
-        <div class="form-group">
-          <label>To Username:</label>
-          <input type="text" id="dmToUsername" placeholder="Username">
-        </div>
-        <div class="form-group">
-          <label>Message:</label>
-          <textarea id="dmContent" placeholder="Your message"></textarea>
-        </div>
-        <button id="dmBtn">Send DM</button>
-        <div id="dmsList"></div>
-      </div>
+    .header h1 {
+      font-size: 3em;
+      color: #8a2be2;
+      text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+      margin-bottom: 10px;
+    }
 
-      <!-- SUGGESTIONS SECTION -->
-      <div class="tabSection hidden">
-        <h2 class="section-title">Suggestions</h2>
-        <div class="form-group">
-          <textarea id="suggestionInput" placeholder="Share your suggestions..."></textarea>
-        </div>
-        <button id="submitSuggestionBtn">Submit Suggestion</button>
-        <div id="suggestionsList"></div>
-      </div>
+    #loginBox, #registerBox {
+      background: rgba(10, 0, 30, 0.95);
+      border: 2px solid rgba(138, 43, 226, 0.7);
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+    }
 
-      <!-- PLINKO SECTION -->
-      <div class="tabSection hidden">
-        <h2 class="section-title">Plinko Game</h2>
-        <button id="claimDailyCoins">Claim Daily Coins (+10)</button>
-        <canvas id="plinkoCanvas" width="600" height="500"></canvas>
-      </div>
-    </div>
-  </div>
+    #loginBox h2, #registerBox h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #9d4edd;
+    }
 
-  <!-- FIREBASE SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-  
-  <!-- Your JavaScript -->
-  <script src="app.js"></script>
-</body>
-</html>
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(138, 43, 226, 0.5);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #8a2be2;
+      box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+    }
+
+    button {
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 10px 20px;
+      transition: all 0.3s;
+      background: linear-gradient(135deg, #8a2be2, #4b0082);
+      color: #fff;
+      border: 2px solid rgba(138, 43, 226, 0.8);
+      font-family: 'Courier New', monospace;
+      margin: 5px;
+      font-size: 14px
