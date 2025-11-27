@@ -42,30 +42,45 @@ function initStars() {
 
 // ================= TABS =================
 function initTabs() {
-  const tabs = ["posts", "users", "dms", "updates"];
+  const tabs = ["Posts", "Users", "DMs", "Updates", "Suggestions", "Games"];
   tabs.forEach(tab => {
-    const tabBtn = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
-    if (tabBtn) tabBtn.onclick = () => showTab(tab);
+    const tabBtn = document.getElementById("tab" + tab);
+    if (tabBtn) {
+      tabBtn.onclick = () => showTab(tab.toLowerCase());
+    }
   });
 }
 
 function showTab(tab) {
-  ["posts", "users", "dms", "updates"].forEach(t => {
-    const section = document.getElementById(t + "Section");
+  const sections = {
+    posts: "postsSection",
+    users: "usersSection",
+    dms: "dmsSection",
+    updates: "updatesSection",
+    suggestions: "suggestionsSection",
+    games: "gamesSection"
+  };
+
+  for (const t in sections) {
+    const section = document.getElementById(sections[t]);
     const tabBtn = document.getElementById("tab" + t.charAt(0).toUpperCase() + t.slice(1));
     if (section) section.classList.add("hidden");
     if (tabBtn) tabBtn.classList.remove("active");
-  });
+  }
 
-  const selectedSection = document.getElementById(tab + "Section");
-  const selectedTab = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
+  const selectedSection = document.getElementById(sections[tab]);
+  const selectedTabBtn = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
   if (selectedSection) selectedSection.classList.remove("hidden");
-  if (selectedTab) selectedTab.classList.add("active");
+  if (selectedTabBtn) selectedTabBtn.classList.add("active");
 
-  if (tab === "posts") loadPosts();
-  if (tab === "users") loadUsers();
-  if (tab === "dms") loadDMs();
-  if (tab === "updates") loadUpdates();
+  switch (tab) {
+    case "posts": loadPosts(); break;
+    case "users": loadUsers(); break;
+    case "dms": loadDMs(); break;
+    case "updates": loadUpdates(); break;
+    case "suggestions": loadSuggestions(); break;
+    case "games": break; // games are static for now
+  }
 }
 
 // ================= LOGIN / REGISTER =================
@@ -157,27 +172,24 @@ async function loginUser(user) {
 
   document.getElementById("box").classList.add("hidden");
   document.getElementById("forum").classList.remove("hidden");
-
   if (isOwner || isModerator) document.getElementById("ownerControls").classList.remove("hidden");
 
   loadPosts();
   loadUsers();
   loadDMs();
   loadUpdates();
+  loadSuggestions();
 }
 
 // ================= DAILY COINS =================
 function initDailyCoins() {
-  const coinsDisplay = document.getElementById("coinDisplay"); // fixed
+  const coinsDisplay = document.getElementById("coinDisplay");
   const dailyCoinsBtn = document.getElementById("claimDailyCoins");
 
   async function updateCoinsDisplay() {
-    if (!currentUser) return;
+    if (!currentUser || !coinsDisplay) return;
     const userDoc = await db.collection("users").doc(currentUser.uid).get();
-    if (userDoc.exists) {
-      const data = userDoc.data();
-      coinsDisplay.textContent = `🪙 Coins: ${data.coins || 0}`; // fixed
-    }
+    if (userDoc.exists) coinsDisplay.textContent = `🪙 Coins: ${userDoc.data().coins || 0}`;
   }
 
   window.claimDailyCoins = async function () {
@@ -186,82 +198,29 @@ function initDailyCoins() {
     const userDoc = await userRef.get();
     if (!userDoc.exists) return;
 
-    const userData = userDoc.data();
-    const lastClaim = userData.lastDailyClaim || 0;
+    const data = userDoc.data();
+    const lastClaim = data.lastDailyClaim || 0;
     const now = Date.now();
     if (now - lastClaim < 24 * 60 * 60 * 1000) {
       const remaining = 24 * 60 * 60 * 1000 - (now - lastClaim);
       const hours = Math.floor(remaining / (1000 * 60 * 60));
       const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-      alert(`Already claimed! Come back in ${hours}h ${minutes}m.`);
-      return;
+      return alert(`Already claimed! Come back in ${hours}h ${minutes}m.`);
     }
 
     const reward = Math.floor(Math.random() * 51) + 50;
-    await userRef.update({
-      coins: (userData.coins || 0) + reward,
-      lastDailyClaim: now
-    });
-
+    await userRef.update({ coins: (data.coins || 0) + reward, lastDailyClaim: now });
     alert(`You received ${reward} coins!`);
     updateCoinsDisplay();
   };
 
   if (dailyCoinsBtn) dailyCoinsBtn.onclick = claimDailyCoins;
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (currentUser) updateCoinsDisplay();
-  });
+  auth.onAuthStateChanged(user => { currentUser = user; if (currentUser) updateCoinsDisplay(); });
 }
 
-  async function updateCoinsDisplay() {
-    if (!currentUser) return;
-    const userDoc = await db.collection("users").doc(currentUser.uid).get();
-    if (userDoc.exists) {
-      const data = userDoc.data();
-      coinsDisplay.textContent = `Coins: ${data.coins || 0}`;
-    }
-  }
-
-  window.claimDailyCoins = async function () {
-    if (!currentUser) return alert("Log in first!");
-    const userRef = db.collection("users").doc(currentUser.uid);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) return;
-    const userData = userDoc.data();
-
-    const lastClaim = userData.lastDailyClaim || 0;
-    const now = Date.now();
-
-    if (now - lastClaim < 24 * 60 * 60 * 1000) {
-      const remaining = 24 * 60 * 60 * 1000 - (now - lastClaim);
-      const hours = Math.floor(remaining / (1000 * 60 * 60));
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-      alert(`Already claimed! Come back in ${hours}h ${minutes}m.`);
-      return;
-    }
-
-    const reward = Math.floor(Math.random() * 51) + 50;
-    await userRef.update({
-      coins: (userData.coins || 0) + reward,
-      lastDailyClaim: now
-    });
-
-    alert(`You received ${reward} coins!`);
-    updateCoinsDisplay();
-  };
-
-  if (dailyCoinsBtn) dailyCoinsBtn.onclick = claimDailyCoins;
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (currentUser) updateCoinsDisplay();
-  });
-}
-
-// ================= POSTS & COMMENTS =================
+// ================= POSTS =================
 async function loadPosts() {
-  const postsContainer = document.getElementById("postsContainer");
+  const postsContainer = document.getElementById("postsList");
   if (!postsContainer) return;
   postsContainer.innerHTML = "";
   const snapshot = await db.collection("posts").orderBy("timestamp", "desc").get();
@@ -282,25 +241,6 @@ async function loadPosts() {
   });
 }
 
-async function addPost() {
-  const text = document.getElementById("newPostText").value;
-  if (!text) return alert("Cannot post empty");
-  await db.collection("posts").add({
-    text,
-    author: currentUsername,
-    timestamp: Date.now(),
-    deleted: false
-  });
-  document.getElementById("newPostText").value = "";
-  loadPosts();
-}
-
-async function deletePost(postId) {
-  if (!isOwner && !isModerator) return alert("Not authorized");
-  await db.collection("posts").doc(postId).update({ deleted: true });
-  loadPosts();
-}
-
 // Comments
 async function loadComments(postId) {
   const commentsContainer = document.getElementById(`comments-${postId}`);
@@ -312,37 +252,15 @@ async function loadComments(postId) {
     if (c.deleted) return;
     const div = document.createElement("div");
     div.className = "comment";
-    div.innerHTML = `
-      <strong>${c.author}</strong>: ${c.text}
-      ${(isOwner || isModerator) ? `<button onclick="deleteComment('${postId}','${doc.id}')">Delete</button>` : ""}
-    `;
+    div.innerHTML = `<strong>${c.author}</strong>: ${c.text}
+      ${(isOwner || isModerator) ? `<button onclick="deleteComment('${postId}','${doc.id}')">Delete</button>` : ""}`;
     commentsContainer.appendChild(div);
   });
 }
 
-async function addComment(postId) {
-  const input = document.getElementById(`commentInput-${postId}`);
-  const text = input.value;
-  if (!text) return alert("Cannot comment empty");
-  await db.collection("posts").doc(postId).collection("comments").add({
-    text,
-    author: currentUsername,
-    timestamp: Date.now(),
-    deleted: false
-  });
-  input.value = "";
-  loadComments(postId);
-}
-
-async function deleteComment(postId, commentId) {
-  if (!isOwner && !isModerator) return alert("Not authorized");
-  await db.collection("posts").doc(postId).collection("comments").doc(commentId).update({ deleted: true });
-  loadComments(postId);
-}
-
 // ================= USERS =================
 async function loadUsers() {
-  const usersContainer = document.getElementById("usersContainer");
+  const usersContainer = document.getElementById("usersList");
   if (!usersContainer) return;
   usersContainer.innerHTML = "";
   const snapshot = await db.collection("users").get();
@@ -355,40 +273,67 @@ async function loadUsers() {
   });
 }
 
-async function banUser(uid) {
-  if (!isOwner) return alert("Only owner can ban");
-  await db.collection("users").doc(uid).update({ banned: true });
-  alert("User banned! Messages will remain hidden.");
-  loadUsers();
-}
-
 // ================= DMS =================
 async function loadDMs() {
-  const dmsContainer = document.getElementById("dmsContainer");
+  const dmsContainer = document.getElementById("dmsList");
   if (!dmsContainer) return;
   dmsContainer.innerHTML = "";
-
-  const snapshot = await db.collection("dms").where("participants", "array-contains", currentUser.uid).orderBy("timestamp", "desc").get();
-  snapshot.forEach(doc => {
+  const snapshot = await db.collection("dms").where("participants", "array-contains", currentUser.uid).orderBy("timestamp","desc").get();
+  snapshot.forEach(async doc => {
     const dm = doc.data();
-    const otherUser = dm.participants.filter(uid => uid !== currentUser.uid)[0];
+    const otherUid = dm.participants.find(uid => uid !== currentUser.uid);
+    const userDoc = await db.collection("users").doc(otherUid).get();
+    const otherUsername = userDoc.exists ? userDoc.data().username : "Unknown";
     const div = document.createElement("div");
     div.className = "dm";
-    div.innerHTML = `<strong>DM with ${otherUser}</strong>: ${dm.lastMessage}`;
+    div.innerHTML = `<strong>DM with ${otherUsername}</strong>: ${dm.lastMessage}`;
     dmsContainer.appendChild(div);
   });
 }
 
 // ================= UPDATES =================
 async function loadUpdates() {
-  const updatesContainer = document.getElementById("updatesContainer");
+  const updatesContainer = document.getElementById("updatesList");
   if (!updatesContainer) return;
   updatesContainer.innerHTML = "";
-  const snapshot = await db.collection("updates").orderBy("timestamp", "desc").get();
+  const snapshot = await db.collection("updates").orderBy("timestamp","desc").get();
   snapshot.forEach(doc => {
     const u = doc.data();
     const div = document.createElement("div");
     div.innerHTML = `<strong>${u.title}</strong>: ${u.text}`;
     updatesContainer.appendChild(div);
+  });
+}
+
+// ================= SUGGESTIONS =================
+async function loadSuggestions() {
+  const suggestionsContainer = document.getElementById("suggestionsList");
+  if (!suggestionsContainer) return;
+  suggestionsContainer.innerHTML = "";
+  const snapshot = await db.collection("suggestions").orderBy("timestamp","desc").get();
+  snapshot.forEach(doc => {
+    const s = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${s.title}</strong> by ${s.author}: ${s.description}`;
+    suggestionsContainer.appendChild(div);
+  });
+}
+
+// ================= PLINKO GAME =================
+function playPlinko() {
+  if (!currentUser) return alert("Log in first!");
+  const bet = parseInt(document.getElementById("plinkoBet").value);
+  if (isNaN(bet) || bet < 10) return alert("Minimum bet 10 coins!");
+
+  db.collection("users").doc(currentUser.uid).get().then(doc => {
+    const coins = doc.data().coins || 0;
+    if (coins < bet) return alert("Not enough coins!");
+
+    const slots = [5,2,1,0.5,1,2,5];
+    const result = slots[Math.floor(Math.random()*slots.length)];
+    const winnings = Math.floor(bet * result);
+
+    db.collection("users").doc(currentUser.uid).update({ coins: coins - bet + winnings });
+    document.getElementById("plinkoBoard").innerHTML = `You landed a ${result}x! You won ${winnings} coins.`;
   });
 }
