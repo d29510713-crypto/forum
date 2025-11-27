@@ -36,16 +36,13 @@ function initStars() {
     s.style.left = Math.random() * 100 + "%";
     s.style.width = (Math.random() * 2 + 1) + "px";
     s.style.height = (Math.random() * 2 + 1) + "px";
-    s.style.background = "white";
-    s.style.position = "absolute";
-    s.style.borderRadius = "50%";
     starsContainer.appendChild(s);
   }
 }
 
 // ================= TABS =================
 function initTabs() {
-  const tabs = ["posts", "users", "games"];
+  const tabs = ["posts", "users", "dms", "updates", "suggestions", "games"];
   tabs.forEach(tab => {
     const tabBtn = document.getElementById("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabBtn) tabBtn.onclick = () => showTab(tab);
@@ -53,7 +50,7 @@ function initTabs() {
 }
 
 function showTab(tab) {
-  ["posts", "users", "games"].forEach(t => {
+  ["posts", "users", "dms", "updates", "suggestions", "games"].forEach(t => {
     const section = document.getElementById(t + "Section");
     const tabBtn = document.getElementById("tab" + t.charAt(0).toUpperCase() + t.slice(1));
     if (section) section.classList.add("hidden");
@@ -67,6 +64,10 @@ function showTab(tab) {
 
   if (tab === "posts") loadPosts();
   if (tab === "users") loadUsers();
+  if (tab === "dms") loadDMs();
+  if (tab === "updates") loadUpdates();
+  if (tab === "suggestions") loadSuggestions();
+  if (tab === "games") loadLeaderboard();
 }
 
 // ================= LOGIN / REGISTER =================
@@ -107,10 +108,12 @@ async function register() {
     await db.collection("users").doc(userCred.user.uid).set({
       username,
       email,
-      coins: 0,
-      moderator: false,
+      joinDate: Date.now(),
       banned: false,
-      joinDate: Date.now()
+      moderator: false,
+      warnings: 0,
+      coins: 0,
+      lastDailyClaim: 0
     });
     loginUser(userCred.user);
   } catch (e) {
@@ -145,6 +148,11 @@ async function loginUser(user) {
   const userDoc = await db.collection("users").doc(user.uid).get();
   if (!userDoc.exists) return;
   const data = userDoc.data();
+  if (data.banned) {
+    alert("You are banned");
+    await auth.signOut();
+    return;
+  }
   currentUsername = data.username;
   isModerator = data.moderator || false;
   isOwner = (user.email === "d29510713@gmail.com");
@@ -152,77 +160,203 @@ async function loginUser(user) {
   document.getElementById("box").classList.add("hidden");
   document.getElementById("forum").classList.remove("hidden");
 
+  if (isOwner || isModerator) document.getElementById("ownerControls").classList.remove("hidden");
+
   loadPosts();
   loadUsers();
+  loadDMs();
+  loadUpdates();
+  loadSuggestions();
+  loadLeaderboard();
+}
+
+// ================= DAILY COINS =================
+function initDailyCoins() {
+  const coinsDisplay = document.getElementById("coinDisplay");
+
+  async function updateCoinsDisplay() {
+    if (!currentUser) return;
+    const userDoc = await db.collection("users").doc(currentUser.uid).get();
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      coinsDisplay.textContent = `🪙 Coins: ${data.coins || 0}`;
+    }
+  }
+
+  window.claimDailyCoins = async function () {
+    if (!currentUser) return alert("Log in first!");
+    const userRef = db.collection("users").doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) return;
+    const userData = userDoc.data();
+
+    const lastClaim = userData.lastDailyClaim || 0;
+    const now = Date.now();
+    if (now - lastClaim < 24 * 60 * 60 * 1000) {
+      const remaining = 24 * 60 * 60 * 1000 - (now - lastClaim);
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      alert(`Already claimed! Come back in ${hours}h ${minutes}m.`);
+      return;
+    }
+
+    const reward = Math.floor(Math.random() * 51) + 50;
+    await userRef.update({
+      coins: (userData.coins || 0) + reward,
+      lastDailyClaim: now
+    });
+
+    alert(`You received ${reward} coins!`);
+    updateCoinsDisplay();
+  };
+
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (currentUser) updateCoinsDisplay();
+  });
 }
 
 // ================= POSTS =================
 async function loadPosts() {
-  const postsContainer = document.getElementById("postsContainer");
+  const postsContainer = document.getElementById("postsList");
   if (!postsContainer) return;
   postsContainer.innerHTML = "";
-
   const snapshot = await db.collection("posts").orderBy("timestamp", "desc").get();
   snapshot.forEach(doc => {
     const post = doc.data();
-    if (!post || post.deleted) return;
-
+    if (!post.content) return; // skip empty
     const div = document.createElement("div");
     div.className = "post";
-    div.innerHTML = `<strong>${post.author || "Unknown"}</strong>: ${post.content || ""}`;
+    div.innerHTML = `
+      <strong>${post.author}</strong>: ${post.content}
+      <div id="comments-${doc.id}"></div>
+      <input placeholder="Comment" id="commentInput-${doc.id}"/>
+      <button onclick="addComment('${doc.id}')">Post Comment</button>
+    `;
     postsContainer.appendChild(div);
+    loadComments(doc.id);
   });
 }
 
-async function addPost() {
-  const text = document.getElementById("newPostText").value;
-  if (!text) return alert("Cannot post empty");
-  await db.collection("posts").add({
-    author: currentUsername,
-    content: text,
-    timestamp: Date.now(),
-    deleted: false
+// Comments
+async function loadComments(postId) {
+  const commentsContainer = document.getElementById(`comments-${postId}`);
+  if (!commentsContainer) return;
+  commentsContainer.innerHTML = "";
+  const snapshot = await db.collection("posts").doc(postId).collection("comments").orderBy("timestamp").get();
+  snapshot.forEach(doc => {
+    const c = doc.data();
+    const div = document.createElement("div");
+    div.className = "comment";
+    div.innerHTML = `<strong>${c.author}</strong>: ${c.text}`;
+    commentsContainer.appendChild(div);
   });
-  document.getElementById("newPostText").value = "";
-  loadPosts();
+}
+
+async function addComment(postId) {
+  const input = document.getElementById(`commentInput-${postId}`);
+  const text = input.value;
+  if (!text) return alert("Cannot comment empty");
+  await db.collection("posts").doc(postId).collection("comments").add({
+    text,
+    author: currentUsername,
+    timestamp: Date.now()
+  });
+  input.value = "";
+  loadComments(postId);
 }
 
 // ================= USERS =================
 async function loadUsers() {
-  const usersContainer = document.getElementById("usersContainer");
+  const usersContainer = document.getElementById("usersList");
   if (!usersContainer) return;
   usersContainer.innerHTML = "";
-
-  const snapshot = await db.collection("users").get();
+  const snapshot = await db.collection("users").orderBy("coins","desc").get();
   snapshot.forEach(doc => {
     const u = doc.data();
     const div = document.createElement("div");
-    div.textContent = `${u.username || "Unknown"} ${u.moderator ? "(Mod)" : ""}`;
+    div.innerHTML = `${u.username} (${u.coins || 0} coins) ${u.moderator ? "(Mod)" : ""}`;
     usersContainer.appendChild(div);
   });
 }
 
-// ================= PLINKO (simplified visual) =================
+// ================= LEADERBOARD =================
+async function loadLeaderboard() {
+  const leaderboardContainer = document.getElementById("gamesSection");
+  if (!leaderboardContainer) return;
+  // could add top 10 users
+}
+
+// ================= DMS =================
+async function loadDMs() {
+  const dmsContainer = document.getElementById("dmsList");
+  if (!dmsContainer || !currentUser) return;
+  dmsContainer.innerHTML = "";
+  const snapshot = await db.collection("dms").where("participants","array-contains",currentUser.uid).orderBy("timestamp","desc").get();
+  snapshot.forEach(doc => {
+    const dm = doc.data();
+    const otherUser = dm.participants.filter(uid=>uid!==currentUser.uid)[0];
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>DM with ${otherUser}</strong>: ${dm.lastMessage}`;
+    dmsContainer.appendChild(div);
+  });
+}
+
+// ================= UPDATES =================
+async function loadUpdates() {
+  const updatesContainer = document.getElementById("updatesList");
+  if (!updatesContainer) return;
+  updatesContainer.innerHTML = "";
+  const snapshot = await db.collection("updates").orderBy("timestamp","desc").get();
+  snapshot.forEach(doc=>{
+    const u = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${u.title}</strong>: ${u.text}`;
+    updatesContainer.appendChild(div);
+  });
+}
+
+// ================= SUGGESTIONS =================
+async function loadSuggestions() {
+  const suggestionsContainer = document.getElementById("suggestionsList");
+  if (!suggestionsContainer) return;
+  suggestionsContainer.innerHTML = "";
+  const snapshot = await db.collection("suggestions").orderBy("timestamp","desc").get();
+  snapshot.forEach(doc=>{
+    const s = doc.data();
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${s.title}</strong>: ${s.description}`;
+    suggestionsContainer.appendChild(div);
+  });
+}
+
+// ================= PLINKO =================
 function playPlinko() {
   const board = document.getElementById("plinkoBoard");
-  if (!board) return;
+  board.innerHTML = ""; // clear board
+
   const ball = document.createElement("div");
   ball.style.width = "20px";
   ball.style.height = "20px";
-  ball.style.background = "gold";
   ball.style.borderRadius = "50%";
+  ball.style.background = "#ff0";
   ball.style.position = "absolute";
-  ball.style.top = "0";
-  ball.style.left = Math.random() * (board.clientWidth - 20) + "px";
+  ball.style.top = "0px";
+  ball.style.left = "50%";
   board.appendChild(ball);
 
   let pos = 0;
-  const interval = setInterval(() => {
-    pos += 5;
-    ball.style.top = pos + "px";
-    ball.style.left = parseFloat(ball.style.left) + (Math.random() * 20 - 10) + "px";
-    if (pos >= board.clientHeight - 20) {
+  let left = 50;
+  const interval = setInterval(()=>{
+    if(pos>=380){
       clearInterval(interval);
+      // calculate multiplier
+      alert("Plinko finished!");
+      return;
     }
-  }, 50);
+    pos += 5;
+    left += Math.random()*10-5; // random horizontal movement
+    ball.style.top = pos+"px";
+    ball.style.left = left+"px";
+  },50);
 }
