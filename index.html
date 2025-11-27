@@ -1,65 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Toasty Forum</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toasty Forums</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="panel">
-        <h1>Toasty Forum</h1>
+<div id="stars"></div>
 
-        <!-- LOGIN -->
-        <div id="loginBox">
-            <h2>Login</h2>
-            <input id="loginUser" placeholder="Username">
-            <button onclick="login()">Login</button>
-            <p><a href="#" onclick="showRegister()">Register instead</a></p>
-        </div>
+<div id="box" class="login-register-box">
+  <h1>Welcome to Toasty Forums</h1>
 
-        <!-- REGISTER -->
-        <div id="registerBox" class="hidden">
-            <h2>Register</h2>
-            <input id="regUser" placeholder="Username">
-            <button onclick="register()">Register</button>
-            <p><a href="#" onclick="showLogin()">Login instead</a></p>
-        </div>
+  <div id="loginBox">
+    <input id="logEmail" type="email" placeholder="Email">
+    <input id="logPass" type="password" placeholder="Password">
+    <button id="loginBtn">Login</button>
+    <button id="toggleToRegister">Register</button>
+  </div>
 
-        <!-- FORUM -->
-        <div id="forumBox" class="hidden">
-            <h2>Forum</h2>
-            <p>Logged in as <span id="displayUser"></span> (<span id="displayRole"></span>)</p>
-            <textarea id="postText" placeholder="Write a message..."></textarea>
-            <button onclick="postMessage()">Post</button>
-            <h3>Messages</h3>
-            <div id="messages"></div>
-        </div>
+  <div id="registerBox" class="hidden">
+    <input id="regUsername" type="text" placeholder="Username">
+    <input id="regEmail" type="email" placeholder="Email">
+    <input id="regPass" type="password" placeholder="Password">
+    <button id="registerBtn">Register</button>
+    <button id="toggleToLogin">Back to Login</button>
+  </div>
+</div>
 
-        <!-- OWNER / ADMIN PANEL -->
-        <div id="adminBox" class="hidden">
-            <h2>Admin / Owner Panel</h2>
-            <h3>Banned Users</h3>
-            <div id="bannedList"></div>
+<div id="forum" class="hidden">
+  <div class="header">
+    <h2>🔥 Toasty Forums</h2>
+    <button id="logoutBtn" class="purple-btn">Logout</button>
+  </div>
 
-            <h3>Role Control (Owner Only)</h3>
-            <input id="promoteUser" placeholder="Username to promote to Admin">
-            <button onclick="promoteAdmin()">Promote</button>
-        </div>
+  <div class="tabs">
+    <button id="tabPosts" class="tab active">Posts</button>
+    <button id="tabUsers" class="tab">Users</button>
+    <button id="tabUpdates" class="tab">Updates</button>
+    <button id="tabSuggestions" class="tab">Ideas</button>
+  </div>
 
-        <!-- OWNER UPDATE POSTS -->
-        <div id="updateBox" class="hidden">
-            <h2>Updates</h2>
-            <textarea id="updateText" placeholder="Write an update..."></textarea>
-            <button onclick="postUpdate()">Post Update</button>
-            <h3>All Updates</h3>
-            <div id="updateFeed"></div>
-        </div>
+  <div class="tab-content">
+    <div id="postsSection" class="section">
+      <div id="postsList"></div>
     </div>
+    <div id="usersSection" class="section hidden">
+      <div id="usersList"></div>
+    </div>
+    <div id="updatesSection" class="section hidden">
+      <div id="updatesList"></div>
+    </div>
+    <div id="suggestionsSection" class="section hidden">
+      <div id="suggestionsList"></div>
+    </div>
+  </div>
 
-    <div id="stars"></div>
-    <div id="blackhole"></div>
+  <div id="ownerControls" class="owner-controls hidden">
+    <h3>Admin Controls</h3>
+    <input id="updateTitle" placeholder="Title">
+    <textarea id="updateContent" placeholder="Content"></textarea>
+    <button id="postUpdateBtn">Post Update</button>
+    <button id="clearForumBtn">Clear Forum</button>
+  </div>
+</div>
 
-    <!-- Link to JS -->
-    <script src="app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
