@@ -1,31 +1,50 @@
-// ================= Firebase v8 Configuration =================
-const firebaseConfig = {
-  apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
-  authDomain: "toasty-89f07.firebaseapp.com",
-  projectId: "toasty-89f07",
-  storageBucket: "toasty-89f07.appspot.com",
-  messagingSenderId: "743787667064",
-  appId: "1:743787667064:web:12284120fbbdd1e907d78d"
-};
+// ================= Wait for Firebase to Load =================
+function initializeFirebase() {
+  console.log("Checking if Firebase is loaded...");
+  
+  if (typeof firebase === 'undefined') {
+    console.error("Firebase is not loaded! Check your script tags.");
+    alert("Firebase failed to load. Please refresh the page.");
+    return false;
+  }
+  
+  console.log("Firebase version:", firebase.SDK_VERSION);
+  
+  // ================= Firebase v8 Configuration =================
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+    authDomain: "toasty-89f07.firebaseapp.com",
+    projectId: "toasty-89f07",
+    storageBucket: "toasty-89f07.appspot.com",
+    messagingSenderId: "743787667064",
+    appId: "1:743787667064:web:12284120fbbdd1e907d78d"
+  };
 
-// ================= Initialize Firebase =================
-console.log("Initializing Firebase...");
-console.log("Firebase config:", firebaseConfig);
+  console.log("Initializing Firebase with config:", firebaseConfig);
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-  console.log("Firebase initialized successfully");
-} else {
-  console.log("Firebase already initialized");
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+      console.log("✅ Firebase initialized successfully");
+    } else {
+      console.log("✅ Firebase already initialized");
+    }
+    return true;
+  } catch (error) {
+    console.error("❌ Firebase initialization error:", error);
+    alert("Firebase initialization failed: " + error.message);
+    return false;
+  }
+}
+
+// Try to initialize Firebase
+if (!initializeFirebase()) {
+  throw new Error("Failed to initialize Firebase");
 }
 
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
-
-console.log("Auth:", auth);
-console.log("DB:", db);
-console.log("Storage:", storage);
 
 // ================= GLOBAL VARIABLES =================
 let currentUser = null;
@@ -58,7 +77,7 @@ function initStars() {
 
 // ================= TABS =================
 function initTabs() {
-  const tabs = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard"];
+  const tabs = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard", "activity"];
   tabs.forEach(tab => {
     const tabBtn = document.getElementById("tab" + capitalize(tab));
     if (tabBtn) tabBtn.onclick = () => showTab(tab);
@@ -70,7 +89,7 @@ function capitalize(str) {
 }
 
 function showTab(tab) {
-  const allTabs = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard"];
+  const allTabs = ["posts", "users", "dms", "updates", "suggestions", "games", "leaderboard", "activity"];
   allTabs.forEach(t => {
     const section = document.getElementById(t + "Section");
     const tabBtn = document.getElementById("tab" + capitalize(t));
@@ -89,6 +108,7 @@ function showTab(tab) {
   if (tab === "updates") loadUpdates();
   if (tab === "suggestions") loadSuggestions();
   if (tab === "leaderboard") loadLeaderboard();
+  if (tab === "activity") loadActivityLeaderboard();
   if (tab === "games") initPlinko();
 }
 
@@ -284,13 +304,33 @@ async function loadPosts() {
 
     snapshot.forEach(doc => {
       const post = doc.data();
+      const postId = doc.id;
+      const userLiked = post.likedBy && post.likedBy.includes(currentUser?.uid);
+      
       const div = document.createElement("div");
       div.className = "post";
+      div.style.background = "rgba(255,255,255,0.1)";
+      div.style.padding = "15px";
+      div.style.margin = "10px 0";
+      div.style.borderRadius = "10px";
       div.innerHTML = `
         <strong>${post.author || "Unknown"}</strong> - ${post.category || "General"}
         <p>${post.content || ""}</p>
         ${post.imageUrl ? `<img src="${post.imageUrl}" style="max-width:300px; margin-top:5px; border-radius:5px;">` : ""}
-        <small>${new Date(post.timestamp).toLocaleString()}</small>
+        <div style="display:flex; gap:15px; margin-top:10px; align-items:center;">
+          <button onclick="likePost('${postId}')" style="background:${userLiked ? '#ff6b35' : 'rgba(255,255,255,0.2)'}; padding:5px 15px; border:none; border-radius:5px; cursor:pointer;">
+            ❤️ ${post.likes || 0}
+          </button>
+          <button onclick="toggleComments('${postId}')" style="background:rgba(255,255,255,0.2); padding:5px 15px; border:none; border-radius:5px; cursor:pointer;">
+            💬 ${post.commentCount || 0}
+          </button>
+          <small style="margin-left:auto;">${new Date(post.timestamp).toLocaleString()}</small>
+        </div>
+        <div id="comments-${postId}" class="hidden" style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:5px;">
+          <div id="commentsList-${postId}"></div>
+          <textarea id="commentInput-${postId}" placeholder="Write a comment..." style="width:100%; margin-top:10px; padding:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:5px; color:#fff;"></textarea>
+          <button onclick="addComment('${postId}')" style="margin-top:5px; background:#ff6b35; padding:5px 15px; border:none; border-radius:5px; cursor:pointer;">Post Comment</button>
+        </div>
       `;
       container.appendChild(div);
     });
@@ -314,6 +354,142 @@ async function loadPosts() {
         preview.classList.remove("hidden");
       }
     };
+  }
+}
+
+// Like a post
+async function likePost(postId) {
+  if (!currentUser) return alert("Please login first");
+  
+  try {
+    const postRef = db.collection("posts").doc(postId);
+    const postDoc = await postRef.get();
+    const post = postDoc.data();
+    
+    const likedBy = post.likedBy || [];
+    const likes = post.likes || 0;
+    
+    if (likedBy.includes(currentUser.uid)) {
+      // Unlike
+      await postRef.update({
+        likes: likes - 1,
+        likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+      });
+    } else {
+      // Like
+      await postRef.update({
+        likes: likes + 1,
+        likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+      });
+      
+      // Award coin to post author
+      if (post.authorId && post.authorId !== currentUser.uid) {
+        const authorRef = db.collection("users").doc(post.authorId);
+        const authorDoc = await authorRef.get();
+        if (authorDoc.exists) {
+          await authorRef.update({
+            coins: (authorDoc.data().coins || 0) + 1
+          });
+        }
+      }
+    }
+    
+    loadPosts();
+  } catch (error) {
+    console.error("Error liking post:", error);
+    alert("Error liking post: " + error.message);
+  }
+}
+
+// Toggle comments visibility
+async function toggleComments(postId) {
+  const commentsDiv = document.getElementById(`comments-${postId}`);
+  if (!commentsDiv) return;
+  
+  if (commentsDiv.classList.contains("hidden")) {
+    commentsDiv.classList.remove("hidden");
+    loadComments(postId);
+  } else {
+    commentsDiv.classList.add("hidden");
+  }
+}
+
+// Load comments for a post
+async function loadComments(postId) {
+  const container = document.getElementById(`commentsList-${postId}`);
+  if (!container) return;
+  container.innerHTML = "<p>Loading comments...</p>";
+  
+  try {
+    const snapshot = await db.collection("posts").doc(postId).collection("comments")
+      .orderBy("timestamp", "asc")
+      .get();
+    
+    container.innerHTML = "";
+    
+    if (snapshot.empty) {
+      container.innerHTML = "<p>No comments yet</p>";
+      return;
+    }
+    
+    snapshot.forEach(doc => {
+      const comment = doc.data();
+      const div = document.createElement("div");
+      div.style.padding = "8px";
+      div.style.margin = "5px 0";
+      div.style.background = "rgba(255,255,255,0.05)";
+      div.style.borderRadius = "5px";
+      div.innerHTML = `
+        <strong>${comment.author}</strong>: ${comment.content}
+        <br><small>${new Date(comment.timestamp).toLocaleString()}</small>
+      `;
+      container.appendChild(div);
+    });
+  } catch (error) {
+    console.error("Error loading comments:", error);
+    container.innerHTML = "<p style='color:red;'>Error loading comments</p>";
+  }
+}
+
+// Add a comment
+async function addComment(postId) {
+  if (!currentUser) return alert("Please login first");
+  
+  const input = document.getElementById(`commentInput-${postId}`);
+  const content = input.value.trim();
+  
+  if (!content) return alert("Write something first!");
+  
+  try {
+    const postRef = db.collection("posts").doc(postId);
+    
+    await postRef.collection("comments").add({
+      author: currentUsername,
+      authorId: currentUser.uid,
+      content,
+      timestamp: Date.now()
+    });
+    
+    // Update comment count
+    const postDoc = await postRef.get();
+    await postRef.update({
+      commentCount: (postDoc.data().commentCount || 0) + 1
+    });
+    
+    // Award coin
+    const userRef = db.collection("users").doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    await userRef.update({
+      coins: (userDoc.data().coins || 0) + 2
+    });
+    updateCoinDisplay((userDoc.data().coins || 0) + 2);
+    
+    input.value = "";
+    loadComments(postId);
+    loadPosts();
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    alert("Error adding comment: " + error.message);
   }
 }
 
@@ -342,21 +518,27 @@ async function createPost() {
       category,
       imageUrl,
       timestamp: Date.now(),
-      likes: 0
+      likes: 0,
+      likedBy: [],
+      commentCount: 0
     });
     
-    // Award coins
+    // Award coins and increase activity
     const userRef = db.collection("users").doc(currentUser.uid);
     const userDoc = await userRef.get();
     const newCoins = (userDoc.data().coins || 0) + 5;
-    await userRef.update({ coins: newCoins });
+    const activity = (userDoc.data().activity || 0) + 10;
+    await userRef.update({ 
+      coins: newCoins,
+      activity: activity
+    });
     updateCoinDisplay(newCoins);
     
     document.getElementById("postContent").value = "";
     document.getElementById("postImage").value = "";
     document.getElementById("previewImage").classList.add("hidden");
     
-    alert("Post created! +5 coins");
+    alert("Post created! +5 coins, +10 activity");
     loadPosts();
   } catch (error) {
     console.error("Error creating post:", error);
@@ -569,17 +751,21 @@ async function submitSuggestion() {
       timestamp: Date.now()
     });
     
-    // Award coins
+    // Award coins and activity
     const userRef = db.collection("users").doc(currentUser.uid);
     const userDoc = await userRef.get();
     const newCoins = (userDoc.data().coins || 0) + 10;
-    await userRef.update({ coins: newCoins });
+    const activity = (userDoc.data().activity || 0) + 15;
+    await userRef.update({ 
+      coins: newCoins,
+      activity: activity
+    });
     updateCoinDisplay(newCoins);
     
     document.getElementById("suggestionTitle").value = "";
     document.getElementById("suggestionDescription").value = "";
     
-    alert("Suggestion submitted! +10 coins");
+    alert("Suggestion submitted! +10 coins, +15 activity");
     loadSuggestions();
   } catch (error) {
     console.error("Error submitting suggestion:", error);
@@ -599,7 +785,7 @@ async function loadLeaderboard() {
       .limit(10)
       .get();
     
-    container.innerHTML = "";
+    container.innerHTML = "<h3>🪙 Top Coin Holders</h3>";
     
     let rank = 1;
     snapshot.forEach(doc => {
@@ -610,9 +796,15 @@ async function loadLeaderboard() {
       div.style.margin = "5px 0";
       div.style.background = rank <= 3 ? "rgba(255,215,0,0.2)" : "rgba(255,255,255,0.1)";
       div.style.borderRadius = "8px";
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.gap = "15px";
+      
+      const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+      
       div.innerHTML = `
-        <span style="font-size: 24px; font-weight: bold;">#${rank}</span>
-        <strong>${user.username}</strong>
+        <span style="font-size: 24px; font-weight: bold; min-width: 50px;">${medal}</span>
+        <strong style="flex: 1;">${user.username}</strong>
         <span style="color: #ffd700;">🪙 ${user.coins || 0}</span>
       `;
       container.appendChild(div);
@@ -624,39 +816,103 @@ async function loadLeaderboard() {
   }
 }
 
-// ================= PLINKO GAME =================
-function initPlinko() {
-  const canvas = document.getElementById("plinkoCanvas");
-  if (!canvas) return;
+// ================= ACTIVITY LEADERBOARD =================
+async function loadActivityLeaderboard() {
+  const container = document.getElementById("activitySection");
+  if (!container) return;
+  container.innerHTML = "<h2>📊 Activity Leaderboard</h2><p>Loading...</p>";
   
-  const ctx = canvas.getContext("2d");
+  try {
+    const snapshot = await db.collection("users")
+      .orderBy("activity", "desc")
+      .limit(10)
+      .get();
+    
+    container.innerHTML = "<h2>📊 Top Active Users</h2>";
+    
+    let rank = 1;
+    snapshot.forEach(doc => {
+      const user = doc.data();
+      const div = document.createElement("div");
+      div.className = "leaderboard-item";
+      div.style.padding = "15px";
+      div.style.margin = "5px 0";
+      div.style.background = rank <= 3 ? "rgba(255,107,53,0.3)" : "rgba(255,255,255,0.1)";
+      div.style.borderRadius = "8px";
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.gap = "15px";
+      
+      const medal = rank === 1 ? "🏆" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+      
+      div.innerHTML = `
+        <span style="font-size: 24px; font-weight: bold; min-width: 50px;">${medal}</span>
+        <strong style="flex: 1;">${user.username}</strong>
+        <span style="color: #ff6b35;">📊 ${user.activity || 0} points</span>
+      `;
+      container.appendChild(div);
+      rank++;
+    });
+  } catch (error) {
+    console.error("Error loading activity leaderboard:", error);
+    container.innerHTML = `<p style="color: red;">Error loading activity leaderboard.</p>`;
+  }
+}
+
+// ================= PLINKO GAME =================
+let plinkoCanvas, plinkoCtx, plinkoBall, plinkoAnimating = false;
+
+function initPlinko() {
+  plinkoCanvas = document.getElementById("plinkoCanvas");
+  if (!plinkoCanvas) return;
+  
+  plinkoCtx = plinkoCanvas.getContext("2d");
+  drawPlinkoBoard();
+}
+
+function drawPlinkoBoard() {
+  if (!plinkoCtx) return;
+  
+  // Clear canvas
+  plinkoCtx.clearRect(0, 0, plinkoCanvas.width, plinkoCanvas.height);
   
   // Draw pegs
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fff";
-  
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col <= row; col++) {
-      const x = 200 + (col - row / 2) * 40;
-      const y = 50 + row * 40;
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fill();
+  plinkoCtx.fillStyle = "#fff";
+  for (let row = 1; row <= 10; row++) {
+    const numPegs = row + 1;
+    for (let col = 0; col < numPegs; col++) {
+      const x = plinkoCanvas.width / 2 + (col - numPegs / 2 + 0.5) * 35;
+      const y = 40 + row * 35;
+      plinkoCtx.beginPath();
+      plinkoCtx.arc(x, y, 4, 0, Math.PI * 2);
+      plinkoCtx.fill();
     }
   }
   
-  // Draw prize zones
-  const prizes = [10, 20, 50, 100, 50, 20, 10];
-  const zoneWidth = canvas.width / prizes.length;
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "#ffd700";
+  // Draw prize zones at bottom
+  const prizes = [0.5, 1, 2, 5, 10, 5, 2, 1, 0.5];
+  const zoneWidth = plinkoCanvas.width / prizes.length;
+  plinkoCtx.font = "14px Arial";
+  plinkoCtx.fillStyle = "#ffd700";
+  plinkoCtx.textAlign = "center";
+  
   prizes.forEach((prize, i) => {
-    ctx.fillText(`${prize}x`, i * zoneWidth + 20, canvas.height - 10);
+    const x = i * zoneWidth + zoneWidth / 2;
+    const y = plinkoCanvas.height - 10;
+    
+    // Draw zone background
+    plinkoCtx.fillStyle = i === 4 ? "rgba(255,215,0,0.3)" : "rgba(255,255,255,0.1)";
+    plinkoCtx.fillRect(i * zoneWidth, plinkoCanvas.height - 35, zoneWidth, 35);
+    
+    // Draw prize text
+    plinkoCtx.fillStyle = "#ffd700";
+    plinkoCtx.fillText(`${prize}x`, x, y);
   });
 }
 
 async function playPlinko() {
   if (!currentUser) return alert("Please login first");
+  if (plinkoAnimating) return alert("Wait for the current ball to finish!");
   
   const bet = parseInt(document.getElementById("plinkoBet").value);
   if (bet < 10) return alert("Minimum bet is 10 coins");
@@ -669,16 +925,103 @@ async function playPlinko() {
   
   // Deduct bet
   await userRef.update({ coins: currentCoins - bet });
+  updateCoinDisplay(currentCoins - bet);
   
-  // Simulate plinko
-  const multipliers = [10, 20, 50, 100, 50, 20, 10];
-  const result = multipliers[Math.floor(Math.random() * multipliers.length)];
-  const winnings = Math.floor(bet * (result / 10));
+  plinkoAnimating = true;
   
-  // Add winnings
-  const newCoins = currentCoins - bet + winnings;
-  await userRef.update({ coins: newCoins });
-  updateCoinDisplay(newCoins);
+  // Initialize ball
+  plinkoBall = {
+    x: plinkoCanvas.width / 2,
+    y: 10,
+    radius: 6,
+    velocityX: 0,
+    velocityY: 0,
+    gravity: 0.3
+  };
   
-  alert(`You won ${winnings} coins! (${result / 10}x multiplier)`);
+  // Animate ball
+  const multipliers = [0.5, 1, 2, 5, 10, 5, 2, 1, 0.5];
+  animatePlinkoBall(multipliers, bet, userRef, currentCoins);
+}
+
+function animatePlinkoBall(multipliers, bet, userRef, originalCoins) {
+  if (!plinkoCtx || !plinkoBall) return;
+  
+  // Clear and redraw board
+  drawPlinkoBoard();
+  
+  // Update ball physics
+  plinkoBall.velocityY += plinkoBall.gravity;
+  plinkoBall.y += plinkoBall.velocityY;
+  plinkoBall.x += plinkoBall.velocityX;
+  
+  // Bounce off pegs
+  for (let row = 1; row <= 10; row++) {
+    const numPegs = row + 1;
+    for (let col = 0; col < numPegs; col++) {
+      const pegX = plinkoCanvas.width / 2 + (col - numPegs / 2 + 0.5) * 35;
+      const pegY = 40 + row * 35;
+      
+      const dx = plinkoBall.x - pegX;
+      const dy = plinkoBall.y - pegY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < plinkoBall.radius + 4) {
+        // Collision! Bounce randomly left or right
+        const angle = Math.random() < 0.5 ? -0.5 : 0.5;
+        plinkoBall.velocityX = angle * 3;
+        plinkoBall.velocityY = Math.abs(plinkoBall.velocityY) * 0.7;
+        plinkoBall.y = pegY + 10;
+      }
+    }
+  }
+  
+  // Keep ball in bounds
+  if (plinkoBall.x < plinkoBall.radius) {
+    plinkoBall.x = plinkoBall.radius;
+    plinkoBall.velocityX *= -0.5;
+  }
+  if (plinkoBall.x > plinkoCanvas.width - plinkoBall.radius) {
+    plinkoBall.x = plinkoCanvas.width - plinkoBall.radius;
+    plinkoBall.velocityX *= -0.5;
+  }
+  
+  // Draw ball
+  plinkoCtx.fillStyle = "#ff6b35";
+  plinkoCtx.beginPath();
+  plinkoCtx.arc(plinkoBall.x, plinkoBall.y, plinkoBall.radius, 0, Math.PI * 2);
+  plinkoCtx.fill();
+  
+  // Check if ball reached bottom
+  if (plinkoBall.y >= plinkoCanvas.height - 40) {
+    plinkoAnimating = false;
+    
+    // Calculate which zone the ball landed in
+    const zoneWidth = plinkoCanvas.width / multipliers.length;
+    const zoneIndex = Math.floor(plinkoBall.x / zoneWidth);
+    const multiplier = multipliers[Math.max(0, Math.min(zoneIndex, multipliers.length - 1))];
+    const winnings = Math.floor(bet * multiplier);
+    
+    // Award winnings
+    const newCoins = originalCoins - bet + winnings;
+    userRef.update({ 
+      coins: newCoins,
+      activity: firebase.firestore.FieldValue.increment(5)
+    });
+    updateCoinDisplay(newCoins);
+    
+    const profit = winnings - bet;
+    if (profit > 0) {
+      alert(`🎉 YOU WON! +${profit} coins (${multiplier}x multiplier)`);
+    } else if (profit === 0) {
+      alert(`Break even! (${multiplier}x multiplier)`);
+    } else {
+      alert(`You lost ${Math.abs(profit)} coins (${multiplier}x multiplier)`);
+    }
+    
+    return;
+  }
+  
+  // Continue animation
+  requestAnimationFrame(() => animatePlinkoBall(multipliers, bet, userRef, originalCoins));
 }
