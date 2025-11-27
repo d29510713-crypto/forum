@@ -13,44 +13,41 @@
 </head>
 <body>
 
-<!-- GALAXY BACKGROUND -->
-<div id="blackhole"></div>
+<!-- STAR BACKGROUND -->
 <div id="stars"></div>
+<div id="blackhole"></div>
 
-<!-- LOGIN + REGISTER PANEL -->
-<div id="box" class="panel">
-  <!-- LOGIN -->
+<!-- LOGIN + REGISTER BOX -->
+<div id="box">
   <div id="loginBox">
     <h2>Login</h2>
     <input id="logEmail" placeholder="Email">
     <input id="logPass" type="password" placeholder="Password">
     <button id="loginBtn">Login</button>
-    <p id="toggleToRegister" class="link-text">Create an account</p>
+    <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
   </div>
 
-  <!-- REGISTER -->
   <div id="registerBox" class="hidden">
     <h2>Register</h2>
     <input id="regEmail" placeholder="Email">
     <input id="regPass" type="password" placeholder="Password">
     <input id="regUsername" placeholder="Username">
     <button id="registerBtn">Register</button>
-    <p id="toggleToLogin" class="link-text">Already have an account?</p>
+    <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
   </div>
 </div>
 
-<!-- MAIN FORUM -->
+<!-- FORUM -->
 <div id="forum" class="hidden">
 
-  <!-- TOP BAR -->
   <div id="topBar">
     <span id="coinDisplay">🪙 0 Coins</span>
     <button id="logoutBtn">Logout</button>
   </div>
 
   <!-- TABS -->
-  <div id="tabs" class="tabs">
-    <button id="tabPosts" class="active">Posts</button>
+  <div id="tabs">
+    <button id="tabPosts">Posts</button>
     <button id="tabUsers">Users</button>
     <button id="tabDms">DMs</button>
     <button id="tabUpdates">Updates</button>
@@ -60,7 +57,7 @@
     <button id="tabActivity">Activity</button>
   </div>
 
-  <!-- TAB SECTIONS -->
+  <!-- SECTIONS -->
   <div id="postsSection" class="tabSection">
     <h2>Create Post</h2>
     <textarea id="postContent" placeholder="Write something..."></textarea>
@@ -68,7 +65,7 @@
       <option>General</option>
       <option>Fun</option>
       <option>Help</option>
-    </select>
+    </select><br>
     <input type="file" id="postImage">
     <img id="previewImage" class="hidden">
     <button id="postBtn">Post</button>
@@ -76,12 +73,12 @@
   </div>
 
   <div id="usersSection" class="tabSection hidden">
-    <h2>All Users</h2>
+    <h2>Users</h2>
     <div id="usersList"></div>
   </div>
 
   <div id="dmsSection" class="tabSection hidden">
-    <h2>Direct Messages</h2>
+    <h2>DMs</h2>
     <input id="dmToUsername" placeholder="Send to username">
     <textarea id="dmContent" placeholder="Message"></textarea>
     <button id="dmBtn">Send</button>
@@ -89,7 +86,7 @@
   </div>
 
   <div id="updatesSection" class="tabSection hidden">
-    <h2>Updates Feed</h2>
+    <h2>Updates</h2>
     <div id="updatesList"></div>
   </div>
 
@@ -118,8 +115,6 @@
 
 </div>
 
-<!-- SCRIPT -->
 <script src="app.js"></script>
-
 </body>
 </html>
