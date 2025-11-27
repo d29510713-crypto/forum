@@ -1,23 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Toasty Forums</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Toasty Forums</title>
+<link rel="stylesheet" href="style.css">
 
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 </head>
 <body>
 
-<!-- BACKGROUND -->
 <div id="blackhole"></div>
 <div id="stars"></div>
 
-<!-- LOGIN + REGISTER -->
+<!-- LOGIN / REGISTER -->
 <div id="box" class="panel">
   <div id="loginBox">
     <h2>Login</h2>
@@ -88,6 +87,15 @@
   <div id="updatesSection" class="tabSection hidden">
     <h2>Updates</h2>
     <div id="updatesList"></div>
+    <div id="ownerUpdateControls" class="hidden">
+      <textarea id="updateContent" placeholder="Owner Update"></textarea>
+      <select id="updatePriority">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
+      <button id="postUpdateBtn">Post Update</button>
+    </div>
   </div>
 
   <div id="suggestionsSection" class="tabSection hidden">
