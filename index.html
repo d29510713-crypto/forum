@@ -5,96 +5,74 @@
 <title>Toasty Forums</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.hidden { display: none; }
-.section { margin-top: 20px; }
-.star { position: absolute; background: white; border-radius: 50%; }
-.tabs button.active { font-weight: bold; }
-#plinkoBoard { position: relative; width: 300px; height: 400px; background:#111; border-radius:10px; overflow:hidden; margin-top:20px; }
-#plinkoBall { position: absolute; width:20px; height:20px; border-radius:50%; background:#ffd700; top:0; left:140px; }
-.plinko-slot { position: absolute; bottom:0; width:42px; height:50px; background:rgba(255,255,255,0.1); border-left:1px solid #555; text-align:center; color:#ffd700; font-weight:bold; line-height:50px; }
+/* Minimal styling for visibility */
+.hidden { display:none; }
+.panel { padding:20px; }
+.post, .comment { border-bottom:1px solid #555; padding:5px 0; }
+.tabs button.active { font-weight:bold; }
+#plinkoBoard { background: #222; border-radius:10px; position:relative; width:100%; height:400px; }
+.ball { width:20px; height:20px; background:#ffd700; border-radius:50%; position:absolute; top:0; left:50%; }
 </style>
 </head>
 <body>
 
-<div id="blackhole"></div>
-<div id="stars"></div>
-
-<!-- LOGIN/REGISTER BOX -->
 <div id="box" class="panel">
   <h1>🔥 Toasty Login</h1>
   <div id="registerBox">
-    <h2>Register</h2>
     <input id="regEmail" placeholder="Email">
     <input id="regPass" type="password" placeholder="Password">
     <input id="regUsername" placeholder="Username">
     <button id="registerBtn">Register</button>
-    <p id="toggleToLogin" style="cursor:pointer;">Already have an account? Login</p>
+    <p style="cursor:pointer;" id="toggleToLogin">Already have an account? Login</p>
   </div>
   <div id="loginBox" class="hidden">
-    <h2>Login</h2>
     <input id="logEmail" placeholder="Email">
     <input id="logPass" type="password" placeholder="Password">
     <button id="loginBtn">Login</button>
-    <p id="toggleToRegister" style="cursor:pointer;">Don't have an account? Register</p>
+    <p style="cursor:pointer;" id="toggleToRegister">Don't have an account? Register</p>
   </div>
 </div>
 
-<!-- MAIN FORUM -->
 <div id="forum" class="panel hidden">
-  <div id="header">
-    <h1>🔥 Toasty Forums</h1>
-    <div style="display:flex; align-items:center; gap:15px;">
-      <span id="coinDisplay" style="font-size:20px; font-weight:bold; color:#ffd700;">🪙 0 Coins</span>
-      <button onclick="claimDailyCoins()" style="background:linear-gradient(135deg, #ffd700, #ff6b35);">🎁 Daily Coins</button>
-      <button id="logoutBtn">Logout</button>
-    </div>
+  <div>
+    <span id="coinDisplay">🪙 0 Coins</span>
+    <button onclick="claimDailyCoins()">🎁 Daily Coins</button>
+    <button id="logoutBtn">Logout</button>
   </div>
 
-  <!-- TABS -->
   <div class="tabs">
     <button id="tabPosts" class="active">📝 Posts</button>
     <button id="tabUsers">👥 Users</button>
     <button id="tabGames">🎮 Games</button>
   </div>
 
-  <!-- POSTS SECTION -->
+  <!-- POSTS -->
   <div id="postsSection" class="section">
-    <h2>Posts</h2>
-    <textarea id="newPostText" placeholder="Write something... (+5 coins)"></textarea><br>
+    <textarea id="newPostText" placeholder="Write something..."></textarea><br>
     <button onclick="addPost()">Post</button>
-    <div id="postsContainer"></div>
+    <div id="postsList"></div>
   </div>
 
-  <!-- USERS SECTION -->
+  <!-- USERS -->
   <div id="usersSection" class="section hidden">
-    <h2>Users</h2>
-    <div id="usersContainer"></div>
+    <div id="usersList"></div>
   </div>
 
-  <!-- GAMES SECTION -->
+  <!-- GAMES -->
   <div id="gamesSection" class="section hidden">
-    <h2>🎮 Plinko</h2>
-    <button onclick="startPlinko()">Start Plinko</button>
-    <div id="plinkoBoard">
-      <div id="plinkoBall"></div>
-      <!-- slots -->
-      <div class="plinko-slot" style="left:0">5x</div>
-      <div class="plinko-slot" style="left:42px">2x</div>
-      <div class="plinko-slot" style="left:84px">1x</div>
-      <div class="plinko-slot" style="left:126px">0.5x</div>
-      <div class="plinko-slot" style="left:168px">1x</div>
-      <div class="plinko-slot" style="left:210px">2x</div>
-      <div class="plinko-slot" style="left:252px">5x</div>
-    </div>
+    <h2>🎯 PLINKO</h2>
+    <button onclick="playPlinko()">Drop Ball</button>
+    <div id="plinkoBoard"></div>
   </div>
 
 </div>
 
-<!-- Firebase SDKs v8 -->
+<!-- Firebase SDK v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
+<!-- App JS -->
 <script src="app.js"></script>
 </body>
 </html>
