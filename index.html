@@ -1,111 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toasty Forum</title>
-    <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<meta charset="UTF-8">
+<title>Toasty Black Hole Forum</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="stars"></div>
-
-    <div id="box">
-        <div id="loginBox">
-            <h2>Login</h2>
-            <input type="email" id="logEmail" placeholder="Email">
-            <input type="password" id="logPass" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p><span id="toggleToRegister">Register here</span> | <span id="forgotPass">Forgot password?</span></p>
-        </div>
-
-        <div id="registerBox" class="hidden">
-            <h2>Register</h2>
-            <input type="text" id="regUsername" placeholder="Username">
-            <input type="email" id="regEmail" placeholder="Email">
-            <input type="password" id="regPass" placeholder="Password">
-            <button id="registerBtn">Register</button>
-            <p><span id="toggleToLogin">Login here</span></p>
-        </div>
+<div id="blackhole"></div>
+<div id="stars"></div>
+<div id="box" class="panel">
+  <h1>🔥 Toasty Black Hole Login</h1>
+  <div id="registerBox">
+    <h2>Register</h2>
+    <input id="regEmail" placeholder="Email">
+    <input id="regPass" type="password" placeholder="Password">
+    <input id="regUsername" placeholder="Username">
+    <button id="registerBtn">Register</button>
+    <p style="cursor:pointer;" id="toggleToLogin">Already have an account? Login</p>
+  </div>
+  <div id="loginBox" class="hidden">
+    <h2>Login</h2>
+    <input id="logEmail" placeholder="Email">
+    <input id="logPass" type="password" placeholder="Password">
+    <button id="loginBtn">Login</button>
+    <p style="cursor:pointer;" id="toggleToRegister">Don't have an account? Register</p>
+    <p class="forgot" id="forgotPass">Forgot Password?</p>
+  </div>
+</div>
+<div id="forum" class="panel hidden">
+  <h1>🔥 Ultimate Toasty Black Hole Forum</h1>
+  <div class="tabs">
+    <button id="tabPosts" class="active">Posts</button>
+    <button id="tabUsers">Users</button>
+    <button id="tabDMs">DMs</button>
+    <button id="tabUpdates">Updates</button>
+  </div>
+  <div id="postsSection" class="section">
+    <h2>Posts</h2>
+    <select id="postCategory">
+      <option value="General">General</option>
+      <option value="Space">Space</option>
+      <option value="Gaming">Gaming</option>
+      <option value="News">News</option>
+      <option value="Announcements">Announcements</option>
+      <option value="Off-Topic">Off-Topic</option>
+      <option value="Tech">Tech</option>
+      <option value="Art">Art</option>
+      <option value="Memes">Memes</option>
+    </select><br>
+    <textarea id="postContent" placeholder="Write something..."></textarea><br>
+    <input type="file" id="postImage"><br>
+    <img id="previewImage" class="hidden">
+    <button id="postBtn">Post</button><br>
+    <input id="searchPost" placeholder="Search posts"><br>
+    <div id="postsList"></div>
+  </div>
+  <div id="usersSection" class="section hidden">
+    <h2>Users</h2>
+    <input id="searchUser" placeholder="Search users by username"><br>
+    <div id="usersList"></div>
+  </div>
+  <div id="dmsSection" class="section hidden">
+    <h2>Direct Messages</h2>
+    <input id="dmToUsername" placeholder="Send to (username)">
+    <textarea id="dmContent" placeholder="Message..."></textarea><br>
+    <button id="dmBtn">Send DM</button>
+    <div id="dmsList"></div>
+  </div>
+  <div id="updatesSection" class="section hidden">
+    <h2>Updates & News</h2>
+    <div id="updatesList"></div>
+    <div id="ownerControls" class="hidden">
+      <h3>Owner Controls</h3>
+      <input id="updateTitle" placeholder="Update Title">
+      <textarea id="updateContent" placeholder="Update Content"></textarea><br>
+      <button id="createUpdateBtn" class="owner-btn">Create Update</button>
+      <button id="clearForumBtn" class="owner-btn">Clear All Content</button>
+      <button id="banUserBtn" class="owner-btn">Ban User</button>
     </div>
-
-    <div id="forum" class="hidden">
-        <div id="tabs">
-            <button id="tabPosts" class="active">Posts</button>
-            <button id="tabUsers">Users</button>
-            <button id="tabDMs">DMs</button>
-            <button id="tabUpdates">Updates</button>
-            <button id="tabSuggestions">Suggestions</button>
-            <button id="tabLeaderboard">Leaderboard</button>
-        </div>
-
-        <div id="ownerControls" class="hidden">
-            <button id="clearForumBtn">Clear Forum</button>
-            <button id="makeModBtn">Make Mod</button>
-        </div>
-
-        <div id="postsSection">
-            <div id="postForm">
-                <textarea id="postContent" placeholder="Write something..."></textarea>
-                <select id="postCategory">
-                    <option value="general">General</option>
-                    <option value="news">News</option>
-                    <option value="media">Media</option>
-                </select>
-                <input type="file" id="postImage">
-                <img id="previewImage" class="hidden" src="" alt="Preview">
-                <button id="postBtn">📤 Post</button>
-            </div>
-            <div id="searchFilter">
-                <input type="text" id="searchPost" placeholder="Search posts">
-                <select id="categoryFilter">
-                    <option value="all">All</option>
-                    <option value="general">General</option>
-                    <option value="news">News</option>
-                    <option value="media">Media</option>
-                </select>
-                <select id="sortPosts">
-                    <option value="newest">Newest</option>
-                    <option value="popular">Popular</option>
-                    <option value="discussed">Most Discussed</option>
-                </select>
-            </div>
-            <div id="postsList"></div>
-        </div>
-
-        <div id="usersSection" class="hidden">
-            <input type="text" id="searchUser" placeholder="Search users">
-            <div id="usersList"></div>
-        </div>
-
-        <div id="dmsSection" class="hidden">
-            <div id="dmsList"></div>
-            <input type="text" id="dmToUsername" placeholder="Send DM to">
-        </div>
-
-        <div id="updatesSection" class="hidden">
-            <div id="updatesList"></div>
-        </div>
-
-        <div id="suggestionsSection" class="hidden">
-            <input type="text" id="suggestionTitle" placeholder="Suggestion title">
-            <textarea id="suggestionDesc" placeholder="Description"></textarea>
-            <button id="submitSuggestion">Submit Suggestion</button>
-            <div id="suggestionsList"></div>
-        </div>
-
-        <div id="leaderboardSection" class="hidden">
-            <div id="leaderboardList"></div>
-        </div>
-
-        <button id="logoutBtn">Logout</button>
-    </div>
-
-    <script src="app.js"></script>
+  </div>
+  <button id="logoutBtn">Log Out</button>
+</div>
+<!-- Firebase SDKs v8 (Compatible with your code) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<!-- Custom JS -->
+<script src="app.js"></script>
 </body>
 </html>
