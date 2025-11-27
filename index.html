@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <title>Toasty Forums</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.hidden { display: none; }
+.section { margin-top: 20px; }
+.star { position: absolute; background: white; border-radius: 50%; }
+.tabs button.active { font-weight: bold; }
+#plinkoBoard { position: relative; width: 300px; height: 400px; background:#111; border-radius:10px; overflow:hidden; margin-top:20px; }
+#plinkoBall { position: absolute; width:20px; height:20px; border-radius:50%; background:#ffd700; top:0; left:140px; }
+.plinko-slot { position: absolute; bottom:0; width:42px; height:50px; background:rgba(255,255,255,0.1); border-left:1px solid #555; text-align:center; color:#ffd700; font-weight:bold; line-height:50px; }
+</style>
 </head>
 <body>
 
@@ -66,8 +75,16 @@
   <div id="gamesSection" class="section hidden">
     <h2>🎮 Plinko</h2>
     <button onclick="startPlinko()">Start Plinko</button>
-    <div id="plinkoBoard" style="position:relative; height:400px; width:300px; margin-top:20px; background:#111; border-radius:10px; overflow:hidden;">
-      <div id="plinkoBall" style="position:absolute; width:20px; height:20px; border-radius:50%; background:#ffd700; top:0; left:140px;"></div>
+    <div id="plinkoBoard">
+      <div id="plinkoBall"></div>
+      <!-- slots -->
+      <div class="plinko-slot" style="left:0">5x</div>
+      <div class="plinko-slot" style="left:42px">2x</div>
+      <div class="plinko-slot" style="left:84px">1x</div>
+      <div class="plinko-slot" style="left:126px">0.5x</div>
+      <div class="plinko-slot" style="left:168px">1x</div>
+      <div class="plinko-slot" style="left:210px">2x</div>
+      <div class="plinko-slot" style="left:252px">5x</div>
     </div>
   </div>
 
@@ -78,7 +95,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-<!-- Custom JS -->
 <script src="app.js"></script>
 </body>
 </html>
