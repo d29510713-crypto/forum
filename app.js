@@ -9,10 +9,23 @@ const firebaseConfig = {
 };
 
 // ================= Initialize Firebase =================
-firebase.initializeApp(firebaseConfig);
+console.log("Initializing Firebase...");
+console.log("Firebase config:", firebaseConfig);
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+  console.log("Firebase initialized successfully");
+} else {
+  console.log("Firebase already initialized");
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
+
+console.log("Auth:", auth);
+console.log("DB:", db);
+console.log("Storage:", storage);
 
 // ================= GLOBAL VARIABLES =================
 let currentUser = null;
