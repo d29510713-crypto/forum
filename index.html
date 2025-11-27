@@ -1,13 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Toasty Forum</title>
-<link rel="stylesheet" href="style.css">
+    <title>Toasty Forum</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Hello! Welcome to Toasty!</h1>
-<div id="app"></div>
-<script src="app.js"></script>
+<h1 class="title">Welcome to Toasty Forum</h1>
+
+<div id="authSection">
+    <div id="loginBox" class="panel">
+        <h2>Login</h2>
+        <input id="loginUser" placeholder="Username"><br>
+        <input id="loginPass" type="password" placeholder="Password"><br>
+        <button onclick="login()">Login</button>
+        <p onclick="showRegister()">Need an account?</p>
+    </div>
+
+    <div id="registerBox" class="panel" style="display:none;">
+        <h2>Register</h2>
+        <input id="regUser" placeholder="Username"><br>
+        <input id="regPass" type="password" placeholder="Password"><br>
+        <button onclick="register()">Register</button>
+        <p onclick="showLogin()">Already have an account?</p>
+    </div>
+</div>
+
+<div id="forumBox" class="panel" style="display:none;">
+    <h2>Forum</h2>
+    <textarea id="postText" placeholder="Write something..."></textarea>
+    <button onclick="postMessage()">Post</button>
+
+    <h3>Posts</h3>
+    <div id="postsArea"></div>
+</div>
+
+<div id="adminBox" class="panel" style="display:none;">
+    <h2>Admin Panel</h2>
+    <input id="banUser" placeholder="Username to ban">
+    <button onclick="banPerson()">Ban</button>
+
+    <h3>Change Username</h3>
+    <input id="newUserName" placeholder="New username">
+    <button onclick="changeUsername()">Change</button>
+</div>
+
+<script src="main.js"></script>
 </body>
 </html>
