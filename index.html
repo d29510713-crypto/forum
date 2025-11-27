@@ -13,27 +13,26 @@
 </head>
 <body>
 
-<!-- STAR BACKGROUND -->
-<div id="stars"></div>
+<!-- BACKGROUND -->
 <div id="blackhole"></div>
+<div id="stars"></div>
 
-<!-- LOGIN + REGISTER BOX -->
-<div id="box">
+<!-- LOGIN / REGISTER -->
+<div id="authBox" class="panel">
   <div id="loginBox">
     <h2>Login</h2>
     <input id="logEmail" placeholder="Email">
     <input id="logPass" type="password" placeholder="Password">
     <button id="loginBtn">Login</button>
-    <p id="toggleToRegister" style="cursor:pointer;">Create an account</p>
+    <p id="toggleToRegister" class="switch">Create an account</p>
   </div>
-
   <div id="registerBox" class="hidden">
     <h2>Register</h2>
     <input id="regEmail" placeholder="Email">
     <input id="regPass" type="password" placeholder="Password">
     <input id="regUsername" placeholder="Username">
     <button id="registerBtn">Register</button>
-    <p id="toggleToLogin" style="cursor:pointer;">Already have an account?</p>
+    <p id="toggleToLogin" class="switch">Already have an account?</p>
   </div>
 </div>
 
@@ -46,15 +45,15 @@
   </div>
 
   <!-- TABS -->
-  <div id="tabs">
-    <button id="tabPosts">Posts</button>
-    <button id="tabUsers">Users</button>
-    <button id="tabDms">DMs</button>
-    <button id="tabUpdates">Updates</button>
-    <button id="tabSuggestions">Suggestions</button>
-    <button id="tabGames">Games</button>
-    <button id="tabLeaderboard">Leaderboard</button>
-    <button id="tabActivity">Activity</button>
+  <div class="tabs">
+    <button data-tab="postsSection">Posts</button>
+    <button data-tab="usersSection">Users</button>
+    <button data-tab="dmsSection">DMs</button>
+    <button data-tab="updatesSection">Updates</button>
+    <button data-tab="suggestionsSection">Suggestions</button>
+    <button data-tab="gamesSection">Games</button>
+    <button data-tab="leaderboardSection">Leaderboard</button>
+    <button data-tab="activitySection">Activity</button>
   </div>
 
   <!-- SECTIONS -->
@@ -65,7 +64,7 @@
       <option>General</option>
       <option>Fun</option>
       <option>Help</option>
-    </select><br>
+    </select>
     <input type="file" id="postImage">
     <img id="previewImage" class="hidden">
     <button id="postBtn">Post</button>
@@ -99,7 +98,7 @@
 
   <div id="gamesSection" class="tabSection hidden">
     <h2>Games</h2>
-    <button onclick="claimDailyCoins()">Claim Daily Coins</button>
+    <button id="dailyCoinBtn">Claim Daily Coins</button>
     <canvas id="plinkoCanvas" width="400" height="500"></canvas>
   </div>
 
@@ -109,7 +108,7 @@
   </div>
 
   <div id="activitySection" class="tabSection hidden">
-    <h2>Activity Leaderboard</h2>
+    <h2>Activity</h2>
     <div id="activityList"></div>
   </div>
 
