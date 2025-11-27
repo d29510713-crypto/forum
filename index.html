@@ -217,7 +217,9 @@ function renderBanned(){
     bannedList.innerHTML = banned.map(b => `<p>${b}</p>`).join("");
 }
 
-
+// ----------------------------
+// PROMOTE ADMIN (OWNER ONLY)
+// ----------------------------
 function promoteAdmin(){
     if (users[currentUser].role !== "owner") return alert("Only owner can promote admins.");
     let u = promoteUser.value.trim();
@@ -227,7 +229,9 @@ function promoteAdmin(){
     alert("Promoted!");
 }
 
-
+// ----------------------------
+// UPDATES (OWNER ONLY)
+// ----------------------------
 function postUpdate(){
     let u = updateText.value.trim();
     if (!u) return;
@@ -244,12 +248,78 @@ function renderUpdates(){
         .join("");
 }
 
-
+// ----------------------------
+// SAVE ALL
+// ----------------------------
 function save(){
     localStorage.setItem("users", JSON.stringify(users));
     localStorage.setItem("messages", JSON.stringify(messages));
     localStorage.setItem("updates", JSON.stringify(updates));
     localStorage.setItem("banned", JSON.stringify(banned));
+}
+
+// --- COMMENTS FEATURE ---
+function addComment(i){
+    let t = prompt("Write a comment:");
+    if(!t) return;
+    t = censor(t);
+    if(!messages[i].comments) messages[i].comments = [];
+    messages[i].comments.push({ user: currentUser, text: t });
+    save();
+    renderMessages();
+}
+
+// Modify renderMessages to show comments
+const oldRender = renderMessages;
+renderMessages = function(){
+    messages = messages.filter(m => !banned.includes(m.user));
+    localStorage.setItem("messages", JSON.stringify(messages));
+
+    let messagesDiv = document.getElementById("messages");
+    messagesDiv.innerHTML = "";
+
+    messages.forEach((m,i) => {
+        let div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `<strong>${m.user}</strong>: ${m.text}`;
+
+        let c = document.createElement("button");
+        c.textContent = "Comments";
+        c.onclick = () => addComment(i);
+        div.appendChild(c);
+
+        if(m.comments){
+            m.comments.forEach(cm => {
+                let cd = document.createElement("div");
+                cd.style.marginLeft = "20px";
+                cd.innerHTML = `<em>${cm.user}</em>: ${cm.text}`;
+                div.appendChild(cd);
+            });
+        }
+
+        if ((users[currentUser].role === "admin" || users[currentUser].role === "owner") && m.user !== currentUser) {
+            let b = document.createElement("button");
+            b.textContent = "Ban";
+            b.onclick = () => banUser(m.user);
+            div.appendChild(b);
+        }
+        messagesDiv.appendChild(div);
+    });
+}
+
+// --- LEADERBOARD FEATURE ---
+function renderLeaderboard(){
+    let counts = {};
+    messages.forEach(m => counts[m.user] = (counts[m.user]||0)+1);
+    let sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    return sorted.map(p=>`<p><strong>${p[0]}</strong>: ${p[1]} posts</p>`).join("");
+}
+
+// extend updates
+const origUpdates = renderUpdates;
+renderUpdates = function(){
+    updateFeed.innerHTML = `<h3>Leaderboard</h3>` + renderLeaderboard() +
+        updates.map(u => `<div class='updatePost'>${u.text}</div>`).join("");
 }
 
 </script>
