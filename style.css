@@ -16,7 +16,7 @@ body {
   position:fixed;
   top:50%;
   left:50%;
-  transform:translate(-50%, -50%);
+  transform:translate(-50%,-50%);
   width:600px;
   height:600px;
   background:black;
@@ -24,15 +24,7 @@ body {
   z-index:0;
   box-shadow:0 0 100px #222, inset 0 0 50px #555;
 }
-
-#stars {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  z-index:0;
-  pointer-events:none;
-}
-
+#stars { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
 .star { position:absolute; background:white; border-radius:50%; }
 
 /* PANEL */
