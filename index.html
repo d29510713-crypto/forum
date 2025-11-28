@@ -1,158 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Toasty Black Hole Forum</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toasty Forum</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="blackhole"></div>
-<div id="stars"></div>
-
-<!-- LOGIN/REGISTER -->
-<div id="box" class="panel">
-  <h1>🔥 Welcome to Toasty</h1>
-  <div id="registerBox">
-    <h2>Create Account</h2>
-    <p style="color:#888; font-size:14px;">⚠️ You must verify your email before logging in</p>
-    <input id="regEmail" placeholder="Email" type="email">
-    <input id="regPass" type="password" placeholder="Password (min 6 characters)">
-    <input id="regUsername" placeholder="Username">
-    <button id="registerBtn">Register</button>
-    <p style="cursor:pointer; color:#00d4ff;" id="toggleToLogin">Already have an account? <strong>Login</strong></p>
+  <!-- Background Effects -->
+  <div id="background-container">
+    <div id="blackhole"></div>
+    <div id="stars"></div>
   </div>
-  <div id="loginBox" class="hidden">
-    <h2>Welcome Back!</h2>
-    <p style="color:#888; font-size:14px;">Login to your verified account</p>
-    <input id="logEmail" placeholder="Email" type="email">
-    <input id="logPass" type="password" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p style="cursor:pointer; color:#00d4ff;" id="toggleToRegister">Need an account? <strong>Register</strong></p>
-    <p class="forgot" id="forgotPass">Forgot Password?</p>
-  </div>
-</div>
 
-<!-- MAIN FORUM -->
-<div id="forum" class="panel hidden">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-    <h1 style="margin:0;">🔥 Toasty Black Hole</h1>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button onclick="changeProfilePicture()" style="padding:8px 20px; background:linear-gradient(135deg, #ff6b35, #f7931e);">
-        🖼️ Change Avatar
-      </button>
-      <button onclick="setCustomStatus()" style="padding:8px 20px; background:linear-gradient(135deg, #8a2be2, #4b0082);">
-        ⚙️ Set Status
-      </button>
+  <!-- Authentication Panel -->
+  <div id="auth-panel" class="panel">
+    <h1 class="title-glow">🔥 Welcome to Toasty</h1>
+    
+    <!-- Register Form -->
+    <div id="register-form">
+      <h2>Create Your Account</h2>
+      <p class="info-text">⚠️ Email verification required before login</p>
+      <input type="email" id="register-email" placeholder="Email Address" autocomplete="email">
+      <input type="password" id="register-password" placeholder="Password (min 6 characters)" autocomplete="new-password">
+      <input type="text" id="register-username" placeholder="Choose Username" autocomplete="username">
+      <button id="register-btn" class="btn-primary">Create Account</button>
+      <p class="switch-text">Already have an account? <span id="show-login" class="link">Login here</span></p>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="hidden">
+      <h2>Welcome Back!</h2>
+      <p class="info-text">Login to your verified account</p>
+      <input type="email" id="login-email" placeholder="Email Address" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      <button id="login-btn" class="btn-primary">Login</button>
+      <p class="switch-text">Need an account? <span id="show-register" class="link">Register here</span></p>
+      <p id="forgot-password" class="forgot-link">Forgot Password?</p>
     </div>
   </div>
-  
-  <div class="tabs">
-    <button id="tabPosts" class="active">📝 Posts</button>
-    <button id="tabUsers">👥 Users</button>
-    <button id="tabDMs">💬 DMs</button>
-    <button id="tabUpdates">📢 Updates</button>
-    <button id="tabSuggestions">💡 Ideas</button>
-    <button id="tabLeaderboard">🏆 Ranks</button>
-  </div>
-  
-  <!-- POSTS -->
-  <div id="postsSection" class="section">
-    <h2>Posts</h2>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-      <select id="categoryFilter" style="flex:1; min-width:150px;">
-        <option value="all">All Categories</option>
-        <option value="General">General</option>
-        <option value="Space">Space</option>
-        <option value="Gaming">Gaming</option>
-        <option value="News">News</option>
-        <option value="Announcements">Announcements</option>
-        <option value="Off-Topic">Off-Topic</option>
-        <option value="Tech">Tech</option>
-        <option value="Art">Art</option>
-        <option value="Memes">Memes</option>
-      </select>
-      <select id="sortPosts" style="flex:1; min-width:150px;">
-        <option value="newest">Newest First</option>
-        <option value="popular">Most Popular</option>
-        <option value="discussed">Most Discussed</option>
-      </select>
-    </div>
-    <select id="postCategory">
-      <option value="General">General</option>
-      <option value="Space">Space</option>
-      <option value="Gaming">Gaming</option>
-      <option value="News">News</option>
-      <option value="Announcements">Announcements</option>
-      <option value="Off-Topic">Off-Topic</option>
-      <option value="Tech">Tech</option>
-      <option value="Art">Art</option>
-      <option value="Memes">Memes</option>
-    </select><br>
-    <textarea id="postContent" placeholder="Share something with the community..."></textarea><br>
-    <input type="file" id="postImage" accept="image/*"><br>
-    <img id="previewImage" class="hidden">
-    <button id="postBtn">📤 Post</button>
-    <button onclick="createPoll()" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">📊 Create Poll</button>
-    <br>
-    <input id="searchPost" placeholder="🔍 Search posts"><br>
-    <div id="postsList"></div>
-  </div>
-  
-  <!-- USERS -->
-  <div id="usersSection" class="section hidden">
-    <h2>Community Members</h2>
-    <input id="searchUser" placeholder="🔍 Search users"><br>
-    <div id="usersList"></div>
-  </div>
-  
-  <!-- DMS -->
-  <div id="dmsSection" class="section hidden">
-    <h2>Direct Messages</h2>
-    <input id="dmToUsername" placeholder="Username">
-    <textarea id="dmContent" placeholder="Type your message..."></textarea><br>
-    <button id="dmBtn">Send Message</button>
-    <div id="dmsList"></div>
-  </div>
-  
-  <!-- UPDATES -->
-  <div id="updatesSection" class="section hidden">
-    <h2>Updates & Announcements</h2>
-    <div id="updatesList"></div>
-    <div id="ownerControls" class="hidden">
-      <h3>Admin Controls</h3>
-      <input id="updateTitle" placeholder="Update Title">
-      <textarea id="updateContent" placeholder="Update Content"></textarea><br>
-      <button id="createUpdateBtn" class="owner-btn">Post Update</button>
-      <button id="clearForumBtn" class="owner-btn">Clear Forum</button>
-      <button id="banUserBtn" class="owner-btn">Ban User</button>
-    </div>
-  </div>
-  
-  <!-- SUGGESTIONS -->
-  <div id="suggestionsSection" class="section hidden">
-    <h2>💡 Community Ideas</h2>
-    <p style="color:#888; font-size:14px;">Share your suggestions for improving the forum!</p>
-    <input id="suggestionTitle" placeholder="Suggestion Title" style="margin-top:15px;">
-    <textarea id="suggestionDesc" placeholder="Describe your idea..."></textarea><br>
-    <button id="submitSuggestion" style="background:linear-gradient(135deg, #00d4ff, #0099cc);">Submit Idea</button>
-    <h3 style="margin-top:30px;">All Suggestions</h3>
-    <div id="suggestionsList"></div>
-  </div>
-  
-  <!-- LEADERBOARD -->
-  <div id="leaderboardSection" class="section hidden">
-    <h2>🏆 Top Contributors</h2>
-    <p style="color:#888; font-size:14px; margin-bottom:20px;">Ranked by activity and engagement!</p>
-    <div id="leaderboardList"></div>
-  </div>
-  
-  <button id="logoutBtn">Log Out</button>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<script src="app.js"></script>
+  <!-- Main Forum -->
+  <div id="forum-container" class="panel hidden">
+    <!-- Header -->
+    <header class="forum-header">
+      <h1 class="forum-title">🔥 Toasty Black Hole</h1>
+      <div class="header-actions">
+        <button id="change-avatar-btn" class="btn-secondary">🖼️ Avatar</button>
+        <button id="set-status-btn" class="btn-secondary">⚙️ Status</button>
+        <button id="logout-btn" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="posts">📝 Posts</button>
+      <button class="tab-btn" data-tab="users">👥 Users</button>
+      <button class="tab-btn" data-tab="messages">💬 Messages</button>
+      <button class="tab-btn" data-tab="updates">📢 Updates</button>
+      <button class="tab-btn" data-tab="suggestions">💡 Ideas</button>
+      <button class="tab-btn" data-tab="leaderboard">🏆 Ranks</button>
+    </nav>
+
+    <!-- Posts Section -->
+    <section id="posts-section" class="tab-content active">
+      <h2>Community Posts</h2>
+      
+      <!-- Filters -->
+      <div class="filters-container">
+        <select id="category-filter" class="filter-select">
+          <option value="all">All Categories</option>
+          <option value="General">General</option>
+          <option value="Space">Space</option>
+          <option value="Gaming">Gaming</option>
+          <option value="News">News</option>
+          <option value="Announcements">Announcements</option>
+          <option value="Off-Topic">Off-Topic</option>
+          <option value="Tech">Tech</option>
+          <option value="Art">Art</option>
+          <option value="Memes">Memes</option>
+        </select>
+        <select id="sort-filter" class="filter-select">
+          <option value="newest">Newest First</option>
+          <option value="popular">Most Popular</option>
+          <option value="discussed">Most Discussed</option>
+        </select>
+        <input type="text" id="search-posts" class="search-input" placeholder="🔍 Search posts...">
+      </div>
+
+      <!-- Create Post -->
+      <div class="create-post-container">
+        <select id="post-category" class="category-select">
+          <option value="General">General</option>
+          <option value="Space">Space</option>
+          <option value="Gaming">Gaming</option>
+          <option value="News">News</option>
+          <option value="Announcements">Announcements</option>
+          <option value="Off-Topic">Off-Topic</option>
+          <option value="Tech">Tech</option>
+          <option value="Art">Art</option>
+          <option value="Memes">Memes</option>
+        </select>
+        <textarea id="post-content" placeholder="Share something with the community..." rows="4"></textarea>
+        <div class="post-actions-bar">
+          <input type="file" id="post-image" accept="image/*" class="file-input">
+          <label for="post-image" class="file-label">📷 Add Image</label>
+          <button id="create-poll-btn" class="btn-secondary">📊 Poll</button>
+          <button id="submit-post-btn" class="btn-primary">📤 Post</button>
+        </div>
+        <img id="image-preview" class="image-preview hidden" alt="Preview">
+      </div>
+
+      <!-- Posts List -->
+      <div id="posts-list" class="content-list">
+        <p class="loading-text">Loading posts...</p>
+      </div>
+    </section>
+
+    <!-- Users Section -->
+    <section id="users-section" class="tab-content">
+      <h2>Community Members</h2>
+      <input type="text" id="search-users" class="search-input" placeholder="🔍 Search users...">
+      <div id="users-list" class="content-list">
+        <p class="loading-text">Loading users...</p>
+      </div>
+    </section>
+
+    <!-- Messages Section -->
+    <section id="messages-section" class="tab-content">
+      <h2>Direct Messages</h2>
+      <div class="dm-container">
+        <input type="text" id="dm-recipient" placeholder="Username" class="dm-input">
+        <textarea id="dm-message" placeholder="Type your message..." rows="4"></textarea>
+        <button id="send-dm-btn" class="btn-primary">Send Message</button>
+      </div>
+      <div id="messages-list" class="content-list">
+        <p class="info-text">Direct messaging coming soon...</p>
+      </div>
+    </section>
+
+    <!-- Updates Section -->
+    <section id="updates-section" class="tab-content">
+      <h2>Updates & Announcements</h2>
+      <div id="updates-list" class="content-list">
+        <p class="info-text">Updates coming soon...</p>
+      </div>
+      
+      <!-- Admin Controls -->
+      <div id="admin-controls" class="admin-panel hidden">
+        <h3>Admin Controls</h3>
+        <input type="text" id="update-title" placeholder="Update Title">
+        <textarea id="update-content" placeholder="Update Content" rows="4"></textarea>
+        <div class="admin-actions">
+          <button id="post-update-btn" class="btn-admin">Post Update</button>
+          <button id="clear-forum-btn" class="btn-admin">Clear Forum</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Suggestions Section -->
+    <section id="suggestions-section" class="tab-content">
+      <h2>💡 Community Ideas</h2>
+      <p class="info-text">Share your suggestions to improve the forum!</p>
+      
+      <div class="create-suggestion-container">
+        <input type="text" id="suggestion-title" placeholder="Suggestion Title">
+        <textarea id="suggestion-description" placeholder="Describe your idea..." rows="4"></textarea>
+        <button id="submit-suggestion-btn" class="btn-primary">Submit Idea</button>
+      </div>
+
+      <h3 class="section-title">All Suggestions</h3>
+      <div id="suggestions-list" class="content-list">
+        <p class="loading-text">Loading suggestions...</p>
+      </div>
+    </section>
+
+    <!-- Leaderboard Section -->
+    <section id="leaderboard-section" class="tab-content">
+      <h2>🏆 Top Contributors</h2>
+      <p class="info-text">Ranked by activity and engagement!</p>
+      <div id="leaderboard-list" class="content-list">
+        <p class="info-text">Leaderboard coming soon...</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
 </body>
 </html>
