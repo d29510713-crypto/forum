@@ -1,114 +1,247 @@
-/* ================== GENERAL ================== */
+/* ================== GLOBAL STYLES ================== */
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
-  color: #000;
   margin: 0;
-  padding: 0;
+  font-family: 'Verdana', sans-serif;
+  background-color: #0a0a0a;
+  color: #eee;
+  overflow-x: hidden;
 }
 
-/* ================== PANEL ================== */
+.hidden {
+  display: none !important;
+}
+
 .panel {
-  max-width: 900px;
+  background-color: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 20px;
   margin: 20px auto;
-  background-color: #fff;
-  border: 2px solid #ccc;
-  padding: 10px;
-  box-shadow: 3px 3px 0 #aaa;
+  max-width: 960px;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
 
 /* ================== HEADERS ================== */
 h1, h2, h3 {
+  color: #00ccff;
+  text-shadow: 0 0 6px #00ccff, 0 0 10px #0ff;
+}
+
+.title-glow {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* ================== FORMS ================== */
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: #0a0a0a;
+  color: #eee;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #00ccff;
+  box-shadow: 0 0 8px #00ccff;
+}
+
+.btn-primary {
+  background-color: #00ccff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  color: #000;
+  cursor: pointer;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-/* ================== POSTS ================== */
-.post-card {
-  border: 1px solid #999;
-  background-color: #eee;
-  padding: 8px;
-  margin-bottom: 5px;
-}
-
-.post-card strong {
-  color: #0066cc; /* Username color like old Roblox */
-}
-
-.post-image {
-  max-width: 100%;
   margin-top: 5px;
+  transition: 0.2s;
 }
 
-/* ================== SUGGESTIONS ================== */
-.suggestion-card {
-  border: 1px solid #aaa;
-  background-color: #fff;
-  padding: 6px;
-  margin-bottom: 4px;
+.btn-primary:hover {
+  background-color: #00ffff;
+  box-shadow: 0 0 10px #00ffff;
 }
 
-/* ================== USERS ================== */
-.user-card {
-  border: 1px solid #999;
-  padding: 4px;
-  margin-bottom: 2px;
-  background-color: #f9f9f9;
+.btn-secondary {
+  background-color: #222;
+  border: 1px solid #00ccff;
+  padding: 6px 12px;
+  color: #00ccff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 5px;
 }
 
-/* ================== BUTTONS ================== */
-button {
-  border: 2px solid #666;
-  background-color: #ddd;
-  padding: 4px 8px;
+.btn-secondary:hover {
+  background-color: #00ccff;
+  color: #000;
+  box-shadow: 0 0 8px #00ccff;
+}
+
+.btn-logout {
+  background-color: #ff5555;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #000;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-logout:hover {
+  background-color: #ff7777;
+  box-shadow: 0 0 10px #ff7777;
+}
+
+.link {
+  color: #00ccff;
   cursor: pointer;
 }
 
-button:hover {
-  background-color: #ccc;
+.link:hover {
+  text-decoration: underline;
 }
 
-/* ================== TABS ================== */
+/* ================== NAV TABS ================== */
 .tabs {
   display: flex;
-  margin-bottom: 5px;
+  gap: 10px;
+  margin: 20px 0;
 }
 
 .tab-btn {
-  flex: 1;
-  border: 1px solid #666;
-  background-color: #ddd;
-  padding: 4px 0;
+  background-color: #111;
+  border: 1px solid #333;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #00ccff;
   cursor: pointer;
-  text-align: center;
 }
 
 .tab-btn.active {
-  background-color: #bbb;
+  background-color: #00ccff;
+  color: #000;
   font-weight: bold;
+  box-shadow: 0 0 10px #00ccff;
 }
 
-/* ================== SIDEBAR ================== */
-.header-actions {
-  float: right;
-}
-
-.forum-header {
-  border-bottom: 2px solid #666;
-  padding-bottom: 5px;
+/* ================== POST CARDS ================== */
+.post-card, .suggestion-card, .user-card, .leaderboard-card, .update-card {
+  border: 1px solid #222;
+  background-color: #111;
+  padding: 12px;
   margin-bottom: 10px;
+  border-radius: 6px;
+  transition: 0.2s;
 }
 
-/* ================== INPUTS ================== */
-input, textarea, select {
-  border: 1px solid #999;
-  padding: 4px;
+.post-card:hover, .suggestion-card:hover, .user-card:hover, .leaderboard-card:hover, .update-card:hover {
+  background-color: #1a1a1a;
+  box-shadow: 0 0 8px #00ccff;
+}
+
+/* ================== SEARCH INPUTS ================== */
+.search-input {
+  background-color: #0a0a0a;
+  border: 1px solid #333;
+  padding: 6px;
+  border-radius: 4px;
+  color: #eee;
+  width: 200px;
+}
+
+/* ================== CREATE POST / SUGGESTION ================== */
+.create-post-container, .create-suggestion-container, .dm-container {
+  border: 1px solid #222;
+  background-color: #111;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.post-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  cursor: pointer;
+  background-color: #222;
+  border: 1px solid #00ccff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  color: #00ccff;
+}
+
+.file-label:hover {
+  background-color: #00ccff;
+  color: #000;
+}
+
+/* ================== PLINKO ================== */
+#plinko-container {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+
+#plinko-canvas {
+  border: 2px solid #00ccff;
+  border-radius: 8px;
+  background-color: #111;
+}
+
+/* ================== LOADING / INFO TEXT ================== */
+.loading-text, .info-text, .forgot-link {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+/* ================== BACKGROUND STARS ================== */
+#blackhole {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  margin-left: -100px;
+  margin-top: -100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0ff, #000);
+  z-index: 0;
+}
+
+#stars {
+  position: fixed;
   width: 100%;
-  margin-bottom: 5px;
+  height: 100%;
+  background: url('https://i.imgur.com/1eXkD2t.png') repeat;
+  z-index: -1;
+  opacity: 0.2;
 }
 
+/* ================== SCROLLBAR ================== */
+body::-webkit-scrollbar {
+  width: 8px;
+}
 
-.title-glow {
-  text-shadow: 1px 1px 0 #fff, 2px 2px 0 #aaa;
+body::-webkit-scrollbar-track {
+  background: #111;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #00ccff;
+  border-radius: 4px;
 }
