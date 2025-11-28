@@ -1,46 +1,34 @@
 // ================== FIREBASE INIT ==================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendEmailVerification,
   signOut,
-  onAuthStateChanged,
-  sendEmailVerification
-} from "https://www.gstatic.com/firebasejs/9.24.0/firebase-auth.js";
-
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import {
   getFirestore,
   collection,
   addDoc,
+  getDocs,
   query,
   orderBy,
-  onSnapshot,
-  doc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore.js";
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/9.24.0/firebase-storage.js";
-
-// ================== CONFIG ==================
 const firebaseConfig = {
   apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
   authDomain: "toasty-89f07.firebaseapp.com",
   projectId: "toasty-89f07",
   storageBucket: "toasty-89f07.appspot.com",
   messagingSenderId: "743787667064",
-  appId: "1:743787667064:web:12284120fbbdd1e907d78d"
+  appId: "1:743787667064:web:12284120fbbdd1e907d78d",
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 // ================== DOM ELEMENTS ==================
 const registerForm = document.getElementById("register-form");
@@ -48,277 +36,296 @@ const loginForm = document.getElementById("login-form");
 const authPanel = document.getElementById("auth-panel");
 const forumContainer = document.getElementById("forum-container");
 
+const showLoginBtn = document.getElementById("show-login");
+const showRegisterBtn = document.getElementById("show-register");
+
+const registerEmail = document.getElementById("register-email");
+const registerPassword = document.getElementById("register-password");
+const registerUsername = document.getElementById("register-username");
 const registerBtn = document.getElementById("register-btn");
+
+const loginEmail = document.getElementById("login-email");
+const loginPassword = document.getElementById("login-password");
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
 
 // Posts
-const postContent = document.getElementById("post-content");
-const postCategory = document.getElementById("post-category");
-const submitPostBtn = document.getElementById("submit-post-btn");
 const postsList = document.getElementById("posts-list");
-const postImage = document.getElementById("post-image");
+const submitPostBtn = document.getElementById("submit-post-btn");
+const postContentInput = document.getElementById("post-content");
+const postCategoryInput = document.getElementById("post-category");
 
 // Suggestions
-const suggestionTitle = document.getElementById("suggestion-title");
-const suggestionDescription = document.getElementById("suggestion-description");
-const submitSuggestionBtn = document.getElementById("submit-suggestion-btn");
 const suggestionsList = document.getElementById("suggestions-list");
+const submitSuggestionBtn = document.getElementById("submit-suggestion-btn");
+const suggestionTitleInput = document.getElementById("suggestion-title");
+const suggestionDescInput = document.getElementById("suggestion-description");
 
 // Users
 const usersList = document.getElementById("users-list");
-const searchUsersInput = document.getElementById("search-users");
 
 // Leaderboard
 const leaderboardList = document.getElementById("leaderboard-list");
 
-// Tabs
-const tabs = document.querySelectorAll(".tab-btn");
-const tabContents = document.querySelectorAll(".tab-content");
-
 // Plinko
-const dropPlinkoBallBtn = document.getElementById("drop-plinko-ball");
 const plinkoCanvas = document.getElementById("plinko-canvas");
-const ctx = plinkoCanvas?.getContext("2d");
+const dropPlinkoBtn = document.getElementById("drop-plinko-ball");
+let coins = 0;
 
-// ================== AUTH ==================
-registerBtn?.addEventListener("click", async () => {
-  const email = document.getElementById("register-email").value;
-  const password = document.getElementById("register-password").value;
-  const username = document.getElementById("register-username").value;
+// Updates
+const updatesList = document.getElementById("updates-list");
+const updateTitleInput = document.getElementById("update-title");
+const updateContentInput = document.getElementById("update-content");
+const postUpdateBtn = document.getElementById("post-update-btn");
 
-  if (!email || !password || !username) return alert("Fill all fields");
+// ================== SWITCH FORMS ==================
+showLoginBtn.onclick = () => {
+  registerForm.classList.add("hidden");
+  loginForm.classList.remove("hidden");
+};
+showRegisterBtn.onclick = () => {
+  loginForm.classList.add("hidden");
+  registerForm.classList.remove("hidden");
+};
+
+// ================== REGISTER ==================
+registerBtn.onclick = async () => {
+  const email = registerEmail.value;
+  const password = registerPassword.value;
+  const username = registerUsername.value;
+
+  if (!email || !password || !username) {
+    alert("All fields required!");
+    return;
+  }
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(userCredential.user);
+    const user = userCredential.user;
+    await sendEmailVerification(user);
 
-    // Save user in Firestore
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-      email,
+    // Add user to users collection
+    await addDoc(collection(db, "users"), {
+      email: user.email,
       username,
-      timestamp: Date.now()
+      timestamp: serverTimestamp(),
+      coins: 0,
     });
 
-    alert("Registered! Check your email for verification.");
-  } catch (err) {
-    alert(err.message);
+    alert("Account created! Please verify your email.");
+    registerForm.classList.add("hidden");
+    loginForm.classList.remove("hidden");
+  } catch (error) {
+    alert(error.message);
   }
-});
+};
 
-loginBtn?.addEventListener("click", async () => {
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
+// ================== LOGIN ==================
+loginBtn.onclick = async () => {
+  const email = loginEmail.value;
+  const password = loginPassword.value;
+
+  if (!email || !password) {
+    alert("Email and password required!");
+    return;
+  }
 
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    if (!userCredential.user.emailVerified) {
-      alert("Please verify your email before logging in.");
-      await signOut(auth);
+    const user = userCredential.user;
+
+    if (!user.emailVerified) {
+      alert("Please verify your email first!");
       return;
     }
-  } catch (err) {
-    alert(err.message);
-  }
-});
 
-logoutBtn?.addEventListener("click", async () => {
-  await signOut(auth);
-});
-
-// Show/Hide Forms
-document.getElementById("show-login")?.addEventListener("click", () => {
-  registerForm.classList.add("hidden");
-  loginForm.classList.remove("hidden");
-});
-document.getElementById("show-register")?.addEventListener("click", () => {
-  loginForm.classList.add("hidden");
-  registerForm.classList.remove("hidden");
-});
-
-// ================== AUTH STATE ==================
-onAuthStateChanged(auth, (user) => {
-  if (user && user.emailVerified) {
     authPanel.classList.add("hidden");
     forumContainer.classList.remove("hidden");
 
-    subscribePosts();
-    subscribeSuggestions();
-    subscribeUsers();
-    subscribeLeaderboard();
-  } else {
-    authPanel.classList.remove("hidden");
-    forumContainer.classList.add("hidden");
+    loadPosts();
+    loadSuggestions();
+    loadUsers();
+    loadLeaderboard();
+    loadUpdates();
+  } catch (error) {
+    alert(error.message);
   }
-});
+};
+
+// ================== LOGOUT ==================
+logoutBtn.onclick = () => {
+  signOut(auth).then(() => {
+    forumContainer.classList.add("hidden");
+    authPanel.classList.remove("hidden");
+  });
+};
 
 // ================== POSTS ==================
-submitPostBtn?.addEventListener("click", async () => {
-  const content = postContent.value;
-  const category = postCategory.value;
-  let imageUrl = "";
-
-  if (!content) return alert("Post content is required.");
-
-  if (postImage.files.length > 0) {
-    const file = postImage.files[0];
-    const storageRef = ref(storage, `posts/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    imageUrl = await getDownloadURL(storageRef);
-  }
+submitPostBtn.onclick = async () => {
+  const content = postContentInput.value;
+  const category = postCategoryInput.value;
+  if (!content) return;
 
   await addDoc(collection(db, "posts"), {
+    author: auth.currentUser.email.split("@")[0],
     content,
     category,
-    imageUrl,
-    timestamp: Date.now(),
-    author: auth.currentUser.email
+    timestamp: serverTimestamp(),
   });
 
-  postContent.value = "";
-  postImage.value = "";
-});
+  postContentInput.value = "";
+  loadPosts();
+};
 
-// ================== REAL-TIME POSTS ==================
-function subscribePosts() {
+async function loadPosts() {
+  postsList.innerHTML = "";
   const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-  onSnapshot(q, (snapshot) => {
-    postsList.innerHTML = "";
-    snapshot.forEach(doc => {
-      const p = doc.data();
-      const div = document.createElement("div");
-      div.className = "post-card";
-      div.innerHTML = `
-        <p><strong>${p.author}</strong> (${p.category})</p>
-        <p>${p.content}</p>
-        ${p.imageUrl ? `<img src="${p.imageUrl}" class="post-image">` : ""}
-      `;
-      postsList.appendChild(div);
-    });
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const post = doc.data();
+    const div = document.createElement("div");
+    div.className = "post-card";
+    div.innerHTML = `
+      <div style="display:flex;">
+        <div style="width:120px; font-weight:bold; color:#0066cc;">${post.author}</div>
+        <div style="flex:1;">
+          <div>${post.content}</div>
+          <div style="font-size:11px; color:#555;">${post.timestamp?.toDate ? post.timestamp.toDate().toLocaleString() : ""}</div>
+        </div>
+      </div>
+    `;
+    postsList.appendChild(div);
   });
 }
 
 // ================== SUGGESTIONS ==================
-submitSuggestionBtn?.addEventListener("click", async () => {
-  const title = suggestionTitle.value;
-  const desc = suggestionDescription.value;
-
-  if (!title || !desc) return alert("Fill all fields");
+submitSuggestionBtn.onclick = async () => {
+  const title = suggestionTitleInput.value;
+  const description = suggestionDescInput.value;
+  if (!title || !description) return;
 
   await addDoc(collection(db, "suggestions"), {
+    author: auth.currentUser.email.split("@")[0],
     title,
-    description: desc,
-    timestamp: Date.now(),
-    author: auth.currentUser.email
+    description,
+    timestamp: serverTimestamp(),
   });
 
-  suggestionTitle.value = "";
-  suggestionDescription.value = "";
-});
+  suggestionTitleInput.value = "";
+  suggestionDescInput.value = "";
+  loadSuggestions();
+};
 
-function subscribeSuggestions() {
+async function loadSuggestions() {
+  suggestionsList.innerHTML = "";
   const q = query(collection(db, "suggestions"), orderBy("timestamp", "desc"));
-  onSnapshot(q, (snapshot) => {
-    suggestionsList.innerHTML = "";
-    snapshot.forEach(doc => {
-      const s = doc.data();
-      const div = document.createElement("div");
-      div.className = "suggestion-card";
-      div.innerHTML = `<p><strong>${s.author}</strong>: ${s.title}</p><p>${s.description}</p>`;
-      suggestionsList.appendChild(div);
-    });
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const sug = doc.data();
+    const div = document.createElement("div");
+    div.className = "suggestion-card";
+    div.innerHTML = `
+      <strong>${sug.title}</strong> by ${sug.author}<br>
+      <span>${sug.description}</span>
+    `;
+    suggestionsList.appendChild(div);
   });
 }
 
 // ================== USERS ==================
-function subscribeUsers() {
-  const q = query(collection(db, "users"), orderBy("timestamp", "asc"));
-  onSnapshot(q, (snapshot) => {
-    const term = searchUsersInput.value.toLowerCase();
-    usersList.innerHTML = "";
-    snapshot.forEach(doc => {
-      const u = doc.data();
-      if (!term || u.username.toLowerCase().includes(term)) {
-        const div = document.createElement("div");
-        div.className = "user-card";
-        div.textContent = `${u.username} (${u.email})`;
-        usersList.appendChild(div);
-      }
-    });
+async function loadUsers() {
+  usersList.innerHTML = "";
+  const snapshot = await getDocs(collection(db, "users"));
+  snapshot.forEach(doc => {
+    const user = doc.data();
+    const div = document.createElement("div");
+    div.className = "user-card";
+    div.textContent = user.username || user.email;
+    usersList.appendChild(div);
   });
 }
-
-searchUsersInput?.addEventListener("input", subscribeUsers);
 
 // ================== LEADERBOARD ==================
-function subscribeLeaderboard() {
-  const postsCol = collection(db, "posts");
-  const suggestionsCol = collection(db, "suggestions");
-
-  onSnapshot(postsCol, (postsSnap) => {
-    onSnapshot(suggestionsCol, (suggSnap) => {
-      const scores = {};
-
-      postsSnap.forEach(doc => {
-        const a = doc.data().author;
-        scores[a] = (scores[a] || 0) + 1;
-      });
-      suggSnap.forEach(doc => {
-        const a = doc.data().author;
-        scores[a] = (scores[a] || 0) + 1;
-      });
-
-      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-      leaderboardList.innerHTML = "";
-      sorted.forEach(([user, score], i) => {
-        const div = document.createElement("div");
-        div.className = "leaderboard-card";
-        div.textContent = `${i + 1}. ${user} - ${score} points`;
-        leaderboardList.appendChild(div);
-      });
-    });
+async function loadLeaderboard() {
+  leaderboardList.innerHTML = "";
+  const q = query(collection(db, "users"), orderBy("coins", "desc"));
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const user = doc.data();
+    const div = document.createElement("div");
+    div.className = "leaderboard-card";
+    div.textContent = `${user.username}: ${user.coins} coins`;
+    leaderboardList.appendChild(div);
   });
 }
 
-// ================== TABS ==================
-tabs.forEach(tab => {
-  tab.onclick = () => {
-    tabs.forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const target = tab.dataset.tab;
-    tabContents.forEach(tc => {
-      tc.id === `${target}-section` ? tc.classList.add("active") : tc.classList.remove("active");
-    });
-  };
-});
+// ================== UPDATES ==================
+postUpdateBtn.onclick = async () => {
+  const title = updateTitleInput.value;
+  const content = updateContentInput.value;
+  if (!title || !content) return;
+
+  await addDoc(collection(db, "updates"), {
+    title,
+    content,
+    author: auth.currentUser.email.split("@")[0],
+    timestamp: serverTimestamp(),
+  });
+
+  updateTitleInput.value = "";
+  updateContentInput.value = "";
+  loadUpdates();
+};
+
+async function loadUpdates() {
+  updatesList.innerHTML = "";
+  const q = query(collection(db, "updates"), orderBy("timestamp", "desc"));
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const up = doc.data();
+    const div = document.createElement("div");
+    div.className = "update-card";
+    div.innerHTML = `<strong>${up.title}</strong> by ${up.author}<br>${up.content}`;
+    updatesList.appendChild(div);
+  });
+}
 
 // ================== PLINKO ==================
-if (plinkoCanvas && dropPlinkoBallBtn) {
-  const ballRadius = 10;
-  function dropBall() {
-    let x = plinkoCanvas.width / 2;
-    let y = 0;
-    const interval = setInterval(() => {
-      y += 5;
-      x += Math.random() < 0.5 ? -5 : 5;
+const ctx = plinkoCanvas.getContext("2d");
+const canvasWidth = plinkoCanvas.width;
+const canvasHeight = plinkoCanvas.height;
 
-      ctx.clearRect(0, 0, plinkoCanvas.width, plinkoCanvas.height);
+function drawPlinkoBoard() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  // Draw pegs
+  ctx.fillStyle = "#999";
+  for (let y = 50; y < canvasHeight - 50; y += 50) {
+    for (let x = 25; x < canvasWidth; x += 50) {
+      if (y / 50 % 2 === 0 && x === canvasWidth - 25) continue;
       ctx.beginPath();
-      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
-      ctx.fillStyle = "red";
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.closePath();
-
-      if (y >= plinkoCanvas.height - 20) {
-        clearInterval(interval);
-        let reward = 0;
-        if (x < plinkoCanvas.width / 3) reward = 1;
-        else if (x < 2 * plinkoCanvas.width / 3) reward = 5;
-        else reward = 10;
-        alert(`You earned ${reward} coins!`);
-      }
-    }, 30);
+    }
   }
 
-  dropPlinkoBallBtn.onclick = dropBall;
+  // Draw slots
+  ctx.fillStyle = "#444";
+  ctx.fillRect(0, canvasHeight - 30, canvasWidth / 3, 30);
+  ctx.fillRect(canvasWidth / 3, canvasHeight - 30, canvasWidth / 3, 30);
+  ctx.fillRect((canvasWidth / 3) * 2, canvasHeight - 30, canvasWidth / 3, 30);
 }
+drawPlinkoBoard();
+
+dropPlinkoBtn.onclick = () => {
+  const slot = Math.floor(Math.random() * 3);
+  let earned = 0;
+  if (slot === 0) earned = 1;
+  else if (slot === 1) earned = 5;
+  else earned = 10;
+
+  coins += earned;
+  alert(`You got ${earned} coins! Total: ${coins}`);
+  loadLeaderboard();
+};
