@@ -60,6 +60,7 @@
       <button class="tab-btn" data-tab="updates">📢 Updates</button>
       <button class="tab-btn" data-tab="suggestions">💡 Ideas</button>
       <button class="tab-btn" data-tab="leaderboard">🏆 Ranks</button>
+      <button class="tab-btn" data-tab="plinko">🎯 Plinko</button>
     </nav>
 
     <!-- Posts Section -->
@@ -184,6 +185,29 @@
       </div>
     </section>
   </div>
+
+  <!-- Plinko Section -->
+<section id="plinko-section" class="tab-content">
+  <h2>🎯 Plinko</h2>
+  <p class="info-text">Drop a ball and win coins!</p>
+
+  <div id="plinko-container">
+    <canvas id="plinko-canvas" width="350" height="500"></canvas>
+  </div>
+
+  <div class="plinko-controls">
+    <button id="drop-plinko-ball" class="btn-primary">Drop Ball</button>
+    <p class="info-text">You earn coins based on where the ball lands.</p>
+  </div>
+
+  <h3>Rewards:</h3>
+  <ul class="info-text">
+    <li>Left Slot: +1 coin</li>
+    <li>Middle Slot: +5 coins</li>
+    <li>Right Slot: +10 coins</li>
+  </ul>
+</section>
+
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
