@@ -13,18 +13,18 @@ body {
 
 .panel {
   background-color: #111;
-  border: 1px solid #222;
+  border: 1px solid #2b0033;
   border-radius: 8px;
   padding: 20px;
   margin: 20px auto;
   max-width: 960px;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 15px rgba(150, 0, 255, 0.25);
 }
 
 /* ================== HEADERS ================== */
 h1, h2, h3 {
-  color: #00ccff;
-  text-shadow: 0 0 6px #00ccff, 0 0 10px #0ff;
+  color: #c300ff;
+  text-shadow: 0 0 6px #c300ff, 0 0 10px #9b00ff;
 }
 
 .title-glow {
@@ -38,7 +38,7 @@ input, textarea, select {
   width: 100%;
   padding: 10px;
   margin: 6px 0;
-  border: 1px solid #333;
+  border: 1px solid #4b0066;
   border-radius: 4px;
   background-color: #0a0a0a;
   color: #eee;
@@ -46,12 +46,12 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #00ccff;
-  box-shadow: 0 0 8px #00ccff;
+  border-color: #c300ff;
+  box-shadow: 0 0 8px #c300ff;
 }
 
 .btn-primary {
-  background-color: #00ccff;
+  background-color: #c300ff;
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
@@ -63,15 +63,15 @@ input:focus, textarea:focus, select:focus {
 }
 
 .btn-primary:hover {
-  background-color: #00ffff;
-  box-shadow: 0 0 10px #00ffff;
+  background-color: #e066ff;
+  box-shadow: 0 0 10px #e066ff;
 }
 
 .btn-secondary {
   background-color: #222;
-  border: 1px solid #00ccff;
+  border: 1px solid #c300ff;
   padding: 6px 12px;
-  color: #00ccff;
+  color: #c300ff;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
@@ -79,13 +79,13 @@ input:focus, textarea:focus, select:focus {
 }
 
 .btn-secondary:hover {
-  background-color: #00ccff;
+  background-color: #c300ff;
   color: #000;
-  box-shadow: 0 0 8px #00ccff;
+  box-shadow: 0 0 8px #c300ff;
 }
 
 .btn-logout {
-  background-color: #ff5555;
+  background-color: #ff44aa;
   border: none;
   padding: 6px 12px;
   border-radius: 4px;
@@ -95,12 +95,12 @@ input:focus, textarea:focus, select:focus {
 }
 
 .btn-logout:hover {
-  background-color: #ff7777;
-  box-shadow: 0 0 10px #ff7777;
+  background-color: #ff66bb;
+  box-shadow: 0 0 10px #ff66bb;
 }
 
 .link {
-  color: #00ccff;
+  color: #c300ff;
   cursor: pointer;
 }
 
@@ -117,23 +117,23 @@ input:focus, textarea:focus, select:focus {
 
 .tab-btn {
   background-color: #111;
-  border: 1px solid #333;
+  border: 1px solid #4b0066;
   padding: 8px 12px;
   border-radius: 4px;
-  color: #00ccff;
+  color: #c300ff;
   cursor: pointer;
 }
 
 .tab-btn.active {
-  background-color: #00ccff;
+  background-color: #c300ff;
   color: #000;
   font-weight: bold;
-  box-shadow: 0 0 10px #00ccff;
+  box-shadow: 0 0 10px #c300ff;
 }
 
 /* ================== POST CARDS ================== */
 .post-card, .suggestion-card, .user-card, .leaderboard-card, .update-card {
-  border: 1px solid #222;
+  border: 1px solid #2b0033;
   background-color: #111;
   padding: 12px;
   margin-bottom: 10px;
@@ -141,15 +141,19 @@ input:focus, textarea:focus, select:focus {
   transition: 0.2s;
 }
 
-.post-card:hover, .suggestion-card:hover, .user-card:hover, .leaderboard-card:hover, .update-card:hover {
-  background-color: #1a1a1a;
-  box-shadow: 0 0 8px #00ccff;
+.post-card:hover,
+.suggestion-card:hover,
+.user-card:hover,
+.leaderboard-card:hover,
+.update-card:hover {
+  background-color: #1a001f;
+  box-shadow: 0 0 8px #c300ff;
 }
 
 /* ================== SEARCH INPUTS ================== */
 .search-input {
   background-color: #0a0a0a;
-  border: 1px solid #333;
+  border: 1px solid #4b0066;
   padding: 6px;
   border-radius: 4px;
   color: #eee;
@@ -157,8 +161,10 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ================== CREATE POST / SUGGESTION ================== */
-.create-post-container, .create-suggestion-container, .dm-container {
-  border: 1px solid #222;
+.create-post-container,
+.create-suggestion-container,
+.dm-container {
+  border: 1px solid #2b0033;
   background-color: #111;
   padding: 12px;
   border-radius: 6px;
@@ -179,14 +185,14 @@ input:focus, textarea:focus, select:focus {
 .file-label {
   cursor: pointer;
   background-color: #222;
-  border: 1px solid #00ccff;
+  border: 1px solid #c300ff;
   padding: 6px 12px;
   border-radius: 4px;
-  color: #00ccff;
+  color: #c300ff;
 }
 
 .file-label:hover {
-  background-color: #00ccff;
+  background-color: #c300ff;
   color: #000;
 }
 
@@ -198,14 +204,14 @@ input:focus, textarea:focus, select:focus {
 }
 
 #plinko-canvas {
-  border: 2px solid #00ccff;
+  border: 2px solid #c300ff;
   border-radius: 8px;
   background-color: #111;
 }
 
 /* ================== LOADING / INFO TEXT ================== */
 .loading-text, .info-text, .forgot-link {
-  color: #888;
+  color: #b37bd6;
   font-size: 0.9rem;
 }
 
@@ -219,7 +225,7 @@ input:focus, textarea:focus, select:focus {
   margin-left: -100px;
   margin-top: -100px;
   border-radius: 50%;
-  background: radial-gradient(circle, #0ff, #000);
+  background: radial-gradient(circle, #c300ff, #000);
   z-index: 0;
 }
 
@@ -242,6 +248,6 @@ body::-webkit-scrollbar-track {
 }
 
 body::-webkit-scrollbar-thumb {
-  background: #00ccff;
+  background: #c300ff;
   border-radius: 4px;
 }
