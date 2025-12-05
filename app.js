@@ -81,31 +81,46 @@ function isMod() {
 // Auth State Observer
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-            currentUser = { uid: user.uid, email: user.email, ...userDoc.data() };
-        } else {
-            // Create user document
-            const userData = {
-                username: user.email.split('@')[0],
-                email: user.email,
-                points: 0,
-                role: user.email === OWNER_EMAIL ? 'owner' : 'user',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                banned: false
-            };
-            await db.collection('users').doc(user.uid).set(userData);
-            currentUser = { uid: user.uid, ...userData };
+        try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                currentUser = { uid: user.uid, email: user.email, ...userDoc.data() };
+            } else {
+                // Create user document
+                const userData = {
+                    username: user.email.split('@')[0],
+                    email: user.email,
+                    points: 0,
+                    role: user.email === OWNER_EMAIL ? 'owner' : 'user',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    banned: false
+                };
+                await db.collection('users').doc(user.uid).set(userData);
+                
+                // Create leaderboard entry
+                await db.collection('leaderboard').doc(user.uid).set({
+                    username: userData.username,
+                    points: 0
+                });
+                
+                currentUser = { uid: user.uid, ...userData };
+            }
+            
+            // Update role to owner if email matches
+            if (currentUser.email === OWNER_EMAIL && currentUser.role !== 'owner') {
+                await db.collection('users').doc(user.uid).update({ role: 'owner' });
+                currentUser.role = 'owner';
+            }
+            
+            // Setup Firestore listeners after user is authenticated
+            setupFirestoreListeners();
+            
+            renderHeader();
+            renderView();
+        } catch (error) {
+            console.error('Auth error:', error);
+            alert('Error loading user data. Please check Firebase rules.');
         }
-        
-        // Update role to owner if email matches
-        if (currentUser.email === OWNER_EMAIL && currentUser.role !== 'owner') {
-            await db.collection('users').doc(user.uid).update({ role: 'owner' });
-            currentUser.role = 'owner';
-        }
-        
-        renderHeader();
-        renderView();
     } else {
         currentUser = null;
         renderHeader();
@@ -113,63 +128,124 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// Firestore Listeners
-db.collection('posts').onSnapshot((snapshot) => {
-    allPosts = [];
-    snapshot.forEach((doc) => {
-        allPosts.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'posts') renderView();
-});
+// Firestore Listeners with error handling
+let unsubscribers = [];
 
-db.collection('users').onSnapshot((snapshot) => {
-    allUsers = [];
-    snapshot.forEach((doc) => {
-        allUsers.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'users' || currentView === 'dms') renderView();
-});
+function setupFirestoreListeners() {
+    // Clear old listeners
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+    
+    // Posts listener
+    const unsubPosts = db.collection('posts').onSnapshot(
+        (snapshot) => {
+            allPosts = [];
+            snapshot.forEach((doc) => {
+                allPosts.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'posts') renderView();
+        },
+        (error) => {
+            console.log('Posts listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubPosts);
 
-db.collection('messages').onSnapshot((snapshot) => {
-    allMessages = [];
-    snapshot.forEach((doc) => {
-        allMessages.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'messages') renderView();
-});
+    // Users listener
+    const unsubUsers = db.collection('users').onSnapshot(
+        (snapshot) => {
+            allUsers = [];
+            snapshot.forEach((doc) => {
+                allUsers.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'users' || currentView === 'dms') renderView();
+        },
+        (error) => {
+            console.log('Users listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubUsers);
 
-db.collection('suggestions').onSnapshot((snapshot) => {
-    allSuggestions = [];
-    snapshot.forEach((doc) => {
-        allSuggestions.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'suggestions') renderView();
-});
+    // Messages listener
+    const unsubMessages = db.collection('messages').onSnapshot(
+        (snapshot) => {
+            allMessages = [];
+            snapshot.forEach((doc) => {
+                allMessages.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'messages') renderView();
+        },
+        (error) => {
+            console.log('Messages listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubMessages);
 
-db.collection('updates').onSnapshot((snapshot) => {
-    allUpdates = [];
-    snapshot.forEach((doc) => {
-        allUpdates.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'updates') renderView();
-});
+    // Suggestions listener
+    const unsubSuggestions = db.collection('suggestions').onSnapshot(
+        (snapshot) => {
+            allSuggestions = [];
+            snapshot.forEach((doc) => {
+                allSuggestions.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'suggestions') renderView();
+        },
+        (error) => {
+            console.log('Suggestions listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubSuggestions);
 
-db.collection('leaderboard').orderBy('points', 'desc').onSnapshot((snapshot) => {
-    allLeaderboard = [];
-    snapshot.forEach((doc) => {
-        allLeaderboard.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'leaderboard') renderView();
-});
+    // Updates listener
+    const unsubUpdates = db.collection('updates').onSnapshot(
+        (snapshot) => {
+            allUpdates = [];
+            snapshot.forEach((doc) => {
+                allUpdates.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'updates') renderView();
+        },
+        (error) => {
+            console.log('Updates listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubUpdates);
 
-// Listen to DMs
-db.collection('dms').onSnapshot((snapshot) => {
-    allDMs = [];
-    snapshot.forEach((doc) => {
-        allDMs.push({ id: doc.id, ...doc.data() });
-    });
-    if (currentView === 'dms') renderView();
-});
+    // Leaderboard listener
+    const unsubLeaderboard = db.collection('leaderboard').orderBy('points', 'desc').onSnapshot(
+        (snapshot) => {
+            allLeaderboard = [];
+            snapshot.forEach((doc) => {
+                allLeaderboard.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'leaderboard') renderView();
+        },
+        (error) => {
+            console.log('Leaderboard listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubLeaderboard);
+
+    // DMs listener (only if user is logged in)
+    if (currentUser) {
+        const unsubDMs = db.collection('dms').onSnapshot(
+            (snapshot) => {
+                allDMs = [];
+                snapshot.forEach((doc) => {
+                    allDMs.push({ id: doc.id, ...doc.data() });
+                });
+                if (currentView === 'dms') renderView();
+            },
+            (error) => {
+                console.log('DMs listener error:', error);
+            }
+        );
+        unsubscribers.push(unsubDMs);
+    }
+}
+
+// Call this after user logs in
+setupFirestoreListeners();
 
 // Render Header
 function renderHeader() {
