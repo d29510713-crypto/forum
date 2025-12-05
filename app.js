@@ -32,6 +32,7 @@ let allDMs = [];
 let allComments = [];
 let selectedDMUser = null;
 let expandedComments = new Set(); // Track which posts have comments expanded
+let selectedPost = null; // For viewing full post details
 
 // Filter States
 let searchTerm = '';
@@ -495,6 +496,213 @@ async function deletePost(postId) {
     if (!isMod()) return;
     
     if (confirm('Are you sure you want to delete this post?')) {
+        try {
+            await db.collection('posts').doc(postId).delete();
+            // Delete all comments for this post
+            const comments = await db.collection('comments').where('postId', '==', postId).get();
+            const batch = db.batch();
+            comments.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            alert('Error deleting post');
+        }
+    }
+}
+
+// Edit Post (author only)
+async function editPost(postId) {
+    const post = allPosts.find(p => p.id === postId);
+    if (!post || !currentUser) return;
+    
+    // Only author or mods can edit
+    if (post.authorId !== currentUser.uid && !isMod()) {
+        alert('You can only edit your own posts!');
+        return;
+    }
+    
+    const newContent = prompt('Edit your post:', post.content);
+    if (newContent && newContent.trim() !== post.content) {
+        try {
+            await db.collection('posts').doc(postId).update({
+                content: newContent.trim(),
+                edited: true,
+                editedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error('Error editing post:', error);
+            alert('Error editing post');
+        }
+    }
+}
+
+// Share Post
+function sharePost(postId) {
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Post by ${post.author}`,
+            text: post.content.substring(0, 100),
+            url: url
+        });
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Link copied to clipboard!');
+        });
+    }
+}
+
+// Report Post
+async function reportPost(postId) {
+    if (!currentUser) return;
+    
+    const reason = prompt('Why are you reporting this post?');
+    if (!reason) return;
+    
+    try {
+        await db.collection('reports').add({
+            postId: postId,
+            reportedBy: currentUser.uid,
+            reporterName: currentUser.username || currentUser.email,
+            reason: reason,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            resolved: false
+        });
+        alert('Post reported. Moderators will review it.');
+    } catch (error) {
+        console.error('Error reporting post:', error);
+        alert('Error reporting post');
+    }
+}
+
+// Award Points to User (Mod/Owner only)
+async function awardPoints(userId) {
+    if (!isMod()) return;
+    
+    const points = prompt('How many points to award?');
+    if (!points || isNaN(points)) return;
+    
+    const amount = parseInt(points);
+    
+    try {
+        await db.collection('leaderboard').doc(userId).update({
+            points: firebase.firestore.FieldValue.increment(amount)
+        });
+        await db.collection('users').doc(userId).update({
+            points: firebase.firestore.FieldValue.increment(amount)
+        });
+        alert(`Awarded ${amount} points!`);
+    } catch (error) {
+        console.error('Error awarding points:', error);
+        alert('Error awarding points');
+    }
+}
+
+// Delete Comment
+async function deleteComment(commentId, postId) {
+    if (!isMod()) return;
+    
+    if (confirm('Delete this comment?')) {
+        try {
+            await db.collection('comments').doc(commentId).delete();
+            await db.collection('posts').doc(postId).update({
+                replies: firebase.firestore.FieldValue.increment(-1)
+            });
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+        }
+    }
+}
+
+// Give Badge to User (Owner only)
+async function giveBadge(userId) {
+    if (!isOwner()) return;
+    
+    const badges = ['Star Member', ' Contributor', ' Diamond User', ' VIP', 'Sore Loser'];
+    const badge = prompt(`Choose a badge:\n${badges.map((b, i) => `${i + 1}. ${b}`).join('\n')}`);
+    
+    if (!badge) return;
+    
+    try {
+        await db.collection('users').doc(userId).update({
+            badges: firebase.firestore.FieldValue.arrayUnion(badge)
+        });
+        alert('Badge awarded!');
+    } catch (error) {
+        console.error('Error giving badge:', error);
+    }
+}
+
+// View User Profile
+function viewUserProfile(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    
+    const userPosts = allPosts.filter(p => p.authorId === userId);
+    const totalLikes = userPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+    
+    alert(`
+👤 ${user.username || user.email}
+${user.role === 'owner' ? '👑 OWNER' : user.role === 'mod' ? '🛡️ MOD' : ''}
+${user.badges ? user.badges.join(' ') : ''}
+
+📊 Stats:
+⭐ Points: ${user.points || 0}
+📝 Posts: ${userPosts.length}
+❤️ Total Likes: ${totalLikes}
+📅 Member since: ${user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : 'Unknown'}
+    `);
+}
+
+// Follow/Unfollow User
+async function toggleFollow(userId) {
+    if (!currentUser || userId === currentUser.uid) return;
+    
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    const following = userDoc.data()?.following || [];
+    
+    if (following.includes(userId)) {
+        await userRef.update({
+            following: firebase.firestore.FieldValue.arrayRemove(userId)
+        });
+    } else {
+        await userRef.update({
+            following: firebase.firestore.FieldValue.arrayUnion(userId)
+        });
+    }
+}
+
+// Save/Bookmark Post
+async function toggleSavePost(postId) {
+    if (!currentUser) return;
+    
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    const saved = userDoc.data()?.savedPosts || [];
+    
+    if (saved.includes(postId)) {
+        await userRef.update({
+            savedPosts: firebase.firestore.FieldValue.arrayRemove(postId)
+        });
+    } else {
+        await userRef.update({
+            savedPosts: firebase.firestore.FieldValue.arrayUnion(postId)
+        });
+    }
+    
+    renderPosts();
+}
+
+// Delete Post
+async function deletePost(postId) {
+    if (!isMod()) return;
+    
+    if (confirm('Are you sure you want to delete this post?')) {
         await db.collection('posts').doc(postId).delete();
     }
 }
@@ -518,6 +726,31 @@ async function addComment(postId) {
         authorId: currentUser.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+}
+
+// Get time ago string
+function getTimeAgo(timestamp) {
+    if (!timestamp || !timestamp.seconds) return 'Just now';
+    
+    const now = Date.now();
+    const postTime = timestamp.seconds * 1000;
+    const diff = now - postTime;
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+    
+    if (seconds < 60) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    if (weeks < 4) return `${weeks}w ago`;
+    if (months < 12) return `${months}mo ago`;
+    return `${years}y ago`;
 }
 
 // Toggle Comments View
@@ -581,38 +814,71 @@ function renderPosts() {
                 const isPinned = post.pinned || false;
                 const postComments = getCommentsForPost(post.id);
                 const commentsExpanded = expandedComments.has(post.id);
+                const timeAgo = getTimeAgo(post.createdAt);
+                const isSaved = currentUser && currentUser.savedPosts && currentUser.savedPosts.includes(post.id);
+                const isOwnPost = currentUser && post.authorId === currentUser.uid;
+                
                 return `
                     <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : ''}">
                         ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">📌 PINNED</div>' : ''}
+                        ${post.edited ? '<div style="display: inline-block; background: rgba(138, 43, 226, 0.3); color: #d8b4fe; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; margin-bottom: 0.5rem;">✏️ Edited</div>' : ''}
                         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem;">
+                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem; cursor: pointer;" onclick="viewUserProfile('${post.authorId}')">
                                 ${(post.author || 'U')[0].toUpperCase()}
                             </div>
-                            <div>
-                                <h3 class="post-title" style="margin: 0; font-size: 1.125rem;">${post.author || 'Unknown'}</h3>
-                                <span class="post-category" style="font-size: 0.75rem;">${post.category}</span>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <h3 class="post-title" style="margin: 0; font-size: 1.125rem; cursor: pointer;" onclick="viewUserProfile('${post.authorId}')">${post.author || 'Unknown'}</h3>
+                                    <span class="post-category" style="font-size: 0.75rem;">${post.category}</span>
+                                    <span style="color: #6b7280; font-size: 0.75rem;">• ${timeAgo}</span>
+                                </div>
                             </div>
                         </div>
                         <p class="post-content">${post.content}</p>
                         <div class="post-meta">
-                            <button onclick="likePost('${post.id}')" class="like-btn ${isLiked ? 'liked' : ''}" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#9ca3af'};">
+                            <button onclick="likePost('${post.id}')" class="like-btn ${isLiked ? 'liked' : ''}" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#9ca3af'}; transition: all 0.3s;" title="Like">
                                 <svg viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                                 </svg>
                                 ${post.likes || 0}
                             </button>
-                            <button onclick="addComment('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: #9ca3af;">
+                            <button onclick="addComment('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: #9ca3af; transition: all 0.3s;" title="Comment">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                                 </svg>
                                 ${post.replies || 0}
                             </button>
+                            ${currentUser ? `
+                                <button onclick="toggleSavePost('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isSaved ? '#fbbf24' : '#9ca3af'}; transition: all 0.3s;" title="${isSaved ? 'Unsave' : 'Save'}">
+                                    <svg viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
+                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </button>
+                                <button onclick="sharePost('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: #9ca3af; transition: all 0.3s;" title="Share">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
+                                        <circle cx="18" cy="5" r="3"/>
+                                        <circle cx="6" cy="12" r="3"/>
+                                        <circle cx="18" cy="19" r="3"/>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                            ${isOwnPost || isMod() ? `
+                                <button onclick="editPost('${post.id}')" style="background: #3b82f6; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;" title="Edit">
+                                    Edit
+                                </button>
+                            ` : ''}
                             ${isMod() ? `
                                 <button onclick="togglePinPost('${post.id}')" style="background: ${isPinned ? '#f59e0b' : '#6b7280'}; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
                                     ${isPinned ? 'Unpin' : 'Pin'}
                                 </button>
                                 <button onclick="deletePost('${post.id}')" style="background: #dc2626; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
                                     Delete
+                                </button>
+                            ` : currentUser ? `
+                                <button onclick="reportPost('${post.id}')" style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 0.75rem;" title="Report">
+                                    Report
                                 </button>
                             ` : ''}
                         </div>
@@ -626,8 +892,17 @@ function renderPosts() {
                                     <div class="comments-list">
                                         ${postComments.map(comment => `
                                             <div class="comment-item">
-                                                <div class="comment-author">${comment.author || 'Unknown'}</div>
-                                                <div class="comment-content">${comment.content}</div>
+                                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                                    <div>
+                                                        <div class="comment-author">${comment.author || 'Unknown'}</div>
+                                                        <div class="comment-content">${comment.content}</div>
+                                                    </div>
+                                                    ${isMod() ? `
+                                                        <button onclick="deleteComment('${comment.id}', '${post.id}')" style="background: #dc2626; border: none; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 0.25rem; color: white; font-size: 0.75rem;">
+                                                            Delete
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
                                             </div>
                                         `).join('')}
                                     </div>
@@ -865,30 +1140,37 @@ function renderUsers() {
                 ${allUsers.map(user => {
                     const roleBadge = user.role === 'owner' ? '👑' : user.role === 'mod' ? '🛡️' : '';
                     const isBanned = user.banned || false;
+                    const isFollowing = currentUser && currentUser.following && currentUser.following.includes(user.id);
                     
                     return `
                         <div class="user-item" style="${isBanned ? 'opacity: 0.5; border-color: #dc2626;' : ''}">
                             <div class="user-info">
-                                <div class="user-avatar">
+                                <div class="user-avatar" style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
                                     ${(user.username || user.email || 'U')[0].toUpperCase()}
                                 </div>
                                 <div class="user-details">
-                                    <p>${roleBadge} ${user.username || user.email} ${isBanned ? '(Banned)' : ''}</p>
+                                    <p style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">${roleBadge} ${user.username || user.email} ${isBanned ? '(Banned)' : ''}</p>
                                     <p>${user.points || 0} points</p>
+                                    ${user.badges ? `<p style="font-size: 0.75rem; color: #fbbf24;">${user.badges.join(' ')}</p>` : ''}
                                 </div>
                             </div>
-                            ${(isMod() || isOwner()) && user.email !== OWNER_EMAIL ? `
-                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                    ${isOwner() && user.role !== 'mod' ? `
-                                        <button onclick="makeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #3b82f6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
-                                            Make Mod
-                                        </button>
-                                    ` : ''}
-                                    ${isOwner() && user.role === 'mod' ? `
-                                        <button onclick="removeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #f59e0b; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
-                                            Remove Mod
-                                        </button>
-                                    ` : ''}
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                ${currentUser && currentUser.uid !== user.id ? `
+                                    <button onclick="toggleFollow('${user.id}')" class="action-btn" style="background: ${isFollowing ? '#10b981' : '#6b7280'}; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        ${isFollowing ? 'Following' : 'Follow'}
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.role !== 'mod' && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="makeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #3b82f6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Make Mod
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.role === 'mod' && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="removeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #f59e0b; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Remove Mod
+                                    </button>
+                                ` : ''}
+                                ${isMod() && user.email !== OWNER_EMAIL ? `
                                     ${!isBanned ? `
                                         <button onclick="banUser('${user.id}', '${user.email}')" class="action-btn" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
                                             Ban
@@ -898,17 +1180,21 @@ function renderUsers() {
                                             Unban
                                         </button>
                                     `}
-                                    ${currentUser && currentUser.uid !== user.id ? `
-                                        <button onclick="openDM('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
-                                            DM
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            ` : currentUser && currentUser.uid !== user.id ? `
-                                <button onclick="openDM('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
-                                    DM
-                                </button>
-                            ` : ''}
+                                    <button onclick="awardPoints('${user.id}')" class="action-btn" style="background: #fbbf24; color: #000; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                                        Award Points
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="giveBadge('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Give Badge
+                                    </button>
+                                ` : ''}
+                                ${currentUser && currentUser.uid !== user.id ? `
+                                    <button onclick="openDM('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        DM
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('')}
