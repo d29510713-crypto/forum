@@ -701,33 +701,29 @@ textarea:focus {
     text-align: center;
 }
 
-.plinko-board {
-    background: radial-gradient(circle at center, rgba(138, 43, 226, 0.3) 0%, rgba(75, 0, 130, 0.2) 100%);
-    border-radius: 1rem;
-    padding: 3rem;
-    border: 2px solid rgba(138, 43, 226, 0.5);
-    box-shadow: 0 0 40px rgba(138, 43, 226, 0.3);
-}
-
-.plinko-emoji {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    filter: drop-shadow(0 0 20px rgba(138, 43, 226, 0.8));
-}
-
-.plinko-title {
-    font-size: 1.5rem;
+.plinko-board-wrapper {
+    display: inline-block;
     margin-bottom: 1.5rem;
-    color: #e9d5ff;
+}
+
+#plinkoCanvas {
+    border: 2px solid rgba(138, 43, 226, 0.5);
+    border-radius: 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 40px rgba(138, 43, 226, 0.3);
 }
 
 .plinko-score {
     font-size: 2rem;
     font-weight: bold;
     color: #fbbf24;
-    animation: bounce 1s infinite;
-    margin-bottom: 1rem;
+    animation: bounce 1s infinite, glow 1s infinite;
     text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+}
+
+@keyframes glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(251, 191, 36, 0.8); }
+    50% { text-shadow: 0 0 40px rgba(251, 191, 36, 1); }
 }
 
 @keyframes bounce {
@@ -751,11 +747,13 @@ textarea:focus {
 .btn-plinko:hover:not(:disabled) {
     background: linear-gradient(90deg, rgba(138, 43, 226, 1) 0%, rgba(168, 85, 247, 1) 100%);
     box-shadow: 0 0 40px rgba(138, 43, 226, 0.6);
+    transform: translateY(-2px);
 }
 
 .btn-plinko:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
 }
 
 /* Modal */
