@@ -240,19 +240,23 @@ function setupFirestoreListeners() {
 
     // DMs listener - real-time updates (only if user is logged in)
     if (currentUser) {
-        const unsubDMs = db.collection('dms').orderBy('createdAt', 'asc').onSnapshot(
-            (snapshot) => {
-                allDMs = [];
-                snapshot.forEach((doc) => {
-                    allDMs.push({ id: doc.id, ...doc.data() });
-                });
-                if (currentView === 'dms') renderView();
-            },
-            (error) => {
-                console.log('DMs listener error:', error);
-            }
-        );
-        unsubscribers.push(unsubDMs);
+        try {
+            const unsubDMs = db.collection('dms').onSnapshot(
+                (snapshot) => {
+                    allDMs = [];
+                    snapshot.forEach((doc) => {
+                        allDMs.push({ id: doc.id, ...doc.data() });
+                    });
+                    if (currentView === 'dms') renderView();
+                },
+                (error) => {
+                    console.log('DMs listener error (this is normal if not logged in):', error.message);
+                }
+            );
+            unsubscribers.push(unsubDMs);
+        } catch (error) {
+            console.log('Could not setup DMs listener:', error.message);
+        }
     }
     
     // Comments listener - real-time updates
@@ -699,33 +703,45 @@ newPostForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    const content = document.getElementById('postContent').value.trim();
-    const category = document.getElementById('postCategory').value;
+    const contentInput = document.getElementById('postContent');
+    const categoryInput = document.getElementById('postCategory');
+    
+    if (!contentInput || !categoryInput) return;
+
+    const content = contentInput.value.trim();
+    const category = categoryInput.value;
 
     if (!content) return;
 
-    await db.collection('posts').add({
-        title: '', // No longer used
-        content: content,
-        category: category,
-        author: currentUser.username || currentUser.email,
-        authorId: currentUser.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        likes: 0,
-        replies: 0,
-        likedBy: []
-    });
+    try {
+        await db.collection('posts').add({
+            title: '', // No longer used
+            content: content,
+            category: category,
+            author: currentUser.username || currentUser.email,
+            authorId: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            likes: 0,
+            replies: 0,
+            likedBy: []
+        });
 
-    newPostModal.classList.add('hidden');
-    document.getElementById('postContent').value = '';
-    document.getElementById('postCategory').value = 'general';
+        newPostModal.classList.add('hidden');
+        contentInput.value = '';
+        categoryInput.value = 'general';
+    } catch (error) {
+        console.error('Error creating post:', error);
+        alert('Error creating post. Please try again.');
+    }
 });
 
 // Cancel Post
 cancelPost.addEventListener('click', () => {
     newPostModal.classList.add('hidden');
-    document.getElementById('postContent').value = '';
-    document.getElementById('postCategory').value = 'general';
+    const contentInput = document.getElementById('postContent');
+    const categoryInput = document.getElementById('postCategory');
+    if (contentInput) contentInput.value = '';
+    if (categoryInput) categoryInput.value = 'general';
 });
 
 // Make Mod
@@ -868,6 +884,8 @@ async function sendDM() {
     if (!currentUser || !selectedDMUser) return;
     
     const input = document.getElementById('dmInput');
+    if (!input) return;
+    
     const message = input.value.trim();
     
     if (!message) return;
@@ -875,18 +893,31 @@ async function sendDM() {
     const participants = [currentUser.uid, selectedDMUser.id].sort();
     const conversationId = participants.join('_');
     
-    await db.collection('dms').add({
-        conversationId: conversationId,
-        from: currentUser.uid,
-        fromName: currentUser.username || currentUser.email,
-        to: selectedDMUser.id,
-        toName: selectedDMUser.username || selectedDMUser.email,
-        message: message,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false
-    });
-    
-    input.value = '';
+    try {
+        await db.collection('dms').add({
+            conversationId: conversationId,
+            from: currentUser.uid,
+            fromName: currentUser.username || currentUser.email,
+            to: selectedDMUser.id,
+            toName: selectedDMUser.username || selectedDMUser.email,
+            message: message,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            read: false
+        });
+        
+        input.value = '';
+        
+        // Scroll to bottom after sending
+        setTimeout(() => {
+            const messageContainer = document.getElementById('messagesContainer');
+            if (messageContainer) {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+        }, 100);
+    } catch (error) {
+        console.error('Error sending DM:', error);
+        alert('Error sending message. Please try again.');
+    }
 }
 
 // Render DMs
