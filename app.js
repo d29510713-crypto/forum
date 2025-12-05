@@ -1,853 +1,646 @@
-// ================= FULL APP.JS =================
-// Core variables
-let currentUser = null;
-let currentUsername = null;
-let userCoins = 0;
-let blackjack = null;
-
-// ================= FIREBASE INIT =================
+// Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
-  authDomain: "toasty-89f07.firebaseapp.com",
-  projectId: "toasty-89f07",
-  storageBucket: "toasty-89f07.appspot.com",
-  messagingSenderId: "1050558945326",
-  appId: "1:1050558945326:web:b17704302990245b5aee0e"
+    apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
+    authDomain: "toasty-89f07.firebaseapp.com",
+    projectId: "toasty-89f07",
+    storageBucket: "toasty-89f07.firebasestorage.app",
+    messagingSenderId: "743787667064",
+    appId: "1:743787667064:web:12284120fbbdd1e907d78d",
+    measurementId: "G-VHGVH5JEYY"
 };
+
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
-// ================= LOGIN / REGISTER =================
-const loginBox = document.getElementById("loginBox");
-const registerBox = document.getElementById("registerBox");
-const forum = document.getElementById("forum");
+// Global State
+let currentUser = null;
+let currentView = 'posts';
+let authMode = 'login';
+let allPosts = [];
+let allUsers = [];
+let allMessages = [];
+let allSuggestions = [];
+let allUpdates = [];
+let allLeaderboard = [];
 
-document.getElementById("toggleToRegister").onclick = () => {
-  loginBox.classList.add("hidden");
-  registerBox.classList.remove("hidden");
-};
-document.getElementById("toggleToLogin").onclick = () => {
-  registerBox.classList.add("hidden");
-  loginBox.classList.remove("hidden");
-};
+// Filter States
+let searchTerm = '';
+let categoryFilter = 'all';
+let sortBy = 'newest';
 
-document.getElementById("loginBtn").onclick = async () => {
-  const email = document.getElementById("logEmail").value;
-  const pass = document.getElementById("logPass").value;
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch (e) { alert(e.message); }
-};
+// DOM Elements
+const headerActions = document.getElementById('headerActions');
+const mainContent = document.getElementById('mainContent');
+const authModal = document.getElementById('authModal');
+const authForm = document.getElementById('authForm');
+const authTitle = document.getElementById('authTitle');
+const usernameInput = document.getElementById('usernameInput');
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authToggle = document.getElementById('authToggle');
+const authCancel = document.getElementById('authCancel');
+const newPostModal = document.getElementById('newPostModal');
+const newPostForm = document.getElementById('newPostForm');
+const cancelPost = document.getElementById('cancelPost');
+const starsContainer = document.getElementById('stars-container');
 
-document.getElementById("registerBtn").onclick = async () => {
-  const email = document.getElementById("regEmail").value;
-  const pass = document.getElementById("regPass").value;
-  const username = document.getElementById("regUsername").value;
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    await db.collection("users").doc(cred.user.uid).set({
-      username,
-      coins: 50,
-      badges: [],
-      color: "#fff"
+// Initialize Stars Background
+function createStars() {
+    for (let i = 0; i < 100; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.width = Math.random() * 3 + 'px';
+        star.style.height = star.style.width;
+        star.style.top = Math.random() * 100 + '%';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        star.style.animationDuration = Math.random() * 3 + 2 + 's';
+        starsContainer.appendChild(star);
+    }
+}
+
+// Auth State Observer
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+            currentUser = { uid: user.uid, email: user.email, ...userDoc.data() };
+        } else {
+            currentUser = { uid: user.uid, email: user.email, points: 0 };
+        }
+        renderHeader();
+        renderView();
+    } else {
+        currentUser = null;
+        renderHeader();
+        renderView();
+    }
+});
+
+// Firestore Listeners
+db.collection('posts').onSnapshot((snapshot) => {
+    allPosts = [];
+    snapshot.forEach((doc) => {
+        allPosts.push({ id: doc.id, ...doc.data() });
     });
-  } catch (e) { alert(e.message); }
-};
-
-// ================= AUTH STATE =================
-auth.onAuthStateChanged(async user => {
-  if (user) {
-    currentUser = user;
-    const snap = await db.collection("users").doc(user.uid).get();
-    currentUsername = snap.data().username;
-    userCoins = snap.data().coins;
-    document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-    loginBox.classList.add("hidden");
-    registerBox.classList.add("hidden");
-    forum.classList.remove("hidden");
-    loadPosts();
-    loadUsers();
-    loadUpdates();
-    loadDMs();
-  } else {
-    forum.classList.add("hidden");
-    loginBox.classList.remove("hidden");
-  }
+    if (currentView === 'posts') renderView();
 });
 
-document.getElementById("logoutBtn").onclick = () => auth.signOut();
-
-// ================= TABS =================
-const tabs = document.querySelectorAll("#tabs button");
-const sections = document.querySelectorAll(".tabSection");
-
-tabs.forEach((btn, i) => {
-  btn.onclick = () => {
-    sections.forEach(s => s.classList.add("hidden"));
-    sections[i].classList.remove("hidden");
-  };
+db.collection('users').onSnapshot((snapshot) => {
+    allUsers = [];
+    snapshot.forEach((doc) => {
+        allUsers.push({ id: doc.id, ...doc.data() });
+    });
+    if (currentView === 'users') renderView();
 });
 
-// ================= POSTS =================
-async function loadPosts() {
-  const postsList = document.getElementById("postsList");
-  postsList.innerHTML = "";
-  const snap = await db.collection("posts").orderBy("time", "desc").get();
-  snap.forEach(doc => {
-    const p = doc.data();
-    postsList.innerHTML += `
-      <div class="post">
-        <h4>${p.username} — <span>${p.category}</span></h4>
-        <p>${p.content}</p>
-        <button onclick="likePost('${doc.id}')">❤️ ${p.likes || 0}</button>
-      </div>
+db.collection('messages').onSnapshot((snapshot) => {
+    allMessages = [];
+    snapshot.forEach((doc) => {
+        allMessages.push({ id: doc.id, ...doc.data() });
+    });
+    if (currentView === 'messages') renderView();
+});
+
+db.collection('suggestions').onSnapshot((snapshot) => {
+    allSuggestions = [];
+    snapshot.forEach((doc) => {
+        allSuggestions.push({ id: doc.id, ...doc.data() });
+    });
+    if (currentView === 'suggestions') renderView();
+});
+
+db.collection('updates').onSnapshot((snapshot) => {
+    allUpdates = [];
+    snapshot.forEach((doc) => {
+        allUpdates.push({ id: doc.id, ...doc.data() });
+    });
+    if (currentView === 'updates') renderView();
+});
+
+db.collection('leaderboard').orderBy('points', 'desc').onSnapshot((snapshot) => {
+    allLeaderboard = [];
+    snapshot.forEach((doc) => {
+        allLeaderboard.push({ id: doc.id, ...doc.data() });
+    });
+    if (currentView === 'leaderboard') renderView();
+});
+
+// Render Header
+function renderHeader() {
+    if (currentUser) {
+        headerActions.innerHTML = `
+            <div class="user-points">
+                <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span>${currentUser.points || 0} pts</span>
+            </div>
+            <span class="username">${currentUser.username || currentUser.email}</span>
+            <button class="btn-logout" onclick="handleLogout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Logout
+            </button>
+        `;
+    } else {
+        headerActions.innerHTML = `
+            <button class="btn-login" onclick="showAuthModal('login')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                Login
+            </button>
+        `;
+    }
+}
+
+// Show Auth Modal
+function showAuthModal(mode) {
+    authMode = mode;
+    if (mode === 'login') {
+        authTitle.textContent = 'Login to Galaxy Forum';
+        usernameInput.classList.add('hidden');
+        authSubmitBtn.textContent = 'Login';
+        authToggle.textContent = 'Need an account? Register';
+    } else {
+        authTitle.textContent = 'Join Galaxy Forum';
+        usernameInput.classList.remove('hidden');
+        authSubmitBtn.textContent = 'Register';
+        authToggle.textContent = 'Already have an account? Login';
+    }
+    authModal.classList.remove('hidden');
+}
+
+// Handle Auth Submit
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    const username = usernameInput.value.trim();
+
+    try {
+        if (authMode === 'login') {
+            await auth.signInWithEmailAndPassword(email, password);
+        } else {
+            const result = await auth.createUserWithEmailAndPassword(email, password);
+            await db.collection('users').doc(result.user.uid).set({
+                username: username,
+                email: email,
+                points: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection('leaderboard').doc(result.user.uid).set({
+                username: username,
+                points: 0
+            });
+        }
+        authModal.classList.add('hidden');
+        emailInput.value = '';
+        passwordInput.value = '';
+        usernameInput.value = '';
+    } catch (error) {
+        alert(error.message);
+    }
+});
+
+// Auth Toggle
+authToggle.addEventListener('click', () => {
+    showAuthModal(authMode === 'login' ? 'register' : 'login');
+});
+
+// Auth Cancel
+authCancel.addEventListener('click', () => {
+    authModal.classList.add('hidden');
+    emailInput.value = '';
+    passwordInput.value = '';
+    usernameInput.value = '';
+});
+
+// Handle Logout
+function handleLogout() {
+    auth.signOut();
+}
+
+// Navigation
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.getAttribute('data-view');
+        renderView();
+    });
+});
+
+// Render View
+function renderView() {
+    switch (currentView) {
+        case 'posts':
+            renderPosts();
+            break;
+        case 'users':
+            renderUsers();
+            break;
+        case 'messages':
+            renderMessages();
+            break;
+        case 'suggestions':
+            renderSuggestions();
+            break;
+        case 'updates':
+            renderUpdates();
+            break;
+        case 'leaderboard':
+            renderLeaderboard();
+            break;
+        case 'plinko':
+            renderPlinko();
+            break;
+    }
+}
+
+// Render Posts
+function renderPosts() {
+    const filteredPosts = getFilteredPosts();
+    
+    mainContent.innerHTML = `
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="search-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search posts..." value="${searchTerm}">
+                </div>
+                <select id="categorySelect">
+                    <option value="all" ${categoryFilter === 'all' ? 'selected' : ''}>All Categories</option>
+                    <option value="general" ${categoryFilter === 'general' ? 'selected' : ''}>General</option>
+                    <option value="tech" ${categoryFilter === 'tech' ? 'selected' : ''}>Tech</option>
+                    <option value="gaming" ${categoryFilter === 'gaming' ? 'selected' : ''}>Gaming</option>
+                    <option value="space" ${categoryFilter === 'space' ? 'selected' : ''}>Space</option>
+                </select>
+                <select id="sortSelect">
+                    <option value="newest" ${sortBy === 'newest' ? 'selected' : ''}>Newest First</option>
+                    <option value="oldest" ${sortBy === 'oldest' ? 'selected' : ''}>Oldest First</option>
+                    <option value="popular" ${sortBy === 'popular' ? 'selected' : ''}>Most Popular</option>
+                </select>
+            </div>
+            ${currentUser ? `
+                <button class="btn-primary" onclick="showNewPostModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    Create New Post
+                </button>
+            ` : ''}
+        </div>
+        <div class="posts-list">
+            ${filteredPosts.length > 0 ? filteredPosts.map(post => `
+                <div class="post-card">
+                    <h3 class="post-title">${post.title}</h3>
+                    <p class="post-content">${post.content}</p>
+                    <div class="post-meta">
+                        <span class="post-author">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            ${post.author}
+                        </span>
+                        <span class="post-category">${post.category}</span>
+                        <span>${post.likes || 0} likes</span>
+                        <span>${post.replies || 0} replies</span>
+                    </div>
+                </div>
+            `).join('') : `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p>No posts found. Be the first to create one!</p>
+                </div>
+            `}
+        </div>
     `;
-  });
-}
 
-document.getElementById("postBtn").onclick = async () => {
-  const content = document.getElementById("postContent").value;
-  const category = document.getElementById("postCategory").value;
-  if (!content.trim()) return;
-  await db.collection("posts").add({
-    username: currentUsername,
-    content,
-    category,
-    likes: 0,
-    time: Date.now()
-  });
-  loadPosts();
-};
+    // Attach event listeners
+    const searchInput = document.getElementById('searchInput');
+    const categorySelect = document.getElementById('categorySelect');
+    const sortSelect = document.getElementById('sortSelect');
 
-async function likePost(id) {
-  const ref = db.collection("posts").doc(id);
-  const snap = await ref.get();
-  await ref.update({ likes: (snap.data().likes || 0) + 1 });
-  loadPosts();
-}
-
-// ================= USERS =================
-async function loadUsers() {
-  const usersList = document.getElementById("usersList");
-  usersList.innerHTML = "";
-  const snap = await db.collection("users").get();
-  snap.forEach(u => {
-    const d = u.data();
-    usersList.innerHTML += `<div class='user'>${d.username} — Coins: ${d.coins}</div>`;
-  });
-}
-
-// ================= UPDATES =================
-async function loadUpdates() {
-  const updatesList = document.getElementById("updatesList");
-  updatesList.innerHTML = "";
-  const snap = await db.collection("updates").get();
-  snap.forEach(d => {
-    updatesList.innerHTML += `<div class='update'>${d.data().text}</div>`;
-  });
-}
-
-// ================= DMS =================
-async function loadDMs() {
-  const dms = document.getElementById("dmsList");
-  dms.innerHTML = "";
-  const snap = await db.collection("dms").where("to", "==", currentUsername).get();
-  snap.forEach(m => {
-    const d = m.data();
-    dms.innerHTML += `<div class='dm'><b>${d.from}:</b> ${d.message}</div>`;
-  });
-}
-
-document.getElementById("dmBtn").onclick = async () => {
-  const to = document.getElementById("dmToUsername").value;
-  const msg = document.getElementById("dmContent").value;
-  if (!to || !msg) return;
-  await db.collection("dms").add({ from: currentUsername, to, message: msg, time: Date.now() });
-  loadDMs();
-};
-
-// ================= COINS =================
-document.getElementById("claimDailyCoins").onclick = async () => {
-  userCoins += 10;
-  await db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-};
-
-// ================= SIMPLE GAMES =================
-function playCoinFlip(choice) {
-  const bet = Number(document.getElementById("coinflipBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-  const result = Math.random() < 0.5 ? "heads" : "tails";
-  if (result === choice) userCoins += bet;
-  else userCoins -= bet;
-  document.getElementById("coinflipResult").innerText = result === "heads" ? "🙂" : "🪙";
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-}
-
-// ================= BLACKJACK =================
-function startBlackjack() {
-  const bet = Number(document.getElementById("blackjackBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-  blackjack = {
-    bet,
-    player: [draw(), draw()],
-    dealer: [draw(), draw()],
-    over: false
-  };
-  renderBJ();
-}
-function draw() { return Math.floor(Math.random()*11)+1; }
-function score(hand) { return hand.reduce((a,b)=>a+b,0); }
-function renderBJ() {
-  const div = document.getElementById("blackjackGame");
-  div.innerHTML = `
-    <p>Player: ${blackjack.player.join(" ")} (
-    ${score(blackjack.player)})</p>
-    <p>Dealer: ${blackjack.dealer[0]} ❓</p>
-    <button onclick="hitBJ()">Hit</button>
-    <button onclick="standBJ()">Stand</button>
-  `;
-}
-
-function hitBJ() {
-  if (blackjack.over) return;
-  blackjack.player.push(draw());
-  if (score(blackjack.player) > 21) endBJ();
-  renderBJ();
-}
-
-function standBJ() {
-  if (blackjack.over) return;
-  while (score(blackjack.dealer) < 17) blackjack.dealer.push(draw());
-  endBJ();
-}
-
-function endBJ() {
-  blackjack.over = true;
-  const p = score(blackjack.player);
-  const d = score(blackjack.dealer);
-  let result = "";
-
-  if (p > 21) {
-    userCoins -= blackjack.bet;
-    result = "❌ Bust! You lost.";
-  } else if (d > 21 || p > d) {
-    userCoins += blackjack.bet;
-    result = "✅ You win!";
-  } else if (p < d) {
-    userCoins -= blackjack.bet;
-    result = "❌ Dealer wins.";
-  } else {
-    result = "🤝 Push (tie).";
-  }
-
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-
-  document.getElementById("blackjackGame").innerHTML = `
-    <p>Player: ${blackjack.player.join(" ")} (${p})</p>
-    <p>Dealer: ${blackjack.dealer.join(" ")} (${d})</p>
-    <h3>${result}</h3>
-  `;
-}
-
-// ================= WHEEL SPIN =================
-function spinWheel() {
-  const bet = Number(document.getElementById("wheelBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-
-  const mults = [0, 0.5, 1, 2, 3, 5, 10];
-  const multiplier = mults[Math.floor(Math.random() * mults.length)];
-
-  const win = Math.floor(bet * multiplier);
-  userCoins = userCoins - bet + win;
-
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-
-  document.getElementById("wheelResult").innerText = `${multiplier}x`;
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-}
-
-// ================= SLOTS =================
-function playSlots() {
-  const bet = Number(document.getElementById("slotsBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-
-  const symbols = ["🍒","🍋","🍊","⭐","💎"]; 
-  const r = [
-    symbols[Math.floor(Math.random()*symbols.length)],
-    symbols[Math.floor(Math.random()*symbols.length)],
-    symbols[Math.floor(Math.random()*symbols.length)]
-  ];
-
-  document.getElementById("slotsResult").innerText = r.join(" ");
-
-  if (r[0] === r[1] && r[1] === r[2]) {
-    let mult = r[0] === "💎" ? 10 : 5;
-    userCoins += bet * mult;
-  } else {
-    userCoins -= bet;
-  }
-
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-}
-
-// ================= SCRATCH CARD =================
-function playScratch() {
-  const bet = Number(document.getElementById("scratchBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-
-  const symbols = ["⭐","💎","7️⃣"];
-  const card = [
-    symbols[Math.floor(Math.random()*symbols.length)],
-    symbols[Math.floor(Math.random()*symbols.length)],
-    symbols[Math.floor(Math.random()*symbols.length)]
-  ];
-
-  document.getElementById("scratchResult").innerText = card.join(" ");
-
-  if (card[0] === card[1] && card[1] === card[2]) {
-    userCoins += bet * 8;
-  } else userCoins -= bet;
-
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-}
-
-// ================= MINES =================
-let mines = null;
-
-function startMines() {
-  const bet = Number(document.getElementById("minesBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-
-  mines = {
-    bet,
-    grid: Array(16).fill(null),
-    mine: Math.floor(Math.random()*16),
-    revealed: 0,
-    over: false
-  };
-
-  renderMines();
-}
-
-function renderMines() {
-  const g = document.getElementById("minesGrid");
-  g.innerHTML = "";
-
-  mines.grid.forEach((v,i) => {
-    g.innerHTML += `<button onclick="clickMine(${i})" style="padding:20px; font-size:20px;">${v ? v : ""}</button>`;
-  });
-}
-
-function clickMine(i) {
-  if (mines.over) return;
-
-  if (i === mines.mine) {
-    mines.grid[i] = "💣";
-    mines.over = true;
-    userCoins -= mines.bet;
-    document.getElementById("minesResult").innerText = "💥 You hit a mine!";
-  } else {
-    mines.grid[i] = "💎";
-    mines.revealed++;
-    let win = Math.floor(mines.bet * (1 + mines.revealed * 0.5));
-    userCoins = userCoins - mines.bet + win;
-    mines.bet = win;
-    document.getElementById("minesResult").innerText = `✨ Current Cashout: ${win}`;
-  }
-
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-  renderMines();
-}
-
-// ================= CRASH =================
-let crash = null;
-let crashInterval = null;
-
-function startCrash() {
-  const bet = Number(document.getElementById("crashBet").value);
-  if (!bet || bet < 1 || bet > userCoins) return;
-
-  crash = { bet, mult: 1, crashed: false };
-
-  document.getElementById("crashCashout").style.display = "block";
-
-  crashInterval = setInterval(() => {
-    if (Math.random() < 0.05) {
-      crash.crashed = true;
-      clearInterval(crashInterval);
-      document.getElementById("crashMultiplier").innerText = "💥 CRASH";
-      userCoins -= crash.bet;
-      db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-      document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-      return;
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchTerm = e.target.value;
+            renderPosts();
+        });
     }
 
-    crash.mult = (crash.mult + 0.05).toFixed(2);
-    document.getElementById("crashMultiplier").innerText = crash.mult + "x";
-  }, 200);
+    if (categorySelect) {
+        categorySelect.addEventListener('change', (e) => {
+            categoryFilter = e.target.value;
+            renderPosts();
+        });
+    }
+
+    if (sortSelect) {
+        sortSelect.addEventListener('change', (e) => {
+            sortBy = e.target.value;
+            renderPosts();
+        });
+    }
 }
 
-function cashoutCrash() {
-  if (!crash || crash.crashed) return;
+// Get Filtered Posts
+function getFilteredPosts() {
+    let filtered = [...allPosts];
 
-  clearInterval(crashInterval);
+    // Search filter
+    if (searchTerm) {
+        filtered = filtered.filter(post =>
+            post.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.content?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
 
-  const win = Math.floor(crash.bet * crash.mult);
-  userCoins = userCoins - crash.bet + win;
+    // Category filter
+    if (categoryFilter !== 'all') {
+        filtered = filtered.filter(post => post.category === categoryFilter);
+    }
 
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-  document.getElementById("crashMultiplier").innerText = `💰 ${win} Won`;
-  crash = null;
-}
-
-// ================= SHOP =================
-function buyItem(item, cost) {
-  if (userCoins < cost) return alert("Not enough coins!");
-
-  userCoins -= cost;
-  db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-
-  document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-
-  alert("Purchased " + item + "!");
-}
-
-function giftCoins() {
-  const to = document.getElementById("giftUsername").value;
-  const amt = Number(document.getElementById("giftAmount").value);
-  if (!to || !amt || amt < 1 || amt > userCoins) return;
-
-  db.collection("users").where("username","==",to).get().then(snap => {
-    if (snap.empty) return alert("User not found.");
-
-    const uid = snap.docs[0].id;
-    const userData = snap.docs[0].data();
-
-    db.collection("users").doc(uid).update({ coins: userData.coins + amt });
-    userCoins -= amt;
-    db.collection("users").doc(currentUser.uid).update({ coins: userCoins });
-
-    document.getElementById("coinDisplay").innerText = `🪙 ${userCoins} Coins`;
-    alert("Gift sent!");
-  });
-}
-
-// ================= MODERATION SYSTEM =================
-
-window.makeModerator = async function(uid) {
-  await db.collection("users").doc(uid).update({ role: "moderator" });
-  alert("User promoted to Moderator.");
-  loadUsers();
-};
-
-window.removeModerator = async function(uid) {
-  await db.collection("users").doc(uid).update({ role: "user" });
-  alert("Moderator removed.");
-  loadUsers();
-};
-
-window.banUser = async function(uid) {
-  await db.collection("users").doc(uid).update({ banned: true });
-  alert("User has been banned.");
-  loadUsers();
-};
-
-window.unbanUser = async function(uid) {
-  await db.collection("users").doc(uid).update({ banned: false });
-  alert("User has been unbanned.");
-  loadUsers();
-};
-
-// ================= DMS SYSTEM =================
-
-window.sendDM = async function(toUID, message) {
-  if (!currentUser) return alert("Not logged in.");
-
-  await db.collection("dms").add({
-    from: currentUser.uid,
-    to: toUID,
-    message,
-    timestamp: Date.now()
-  });
-
-  alert("DM sent.");
-};
-
-window.loadDMs = function() {
-  if (!currentUser) return;
-
-  db.collection("dms")
-    .where("to", "==", currentUser.uid)
-    .orderBy("timestamp", "desc")
-    .onSnapshot(snapshot => {
-      const box = document.getElementById("dmInbox");
-      if (!box) return;
-
-      box.innerHTML = "";
-
-      snapshot.forEach(doc => {
-        const dm = doc.data();
-        box.innerHTML += `
-          <div class="dm-item">
-            <strong>From:</strong> ${dm.from}<br>
-            ${dm.message}
-          </div>
-        `;
-      });
+    // Sort
+    filtered.sort((a, b) => {
+        if (sortBy === 'newest') {
+            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        } else if (sortBy === 'oldest') {
+            return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+        } else if (sortBy === 'popular') {
+            return (b.likes || 0) - (a.likes || 0);
+        }
+        return 0;
     });
-};
 
-// ================= GAME: SLOTS =================
+    return filtered;
+}
 
-window.playSlots = async function(bet) {
-  const ref = db.collection("users").doc(currentUser.uid);
-  const doc = await ref.get();
-  let coins = doc.data().coins || 0;
-  if (coins < bet) return alert("Not enough coins.");
+// Show New Post Modal
+function showNewPostModal() {
+    newPostModal.classList.remove('hidden');
+}
 
-  coins -= bet;
+// New Post Form
+newPostForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
 
-  const r1 = Math.floor(Math.random() * 5);
-  const r2 = Math.floor(Math.random() * 5);
-  const r3 = Math.floor(Math.random() * 5);
+    const title = document.getElementById('postTitle').value.trim();
+    const content = document.getElementById('postContent').value.trim();
+    const category = document.getElementById('postCategory').value;
 
-  let win = 0;
-  if (r1 === r2 && r2 === r3) win = bet * 5;
-  else if (r1 === r2 || r2 === r3 || r1 === r3) win = bet * 2;
+    if (!title || !content) return;
 
-  coins += win;
-  await ref.update({ coins });
-  loadCoins();
-
-  document.getElementById("slotsGame").innerHTML = `
-    <div>${r1} | ${r2} | ${r3}</div>
-    <div>${win > 0 ? `You won ${win} coins!` : "You lost!"}</div>
-  `;
-};
-
-// ================= GAME: DICE =================
-
-window.rollDice = async function(bet) {
-  const ref = db.collection("users").doc(currentUser.uid);
-  const doc = await ref.get();
-  let coins = doc.data().coins || 0;
-  if (coins < bet) return alert("Not enough coins.");
-
-  coins -= bet;
-
-  const player = Math.floor(Math.random() * 6) + 1;
-  const dealer = Math.floor(Math.random() * 6) + 1;
-
-  let result = "";
-
-  if (player > dealer) {
-    coins += bet * 2;
-    result = `You win! +${bet}`;
-  } else if (player === dealer) {
-    coins += bet;
-    result = "Tie! Bet returned.";
-  } else {
-    result = `You lost ${bet}`;
-  }
-
-  await ref.update({ coins });
-  loadCoins();
-
-  document.getElementById("diceGame").innerHTML = `
-    <div>You: ${player}</div>
-    <div>Dealer: ${dealer}</div>
-    <div>${result}</div>
-  `;
-};
-
-// ================= GAME: PLINKO =================
-
-window.playPlinko = async function(bet) {
-  const ref = db.collection("users").doc(currentUser.uid);
-  const doc = await ref.get();
-  let coins = doc.data().coins || 0;
-  if (coins < bet) return alert("Not enough coins.");
-
-  coins -= bet;
-
-  const slots = [0, 2, 5, 10, 5, 2, 0];
-  const resultIdx = Math.floor(Math.random() * slots.length);
-  const multiplier = slots[resultIdx];
-  const payout = bet * multiplier;
-
-  coins += payout;
-  await ref.update({ coins });
-  loadCoins();
-
-  document.getElementById("plinkoGame").innerHTML = `
-    <div>Ball landed in slot x${multiplier}</div>
-    <div>${payout > 0 ? `You won ${payout}!` : "No win."}</div>
-  `;
-};
-
-// ================= UPDATE SYSTEM =================
-
-window.postUpdate = async function(text) {
-  if (!currentUser) return alert("Not logged in.");
-
-  await db.collection("updates").add({
-    user: currentUser.uid,
-    text,
-    time: Date.now()
-  });
-
-  loadUpdates();
-};
-
-window.loadUpdates = function() {
-  const box = document.getElementById("updatesBox");
-  if (!box) return;
-
-  db.collection("updates")
-    .orderBy("time", "desc")
-    .onSnapshot(snapshot => {
-      box.innerHTML = "";
-      snapshot.forEach(doc => {
-        const u = doc.data();
-        box.innerHTML += `
-          <div class="update-item">
-            <strong>${u.user}</strong><br>
-            ${u.text}
-          </div>
-        `;
-      });
+    await db.collection('posts').add({
+        title: title,
+        content: content,
+        category: category,
+        author: currentUser.username || currentUser.email,
+        authorId: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        likes: 0,
+        replies: 0
     });
-};
 
-// ================= END OF FULL SYSTEM =================
-
-
-// ================= REALTIME ONLINE USERS =================
-
-window.trackOnline = function() {
-  if (!currentUser) return;
-
-  const ref = db.collection("online").doc(currentUser.uid);
-  ref.set({ lastActive: Date.now() });
-
-  setInterval(() => {
-    ref.update({ lastActive: Date.now() });
-  }, 30000);
-};
-
-window.loadOnlineUsers = function() {
-  const box = document.getElementById("onlineUsers");
-  if (!box) return;
-
-  db.collection("online").onSnapshot(snapshot => {
-    box.innerHTML = "";
-
-    snapshot.forEach(doc => {
-      const u = doc.data();
-      if (Date.now() - u.lastActive < 60000) {
-        box.innerHTML += `<div class="online-user">${doc.id}</div>`;
-      }
-    });
-  });
-};
-
-// ================= FRIEND SYSTEM =================
-
-window.sendFriendRequest = async function(uid) {
-  await db.collection("friend_requests").add({
-    from: currentUser.uid,
-    to: uid,
-    time: Date.now()
-  });
-  alert("Friend request sent.");
-};
-
-window.acceptFriend = async function(reqID, fromUID) {
-  await db.collection("friends").add({
-    users: [currentUser.uid, fromUID]
-  });
-  await db.collection("friend_requests").doc(reqID).delete();
-};
-
-window.loadFriendRequests = function() {
-  const box = document.getElementById("friendRequests");
-  if (!box) return;
-
-  db.collection("friend_requests")
-    .where("to", "==", currentUser.uid)
-    .onSnapshot(snapshot => {
-      box.innerHTML = "";
-      snapshot.forEach(doc => {
-        const r = doc.data();
-        box.innerHTML += `
-          <div class="request">
-            From: ${r.from}
-            <button onclick="acceptFriend('${doc.id}', '${r.from}')">Accept</button>
-          </div>
-        `;
-      });
-    });
-};
-
-// ================= LEADERBOARDS =================
-
-window.loadLeaderboard = function() {
-  const box = document.getElementById("leaderboard");
-  if (!box) return;
-
-  db.collection("users")
-    .orderBy("coins", "desc")
-    .limit(20)
-    .onSnapshot(snapshot => {
-      box.innerHTML = "";
-      snapshot.forEach(doc => {
-        const u = doc.data();
-        box.innerHTML += `
-          <div class="leader-item">
-            ${u.username || doc.id}: ${u.coins} coins
-          </div>`;
-      });
-    });
-};
-
-// ================= SETTINGS =================
-
-window.updateProfile = async function(username, bio) {
-  if (!currentUser) return;
-
-  await db.collection("users").doc(currentUser.uid).update({ username, bio });
-  alert("Profile updated!");
-};
-
-// ================= LOGOUT =================
-
-window.logout = function() {
-  auth.signOut().then(() => {
-    currentUser = null;
-    window.location.reload();
-  });
-};
-
-// ================= FINAL END =================
-
-
-// ================= SOUND EFFECTS =================
-const sfx = {
-  click: new Audio('sfx/click.mp3'),
-  win: new Audio('sfx/win.mp3'),
-  lose: new Audio('sfx/lose.mp3'),
-  coin: new Audio('sfx/coin.mp3'),
-  popup: new Audio('sfx/popup.mp3')
-};
-
-document.body.addEventListener("click", ()=> sfx.click.play().catch(()=>{}));
-
-function playSFX(name){
-  if(sfx[name]) sfx[name].play().catch(()=>{});
-}
-
-// ================= ANIMATIONS =================
-
-function animatePop(el){
-  el.style.transform = "scale(1.15)";
-  setTimeout(()=> el.style.transform = "scale(1)", 150);
-}
-
-function flashGold(el){
-  el.style.boxShadow = "0 0 15px gold";
-  setTimeout(()=> el.style.boxShadow = "none", 300);
-}
-
-// Add animation to coin update
-function updateCoinDisplay(amount){
-  const cd = document.getElementById("coinDisplay");
-  cd.innerText = `🪙 ${amount} Coins`;
-  animatePop(cd);
-  playSFX("coin");
-}
-
-// ================= ACHIEVEMENTS =================
-
-const achievementList = {
-  firstLogin: "Logged in for the first time!",
-  firstPost: "Created your first post!",
-  rich100: "Earned 100+ coins!",
-  gambler200: "Won 200 coins from games!",
-  chatter: "Sent 10 DMs!",
-  highRoller: "Bet 100 coins in a single game!",
-  eggHunter: "Found the secret easter egg!"
-};
-
-async function unlockAchievement(key){
-  if(!currentUser) return;
-
-  const ref = db.collection("users").doc(currentUser.uid);
-  const snap = await ref.get();
-  const data = snap.data();
-
-  if(data.achievements && data.achievements.includes(key)) return;
-
-  await ref.update({
-    achievements: firebase.firestore.FieldValue.arrayUnion(key)
-  });
-
-  showAchievementPopup(achievementList[key]);
-}
-
-function showAchievementPopup(text){
-  playSFX("popup");
-
-  const box = document.createElement("div");
-  box.className = "achievementPopup";
-  box.innerHTML = `🏆 ${text}`;
-  document.body.appendChild(box);
-
-  setTimeout(()=> box.style.opacity = 1, 50);
-  setTimeout(()=> box.style.opacity = 0, 3000);
-  setTimeout(()=> box.remove(), 3500);
-}
-
-// Trigger achievements automatically
-auth.onAuthStateChanged(user => {
-  if(user) unlockAchievement("firstLogin");
+    newPostModal.classList.add('hidden');
+    document.getElementById('postTitle').value = '';
+    document.getElementById('postContent').value = '';
+    document.getElementById('postCategory').value = 'general';
 });
 
-window.postMessageAchievement = function(){ unlockAchievement("firstPost"); };
-window.gain100CoinsAchievement = function(){ unlockAchievement("rich100"); };
-window.bigBetAchievement = function(){ unlockAchievement("highRoller"); };
-window.dmAchievement = function(){ unlockAchievement("chatter"); };
-
-// ================= EASTER EGGS =================
-
-// Secret console command
-typeSecret = "";
-document.addEventListener("keydown", e => {
-  typeSecret += e.key.toLowerCase();
-  if(typeSecret.includes("spaceisawesome")){
-    unlockAchievement("eggHunter");
-    alert("🚀 You found a secret easter egg!");
-    typeSecret = "";
-  }
+// Cancel Post
+cancelPost.addEventListener('click', () => {
+    newPostModal.classList.add('hidden');
+    document.getElementById('postTitle').value = '';
+    document.getElementById('postContent').value = '';
+    document.getElementById('postCategory').value = 'general';
 });
 
-// Hidden clickable star
-const starsDiv = document.getElementById("stars");
-starsDiv.addEventListener("click", ()=>{
-  if(Math.random() < 0.02){
-    unlockAchievement("eggHunter");
-    alert("⭐ You clicked the magical star!");
-  }
-});
+// Render Users
+function renderUsers() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <h2>Community Members</h2>
+            </div>
+            <div class="users-grid">
+                ${allUsers.map(user => `
+                    <div class="user-item">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                ${(user.username || user.email || 'U')[0].toUpperCase()}
+                            </div>
+                            <div class="user-details">
+                                <p>${user.username || user.email}</p>
+                                <p>${user.points || 0} points</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
 
-// ================= END EXTENSIONS =================
+// Render Messages
+function renderMessages() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                <h2>Messages</h2>
+            </div>
+            <div class="item-list">
+                ${allMessages.length > 0 ? allMessages.map(msg => `
+                    <div class="item-card">
+                        <p>${msg.content}</p>
+                        <p class="item-meta">From: ${msg.from}</p>
+                    </div>
+                `).join('') : '<p class="empty-state">No messages yet</p>'}
+            </div>
+        </div>
+    `;
+}
 
+// Render Suggestions
+function renderSuggestions() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                <h2>Suggestions</h2>
+            </div>
+            <div class="item-list">
+                ${allSuggestions.length > 0 ? allSuggestions.map(suggestion => `
+                    <div class="item-card">
+                        <h3>${suggestion.title}</h3>
+                        <p>${suggestion.content}</p>
+                        <p class="item-meta">Votes: ${suggestion.votes || 0}</p>
+                    </div>
+                `).join('') : '<p class="empty-state">No suggestions yet</p>'}
+            </div>
+        </div>
+    `;
+}
+
+// Render Updates
+function renderUpdates() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <h2>Platform Updates</h2>
+            </div>
+            <div class="item-list">
+                ${allUpdates.length > 0 ? allUpdates.map(update => `
+                    <div class="item-card">
+                        <h3>${update.title}</h3>
+                        <p>${update.content}</p>
+                    </div>
+                `).join('') : '<p class="empty-state">No updates yet</p>'}
+            </div>
+        </div>
+    `;
+}
+
+// Render Leaderboard
+function renderLeaderboard() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                    <path d="M4 22h16"/>
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                </svg>
+                <h2>Leaderboard</h2>
+            </div>
+            <div class="leaderboard-list">
+                ${allLeaderboard.length > 0 ? allLeaderboard.map((entry, index) => `
+                    <div class="leaderboard-item">
+                        <div class="leaderboard-left">
+                            <div class="rank-badge ${
+                                index === 0 ? 'rank-1' :
+                                index === 1 ? 'rank-2' :
+                                index === 2 ? 'rank-3' :
+                                'rank-other'
+                            }">
+                                ${index + 1}
+                            </div>
+                            <span>${entry.username}</span>
+                        </div>
+                        <div class="leaderboard-points">
+                            <svg viewBox="0 0 24 24" fill="currentColor" style="width: 1.25rem; height: 1.25rem; color: #fbbf24;">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            <span>${entry.points}</span>
+                        </div>
+                    </div>
+                `).join('') : '<p class="empty-state">No leaderboard data yet</p>'}
+            </div>
+        </div>
+    `;
+}
+
+// Render Plinko
+function renderPlinko() {
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <div class="content-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="8" width="18" height="4" rx="1"/>
+                    <path d="M12 8v13"/>
+                    <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+                    <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>
+                </svg>
+                <h2>Plinko Game</h2>
+            </div>
+            <div class="plinko-container">
+                <div class="plinko-board">
+                    <div class="plinko-emoji">🎰</div>
+                    <p class="plinko-title">Drop the ball and win points!</p>
+                    <div id="plinkoScore"></div>
+                    ${currentUser ? `
+                        <button class="btn-plinko" onclick="playPlinko()">Play Plinko</button>
+                    ` : `
+                        <p style="color: #9ca3af;">Login to play!</p>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Play Plinko
+function playPlinko() {
+    if (!currentUser) return;
+
+    const reward = Math.floor(Math.random() * 100) + 10;
+    const scoreDiv = document.getElementById('plinkoScore');
+    const playBtn = document.querySelector('.btn-plinko');
+
+    if (scoreDiv && playBtn) {
+        scoreDiv.innerHTML = `<div class="plinko-score">+${reward} Points!</div>`;
+        playBtn.disabled = true;
+
+        // Update Firestore
+        db.collection('leaderboard').doc(currentUser.uid).update({
+            points: firebase.firestore.FieldValue.increment(reward)
+        }).catch(() => {
+            // If document doesn't exist, create it
+            db.collection('leaderboard').doc(currentUser.uid).set({
+                username: currentUser.username || currentUser.email,
+                points: reward
+            });
+        });
+
+        db.collection('users').doc(currentUser.uid).update({
+            points: firebase.firestore.FieldValue.increment(reward)
+        });
+
+        setTimeout(() => {
+            scoreDiv.innerHTML = '';
+            playBtn.disabled = false;
+        }, 3000);
+    }
+}
+
+// Initialize
+createStars();
+renderHeader();
+renderView();
