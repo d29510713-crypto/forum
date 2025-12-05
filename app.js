@@ -544,17 +544,17 @@ function renderPosts() {
                 return `
                     <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : ''}">
                         ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">📌 PINNED</div>' : ''}
-                        <h3 class="post-title">${post.title}</h3>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem;">
+                                ${(post.author || 'U')[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 class="post-title" style="margin: 0; font-size: 1.125rem;">${post.author || 'Unknown'}</h3>
+                                <span class="post-category" style="font-size: 0.75rem;">${post.category}</span>
+                            </div>
+                        </div>
                         <p class="post-content">${post.content}</p>
                         <div class="post-meta">
-                            <span class="post-author">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="12" cy="7" r="4"/>
-                                </svg>
-                                ${post.author || 'Unknown'}
-                            </span>
-                            <span class="post-category">${post.category}</span>
                             <button onclick="likePost('${post.id}')" class="like-btn ${isLiked ? 'liked' : ''}" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#9ca3af'};">
                                 <svg viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -699,14 +699,13 @@ newPostForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
     const category = document.getElementById('postCategory').value;
 
-    if (!title || !content) return;
+    if (!content) return;
 
     await db.collection('posts').add({
-        title: title,
+        title: '', // No longer used
         content: content,
         category: category,
         author: currentUser.username || currentUser.email,
@@ -718,7 +717,6 @@ newPostForm.addEventListener('submit', async (e) => {
     });
 
     newPostModal.classList.add('hidden');
-    document.getElementById('postTitle').value = '';
     document.getElementById('postContent').value = '';
     document.getElementById('postCategory').value = 'general';
 });
@@ -726,7 +724,6 @@ newPostForm.addEventListener('submit', async (e) => {
 // Cancel Post
 cancelPost.addEventListener('click', () => {
     newPostModal.classList.add('hidden');
-    document.getElementById('postTitle').value = '';
     document.getElementById('postContent').value = '';
     document.getElementById('postCategory').value = 'general';
 });
@@ -1207,53 +1204,214 @@ function renderPlinko() {
                 <h2>Plinko Game</h2>
             </div>
             <div class="plinko-container">
-                <div class="plinko-board">
-                    <div class="plinko-emoji">🎰</div>
-                    <p class="plinko-title">Drop the ball and win points!</p>
-                    <div id="plinkoScore"></div>
-                    ${currentUser ? `
-                        <button class="btn-plinko" onclick="playPlinko()">Play Plinko</button>
-                    ` : `
-                        <p style="color: #9ca3af;">Login to play!</p>
-                    `}
+                <div class="plinko-board-wrapper">
+                    <canvas id="plinkoCanvas" width="400" height="500"></canvas>
+                    <div id="plinkoResult" style="text-align: center; margin-top: 1rem; min-height: 3rem;"></div>
                 </div>
+                ${currentUser ? `
+                    <button class="btn-plinko" onclick="playPlinko()" id="plinkoBtn">Drop Ball</button>
+                ` : `
+                    <p style="color: #9ca3af; text-align: center; margin-top: 1rem;">Login to play!</p>
+                `}
             </div>
         </div>
     `;
+    
+    // Initialize Plinko board
+    if (currentUser) {
+        initPlinkoBoard();
+    }
 }
 
-// Play Plinko
+// Initialize Plinko Board
+function initPlinkoBoard() {
+    const canvas = document.getElementById('plinkoCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear canvas
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw pegs
+    const rows = 10;
+    const cols = 9;
+    const pegRadius = 4;
+    const startY = 50;
+    const spacing = 40;
+    
+    ctx.fillStyle = '#a855f7';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#a855f7';
+    
+    for (let row = 0; row < rows; row++) {
+        const numPegs = cols - (row % 2);
+        const offsetX = (row % 2) * (spacing / 2);
+        
+        for (let col = 0; col < numPegs; col++) {
+            const x = offsetX + (width / numPegs) * col + (width / numPegs / 2);
+            const y = startY + row * spacing;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, pegRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // Draw prize zones at bottom
+    const zones = [10, 20, 50, 100, 50, 20, 10];
+    const zoneWidth = width / zones.length;
+    const zoneY = height - 40;
+    
+    ctx.shadowBlur = 0;
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    
+    zones.forEach((prize, i) => {
+        const x = i * zoneWidth;
+        const color = prize === 100 ? '#fbbf24' : prize >= 50 ? '#a855f7' : '#8b5cf6';
+        
+        ctx.fillStyle = color;
+        ctx.fillRect(x, zoneY, zoneWidth - 2, 35);
+        
+        ctx.fillStyle = '#000';
+        ctx.fillText(prize, x + zoneWidth / 2, zoneY + 22);
+    });
+}
+
+// Play Plinko with animation
 function playPlinko() {
     if (!currentUser) return;
 
-    const reward = Math.floor(Math.random() * 100) + 10;
-    const scoreDiv = document.getElementById('plinkoScore');
-    const playBtn = document.querySelector('.btn-plinko');
-
-    if (scoreDiv && playBtn) {
-        scoreDiv.innerHTML = `<div class="plinko-score">+${reward} Points!</div>`;
-        playBtn.disabled = true;
-
-        // Update Firestore
-        db.collection('leaderboard').doc(currentUser.uid).update({
-            points: firebase.firestore.FieldValue.increment(reward)
-        }).catch(() => {
-            // If document doesn't exist, create it
-            db.collection('leaderboard').doc(currentUser.uid).set({
-                username: currentUser.username || currentUser.email,
-                points: reward
-            });
-        });
-
-        db.collection('users').doc(currentUser.uid).update({
-            points: firebase.firestore.FieldValue.increment(reward)
-        });
-
-        setTimeout(() => {
-            scoreDiv.innerHTML = '';
-            playBtn.disabled = false;
-        }, 3000);
+    const canvas = document.getElementById('plinkoCanvas');
+    const btn = document.getElementById('plinkoBtn');
+    const resultDiv = document.getElementById('plinkoResult');
+    
+    if (!canvas || !btn) return;
+    
+    btn.disabled = true;
+    btn.textContent = 'Dropping...';
+    resultDiv.innerHTML = '';
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Ball properties
+    let ballX = width / 2;
+    let ballY = 20;
+    const ballRadius = 8;
+    let velocityY = 0;
+    let velocityX = 0;
+    const gravity = 0.4;
+    
+    // Peg positions
+    const rows = 10;
+    const cols = 9;
+    const startY = 50;
+    const spacing = 40;
+    const pegRadius = 4;
+    const pegs = [];
+    
+    for (let row = 0; row < rows; row++) {
+        const numPegs = cols - (row % 2);
+        const offsetX = (row % 2) * (spacing / 2);
+        
+        for (let col = 0; col < numPegs; col++) {
+            const x = offsetX + (width / numPegs) * col + (width / numPegs / 2);
+            const y = startY + row * spacing;
+            pegs.push({ x, y });
+        }
     }
+    
+    // Prize zones
+    const zones = [10, 20, 50, 100, 50, 20, 10];
+    const zoneWidth = width / zones.length;
+    
+    function animate() {
+        // Redraw board
+        initPlinkoBoard();
+        
+        // Update ball physics
+        velocityY += gravity;
+        ballY += velocityY;
+        ballX += velocityX;
+        
+        // Friction
+        velocityX *= 0.98;
+        
+        // Check collision with pegs
+        pegs.forEach(peg => {
+            const dx = ballX - peg.x;
+            const dy = ballY - peg.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < ballRadius + pegRadius) {
+                // Bounce off peg
+                const angle = Math.atan2(dy, dx);
+                velocityX = Math.cos(angle) * 3;
+                velocityY = Math.abs(velocityY) * 0.7;
+                ballX = peg.x + Math.cos(angle) * (ballRadius + pegRadius + 1);
+                ballY = peg.y + Math.sin(angle) * (ballRadius + pegRadius + 1);
+            }
+        });
+        
+        // Wall collision
+        if (ballX - ballRadius < 0) {
+            ballX = ballRadius;
+            velocityX *= -0.5;
+        }
+        if (ballX + ballRadius > width) {
+            ballX = width - ballRadius;
+            velocityX *= -0.5;
+        }
+        
+        // Draw ball
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ec4899';
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Check if ball reached bottom
+        if (ballY + ballRadius >= height - 45) {
+            // Calculate which zone
+            const zoneIndex = Math.floor(ballX / zoneWidth);
+            const reward = zones[Math.max(0, Math.min(zoneIndex, zones.length - 1))];
+            
+            // Show result
+            resultDiv.innerHTML = `<div class="plinko-score">+${reward} Points!</div>`;
+            
+            // Update Firestore
+            db.collection('leaderboard').doc(currentUser.uid).update({
+                points: firebase.firestore.FieldValue.increment(reward)
+            }).catch(() => {
+                db.collection('leaderboard').doc(currentUser.uid).set({
+                    username: currentUser.username || currentUser.email,
+                    points: reward
+                });
+            });
+
+            db.collection('users').doc(currentUser.uid).update({
+                points: firebase.firestore.FieldValue.increment(reward)
+            });
+            
+            // Re-enable button
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = 'Drop Ball';
+                resultDiv.innerHTML = '';
+            }, 3000);
+        } else {
+            requestAnimationFrame(animate);
+        }
+    }
+    
+    animate();
 }
 
 // Initialize
