@@ -112,6 +112,16 @@ auth.onAuthStateChanged(async (user) => {
                 currentUser.role = 'owner';
             }
             
+            // Fix undefined username
+            if (!currentUser.username || currentUser.username === 'undefined') {
+                const newUsername = user.email.split('@')[0];
+                await db.collection('users').doc(user.uid).update({ username: newUsername });
+                currentUser.username = newUsername;
+                
+                // Update leaderboard too
+                await db.collection('leaderboard').doc(user.uid).update({ username: newUsername });
+            }
+            
             // Setup Firestore listeners after user is authenticated
             setupFirestoreListeners();
             
@@ -136,7 +146,7 @@ function setupFirestoreListeners() {
     unsubscribers.forEach(unsub => unsub());
     unsubscribers = [];
     
-    // Posts listener
+    // Posts listener - real-time updates
     const unsubPosts = db.collection('posts').onSnapshot(
         (snapshot) => {
             allPosts = [];
@@ -151,7 +161,7 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubPosts);
 
-    // Users listener
+    // Users listener - real-time updates
     const unsubUsers = db.collection('users').onSnapshot(
         (snapshot) => {
             allUsers = [];
@@ -166,7 +176,7 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubUsers);
 
-    // Messages listener
+    // Messages listener - real-time updates
     const unsubMessages = db.collection('messages').onSnapshot(
         (snapshot) => {
             allMessages = [];
@@ -181,7 +191,7 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubMessages);
 
-    // Suggestions listener
+    // Suggestions listener - real-time updates
     const unsubSuggestions = db.collection('suggestions').onSnapshot(
         (snapshot) => {
             allSuggestions = [];
@@ -196,8 +206,8 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubSuggestions);
 
-    // Updates listener
-    const unsubUpdates = db.collection('updates').onSnapshot(
+    // Updates listener - real-time updates, sorted newest first
+    const unsubUpdates = db.collection('updates').orderBy('createdAt', 'desc').onSnapshot(
         (snapshot) => {
             allUpdates = [];
             snapshot.forEach((doc) => {
@@ -211,7 +221,7 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubUpdates);
 
-    // Leaderboard listener
+    // Leaderboard listener - real-time updates
     const unsubLeaderboard = db.collection('leaderboard').orderBy('points', 'desc').onSnapshot(
         (snapshot) => {
             allLeaderboard = [];
@@ -226,9 +236,9 @@ function setupFirestoreListeners() {
     );
     unsubscribers.push(unsubLeaderboard);
 
-    // DMs listener (only if user is logged in)
+    // DMs listener - real-time updates (only if user is logged in)
     if (currentUser) {
-        const unsubDMs = db.collection('dms').onSnapshot(
+        const unsubDMs = db.collection('dms').orderBy('createdAt', 'asc').onSnapshot(
             (snapshot) => {
                 allDMs = [];
                 snapshot.forEach((doc) => {
@@ -494,8 +504,10 @@ function renderPosts() {
         <div class="posts-list">
             ${filteredPosts.length > 0 ? filteredPosts.map(post => {
                 const isLiked = currentUser && post.likedBy && post.likedBy.includes(currentUser.uid);
+                const isPinned = post.pinned || false;
                 return `
-                    <div class="post-card">
+                    <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : ''}">
+                        ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">📌 PINNED</div>' : ''}
                         <h3 class="post-title">${post.title}</h3>
                         <p class="post-content">${post.content}</p>
                         <div class="post-meta">
@@ -504,7 +516,7 @@ function renderPosts() {
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                                     <circle cx="12" cy="7" r="4"/>
                                 </svg>
-                                ${post.author}
+                                ${post.author || 'Unknown'}
                             </span>
                             <span class="post-category">${post.category}</span>
                             <button onclick="likePost('${post.id}')" class="like-btn ${isLiked ? 'liked' : ''}" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#9ca3af'};">
@@ -520,6 +532,9 @@ function renderPosts() {
                                 ${post.replies || 0}
                             </button>
                             ${isMod() ? `
+                                <button onclick="togglePinPost('${post.id}')" style="background: ${isPinned ? '#f59e0b' : '#6b7280'}; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
+                                    ${isPinned ? 'Unpin' : 'Pin'}
+                                </button>
                                 <button onclick="deletePost('${post.id}')" style="background: #dc2626; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
                                     Delete
                                 </button>
@@ -565,6 +580,19 @@ function renderPosts() {
     }
 }
 
+// Pin/Unpin Post
+async function togglePinPost(postId) {
+    if (!isMod()) return;
+    
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+    
+    await db.collection('posts').doc(postId).update({
+        pinned: !post.pinned,
+        pinnedAt: post.pinned ? null : firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
+
 // Get Filtered Posts
 function getFilteredPosts() {
     let filtered = [...allPosts];
@@ -582,8 +610,12 @@ function getFilteredPosts() {
         filtered = filtered.filter(post => post.category === categoryFilter);
     }
 
-    // Sort
-    filtered.sort((a, b) => {
+    // Separate pinned and unpinned posts
+    const pinnedPosts = filtered.filter(post => post.pinned);
+    const unpinnedPosts = filtered.filter(post => !post.pinned);
+
+    // Sort unpinned posts
+    unpinnedPosts.sort((a, b) => {
         if (sortBy === 'newest') {
             return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
         } else if (sortBy === 'oldest') {
@@ -594,7 +626,13 @@ function getFilteredPosts() {
         return 0;
     });
 
-    return filtered;
+    // Sort pinned posts by pinned date (newest pinned first)
+    pinnedPosts.sort((a, b) => {
+        return (b.pinnedAt?.seconds || 0) - (a.pinnedAt?.seconds || 0);
+    });
+
+    // Return pinned posts first, then unpinned
+    return [...pinnedPosts, ...unpinnedPosts];
 }
 
 // Show New Post Modal
@@ -836,7 +874,7 @@ function renderDMs() {
                 <div class="item-list">
                     ${Array.from(conversations.values()).map(conv => `
                         <div class="item-card" style="cursor: pointer;" onclick="openDM('${conv.userId}')">
-                            <h3>${conv.userName}</h3>
+                            <h3>${conv.userName || 'User'}</h3>
                             <p>${conv.lastMessage}</p>
                         </div>
                     `).join('')}
@@ -862,13 +900,13 @@ function renderDMs() {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
-                    <h2>Chat with ${selectedDMUser.username || selectedDMUser.email}</h2>
+                    <h2>Chat with ${selectedDMUser.username || selectedDMUser.email || 'User'}</h2>
                 </div>
-                <div style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem; padding: 1rem; background: rgba(30, 41, 59, 0.3); border-radius: 0.5rem;">
+                <div id="messagesContainer" style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem; padding: 1rem; background: rgba(30, 41, 59, 0.3); border-radius: 0.5rem;">
                     ${messages.map(msg => `
                         <div style="margin-bottom: 1rem; text-align: ${msg.from === currentUser.uid ? 'right' : 'left'};">
                             <div style="display: inline-block; max-width: 70%; background: ${msg.from === currentUser.uid ? '#8b5cf6' : '#475569'}; padding: 0.75rem; border-radius: 1rem; text-align: left;">
-                                <p style="font-size: 0.75rem; color: #d1d5db; margin-bottom: 0.25rem;">${msg.fromName}</p>
+                                <p style="font-size: 0.75rem; color: #d1d5db; margin-bottom: 0.25rem;">${msg.fromName || 'User'}</p>
                                 <p>${msg.message}</p>
                             </div>
                         </div>
@@ -885,10 +923,12 @@ function renderDMs() {
         `;
         
         // Auto scroll to bottom
-        const messageContainer = mainContent.querySelector('[style*="max-height: 400px"]');
-        if (messageContainer) {
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        }
+        setTimeout(() => {
+            const messageContainer = document.getElementById('messagesContainer');
+            if (messageContainer) {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+        }, 100);
         
         // Add enter key handler
         const dmInput = document.getElementById('dmInput');
@@ -898,6 +938,7 @@ function renderDMs() {
                     sendDM();
                 }
             });
+            dmInput.focus();
         }
     }
 }
