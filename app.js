@@ -29,7 +29,9 @@ let allSuggestions = [];
 let allUpdates = [];
 let allLeaderboard = [];
 let allDMs = [];
+let allComments = [];
 let selectedDMUser = null;
+let expandedComments = new Set(); // Track which posts have comments expanded
 
 // Filter States
 let searchTerm = '';
@@ -55,7 +57,7 @@ const starsContainer = document.getElementById('stars-container');
 
 // Initialize Stars Background
 function createStars() {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 150; i++) {
         const star = document.createElement('div');
         star.className = 'star';
         star.style.width = Math.random() * 3 + 'px';
@@ -252,6 +254,21 @@ function setupFirestoreListeners() {
         );
         unsubscribers.push(unsubDMs);
     }
+    
+    // Comments listener - real-time updates
+    const unsubComments = db.collection('comments').onSnapshot(
+        (snapshot) => {
+            allComments = [];
+            snapshot.forEach((doc) => {
+                allComments.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'posts') renderView();
+        },
+        (error) => {
+            console.log('Comments listener error:', error);
+        }
+    );
+    unsubscribers.push(unsubComments);
 }
 
 // Call this after user logs in
@@ -463,6 +480,23 @@ async function addComment(postId) {
     });
 }
 
+// Toggle Comments View
+function toggleComments(postId) {
+    if (expandedComments.has(postId)) {
+        expandedComments.delete(postId);
+    } else {
+        expandedComments.add(postId);
+    }
+    renderPosts();
+}
+
+// Get comments for a post
+function getCommentsForPost(postId) {
+    return allComments
+        .filter(comment => comment.postId === postId)
+        .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+}
+
 // Render Posts
 function renderPosts() {
     const filteredPosts = getFilteredPosts();
@@ -505,6 +539,8 @@ function renderPosts() {
             ${filteredPosts.length > 0 ? filteredPosts.map(post => {
                 const isLiked = currentUser && post.likedBy && post.likedBy.includes(currentUser.uid);
                 const isPinned = post.pinned || false;
+                const postComments = getCommentsForPost(post.id);
+                const commentsExpanded = expandedComments.has(post.id);
                 return `
                     <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : ''}">
                         ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">📌 PINNED</div>' : ''}
@@ -540,6 +576,24 @@ function renderPosts() {
                                 </button>
                             ` : ''}
                         </div>
+                        
+                        ${postComments.length > 0 ? `
+                            <div class="comments-section">
+                                <button onclick="toggleComments('${post.id}')" class="comments-toggle">
+                                    ${commentsExpanded ? '▼' : '▶'} ${postComments.length} Comment${postComments.length !== 1 ? 's' : ''}
+                                </button>
+                                ${commentsExpanded ? `
+                                    <div class="comments-list">
+                                        ${postComments.map(comment => `
+                                            <div class="comment-item">
+                                                <div class="comment-author">${comment.author || 'Unknown'}</div>
+                                                <div class="comment-content">${comment.content}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('') : `
