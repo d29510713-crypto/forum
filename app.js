@@ -319,66 +319,102 @@ function renderHeader() {
 // Show Auth Modal
 function showAuthModal(mode) {
     authMode = mode;
+    
+    const titleEl = document.getElementById('authTitle');
+    const usernameEl = document.getElementById('usernameInput');
+    const submitBtn = document.getElementById('authSubmitBtn');
+    const toggleBtn = document.getElementById('authToggle');
+    
     if (mode === 'login') {
-        authTitle.textContent = 'Login to Galaxy Forum';
-        usernameInput.classList.add('hidden');
-        authSubmitBtn.textContent = 'Login';
-        authToggle.textContent = 'Need an account? Register';
+        if (titleEl) titleEl.textContent = 'Login to Galaxy Forum';
+        if (usernameEl) usernameEl.classList.add('hidden');
+        if (submitBtn) submitBtn.textContent = 'Login';
+        if (toggleBtn) toggleBtn.textContent = 'Need an account? Register';
     } else {
-        authTitle.textContent = 'Join Galaxy Forum';
-        usernameInput.classList.remove('hidden');
-        authSubmitBtn.textContent = 'Register';
-        authToggle.textContent = 'Already have an account? Login';
+        if (titleEl) titleEl.textContent = 'Join Galaxy Forum';
+        if (usernameEl) usernameEl.classList.remove('hidden');
+        if (submitBtn) submitBtn.textContent = 'Register';
+        if (toggleBtn) toggleBtn.textContent = 'Already have an account? Login';
     }
-    authModal.classList.remove('hidden');
+    
+    if (authModal) authModal.classList.remove('hidden');
 }
 
 // Handle Auth Submit
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    const username = usernameInput.value.trim();
-
-    try {
-        if (authMode === 'login') {
-            await auth.signInWithEmailAndPassword(email, password);
-        } else {
-            const result = await auth.createUserWithEmailAndPassword(email, password);
-            await db.collection('users').doc(result.user.uid).set({
-                username: username,
-                email: email,
-                points: 0,
-                role: email === OWNER_EMAIL ? 'owner' : 'user',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                banned: false
-            });
-            await db.collection('leaderboard').doc(result.user.uid).set({
-                username: username,
-                points: 0
-            });
+if (authForm) {
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const emailEl = document.getElementById('emailInput');
+        const passwordEl = document.getElementById('passwordInput');
+        const usernameEl = document.getElementById('usernameInput');
+        
+        if (!emailEl || !passwordEl) {
+            console.error('Auth form elements not found');
+            return;
         }
-        authModal.classList.add('hidden');
-        emailInput.value = '';
-        passwordInput.value = '';
-        usernameInput.value = '';
-    } catch (error) {
-        alert(error.message);
-    }
-});
+        
+        const email = emailEl.value.trim();
+        const password = passwordEl.value.trim();
+        const username = usernameEl ? usernameEl.value.trim() : '';
+
+        if (!email || !password) {
+            alert('Please enter email and password');
+            return;
+        }
+
+        try {
+            if (authMode === 'login') {
+                await auth.signInWithEmailAndPassword(email, password);
+            } else {
+                if (!username) {
+                    alert('Please enter a username');
+                    return;
+                }
+                const result = await auth.createUserWithEmailAndPassword(email, password);
+                await db.collection('users').doc(result.user.uid).set({
+                    username: username,
+                    email: email,
+                    points: 0,
+                    role: email === OWNER_EMAIL ? 'owner' : 'user',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    banned: false
+                });
+                await db.collection('leaderboard').doc(result.user.uid).set({
+                    username: username,
+                    points: 0
+                });
+            }
+            authModal.classList.add('hidden');
+            emailEl.value = '';
+            passwordEl.value = '';
+            if (usernameEl) usernameEl.value = '';
+        } catch (error) {
+            console.error('Auth error:', error);
+            alert(error.message);
+        }
+    });
+}
 
 // Auth Toggle
-authToggle.addEventListener('click', () => {
-    showAuthModal(authMode === 'login' ? 'register' : 'login');
-});
+if (authToggle) {
+    authToggle.addEventListener('click', () => {
+        showAuthModal(authMode === 'login' ? 'register' : 'login');
+    });
+}
 
 // Auth Cancel
-authCancel.addEventListener('click', () => {
-    authModal.classList.add('hidden');
-    emailInput.value = '';
-    passwordInput.value = '';
-    usernameInput.value = '';
-});
+if (authCancel) {
+    authCancel.addEventListener('click', () => {
+        authModal.classList.add('hidden');
+        const emailEl = document.getElementById('emailInput');
+        const passwordEl = document.getElementById('passwordInput');
+        const usernameEl = document.getElementById('usernameInput');
+        if (emailEl) emailEl.value = '';
+        if (passwordEl) passwordEl.value = '';
+        if (usernameEl) usernameEl.value = '';
+    });
+}
 
 // Handle Logout
 function handleLogout() {
@@ -696,53 +732,70 @@ function getFilteredPosts() {
 // Show New Post Modal
 function showNewPostModal() {
     newPostModal.classList.remove('hidden');
+    // Reset form
+    setTimeout(() => {
+        const contentInput = document.getElementById('postContent');
+        const categoryInput = document.getElementById('postCategory');
+        if (contentInput) contentInput.value = '';
+        if (categoryInput) categoryInput.value = 'general';
+    }, 100);
 }
 
 // New Post Form
-newPostForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUser) return;
+if (newPostForm) {
+    newPostForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
 
-    const contentInput = document.getElementById('postContent');
-    const categoryInput = document.getElementById('postCategory');
-    
-    if (!contentInput || !categoryInput) return;
+        const contentInput = document.getElementById('postContent');
+        const categoryInput = document.getElementById('postCategory');
+        
+        if (!contentInput || !categoryInput) {
+            console.error('Post form elements not found');
+            return;
+        }
 
-    const content = contentInput.value.trim();
-    const category = categoryInput.value;
+        const content = contentInput.value.trim();
+        const category = categoryInput.value;
 
-    if (!content) return;
+        if (!content) {
+            alert('Please enter some content for your post');
+            return;
+        }
 
-    try {
-        await db.collection('posts').add({
-            title: '', // No longer used
-            content: content,
-            category: category,
-            author: currentUser.username || currentUser.email,
-            authorId: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            likes: 0,
-            replies: 0,
-            likedBy: []
-        });
+        try {
+            await db.collection('posts').add({
+                title: '', // No longer used
+                content: content,
+                category: category,
+                author: currentUser.username || currentUser.email,
+                authorId: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                likes: 0,
+                replies: 0,
+                likedBy: []
+            });
 
-        newPostModal.classList.add('hidden');
-        contentInput.value = '';
-        categoryInput.value = 'general';
-    } catch (error) {
-        console.error('Error creating post:', error);
-        alert('Error creating post. Please try again.');
-    }
-});
+            newPostModal.classList.add('hidden');
+            contentInput.value = '';
+            categoryInput.value = 'general';
+        } catch (error) {
+            console.error('Error creating post:', error);
+            alert('Error creating post. Please try again.');
+        }
+    });
+}
 
 // Cancel Post
-cancelPost.addEventListener('click', () => {
-    newPostModal.classList.add('hidden');
-    const contentInput = document.getElementById('postContent');
-    const categoryInput = document.getElementById('postCategory');
-    if (contentInput) contentInput.value = '';
-    if (categoryInput) categoryInput.value = 'general';
-});
+if (cancelPost) {
+    cancelPost.addEventListener('click', () => {
+        newPostModal.classList.add('hidden');
+        const contentInput = document.getElementById('postContent');
+        const categoryInput = document.getElementById('postCategory');
+        if (contentInput) contentInput.value = '';
+        if (categoryInput) categoryInput.value = 'general';
+    });
+}
 
 // Make Mod
 async function makeMod(userId, userEmail) {
