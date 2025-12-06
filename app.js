@@ -1,387 +1,4 @@
-// View User Profile - Enhanced with full profile page
-function viewUserProfile(userId) {
-    viewingProfile = userId;
-    currentView = 'profile';
-    
-    // Update navigation
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    renderProfile();
-}
-
-// Edit Own Bio
-async function editBio() {
-    if (!currentUser) return;
-    
-    const newBio = prompt('Enter your bio:', currentUser.bio || '');
-    if (newBio === null) return;
-    
-    try {
-        await db.collection('users').doc(currentUser.uid).update({
-            bio: newBio.trim()
-        });
-        currentUser.bio = newBio.trim();
-        renderProfile();
-    } catch (error) {
-        console.error('Error updating bio:', error);
-        alert('Error updating bio');
-    }
-}
-
-// Change Profile Picture (file upload)
-async function changeProfilePicture() {
-    if (!currentUser) return;
-    
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Image must be less than 5MB');
-            return;
-        }
-        
-        try {
-            // Show uploading message
-            alert('Uploading image...');
-            
-            // Upload to Firebase Storage
-            const storageRef = storage.ref();
-            const imageRef = storageRef.child(`profilePictures/${currentUser.uid}/${Date.now()}_${file.name}`);
-            
-            await imageRef.put(file);
-            const downloadURL = await imageRef.getDownloadURL();
-            
-            // Update user document
-            await db.collection('users').doc(currentUser.uid).update({
-                profilePicture: downloadURL
-            });
-            
-            currentUser.profilePicture = downloadURL;
-            alert('Profile picture updated!');
-            renderProfile();
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            alert('Error uploading image: ' + error.message);
-        }
-    };
-    
-    input.click();
-}
-
-// Get profile picture HTML
-function getProfilePictureHTML(user, size = '2.5rem') {
-    if (user.profilePicture) {
-        return `<img src="${user.profilePicture}" style="width: ${size}; height: ${size}; border-radius: 50%; object-fit: cover; box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);" alt="Profile">`;
-    } else {
-        return `<div style="width: ${size}; height: ${size}; background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: calc(${size} / 2); box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); font-weight: bold;">
-            ${(user.username || user.email || 'U')[0].toUpperCase()}
-        </div>`;
-    }
-}
-
-// Send Friend Request
-async function sendFriendRequest(userId) {
-    if (!currentUser || userId === currentUser.uid) return;
-    
-    const user = allUsers.find(u => u.id === userId);
-    if (!user) return;
-    
-    // Check if already friends
-    if (currentUser.friends && currentUser.friends.includes(userId)) {
-        alert('You are already friends!');
-        return;
-    }
-    
-    // Check if request already sent
-    const existingRequest = allFriendRequests.find(r => 
-        r.from === currentUser.uid && r.to === userId && r.status === 'pending'
-    );
-    
-    if (existingRequest) {
-        alert('Friend request already sent!');
-        return;
-    }
-    
-    try {
-        await db.collection('friendRequests').add({
-            from: currentUser.uid,
-            fromName: currentUser.username || currentUser.email,
-            to: userId,
-            toName: user.username || user.email,
-            status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        alert('Friend request sent!');
-        renderProfile();
-    } catch (error) {
-        console.error('Error sending friend request:', error);
-        alert('Error sending friend request');
-    }
-}
-
-// Accept Friend Request
-async function acceptFriendRequest(requestId, fromUserId) {
-    if (!currentUser) return;
-    
-    try {
-        // Update request status
-        await db.collection('friendRequests').doc(requestId).update({
-            status: 'accepted'
-        });
-        
-        // Add to friends list for both users
-        await db.collection('users').doc(currentUser.uid).update({
-            friends: firebase.firestore.FieldValue.arrayUnion(fromUserId)
-        });
-        
-        await db.collection('users').doc(fromUserId).update({
-            friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-        });
-        
-        alert('Friend request accepted!');
-        renderProfile();
-    } catch (error) {
-        console.error('Error accepting friend request:', error);
-        alert('Error accepting friend request');
-    }
-}
-
-// Reject Friend Request
-async function rejectFriendRequest(requestId) {
-    if (!currentUser) return;
-    
-    try {
-        await db.collection('friendRequests').doc(requestId).update({
-            status: 'rejected'
-        });
-        alert('Friend request rejected');
-        renderProfile();
-    } catch (error) {
-        console.error('Error rejecting friend request:', error);
-    }
-}
-
-// Remove Friend
-async function removeFriend(userId) {
-    if (!currentUser) return;
-    
-    if (!confirm('Remove this friend?')) return;
-    
-    try {
-        await db.collection('users').doc(currentUser.uid).update({
-            friends: firebase.firestore.FieldValue.arrayRemove(userId)
-        });
-        
-        await db.collection('users').doc(userId).update({
-            friends: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
-        });
-        
-        alert('Friend removed');
-        renderProfile();
-    } catch (error) {
-        console.error('Error removing friend:', error);
-    }
-}
-
-// Render Profile Page
-function renderProfile() {
-    if (!viewingProfile) {
-        viewingProfile = currentUser?.uid;
-    }
-    
-    const user = allUsers.find(u => u.id === viewingProfile);
-    if (!user) {
-        mainContent.innerHTML = '<div class="empty-state">User not found</div>';
-        return;
-    }
-    
-    const isOwnProfile = currentUser && currentUser.uid === viewingProfile;
-    const userPosts = allPosts.filter(p => p.authorId === viewingProfile);
-    const totalLikes = userPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
-    const isFriend = currentUser && currentUser.friends && currentUser.friends.includes(viewingProfile);
-    const pendingRequest = allFriendRequests.find(r => 
-        r.from === currentUser?.uid && r.to === viewingProfile && r.status === 'pending'
-    );
-    const receivedRequest = allFriendRequests.find(r => 
-        r.from === viewingProfile && r.to === currentUser?.uid && r.status === 'pending'
-    );
-    
-    // Get friend requests for own profile
-    const myPendingRequests = isOwnProfile ? allFriendRequests.filter(r => 
-        r.to === currentUser.uid && r.status === 'pending'
-    ) : [];
-    
-    // Get friends list
-    const friendsList = user.friends ? allUsers.filter(u => user.friends.includes(u.id)) : [];
-    
-    // Get followers (people who follow this user)
-    const followers = allUsers.filter(u => u.following && u.following.includes(viewingProfile));
-    const following = user.following ? allUsers.filter(u => user.following.includes(u.id)) : [];
-    const isFollowing = currentUser && currentUser.following && currentUser.following.includes(viewingProfile);
-    
-    mainContent.innerHTML = `
-        <div class="content-card">
-            <button onclick="viewingProfile = null; currentView = 'users'; renderUsers();" style="background: #475569; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; margin-bottom: 1rem;">
-                ← Back to Users
-            </button>
-            
-            <!-- Profile Header -->
-            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; align-items: start; flex-wrap: wrap;">
-                <div style="text-align: center;">
-                    ${getProfilePictureHTML(user, '8rem')}
-                    ${isOwnProfile ? `
-                        <button onclick="changeProfilePicture()" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem; margin-top: 1rem;">
-                            📷 Change Picture
-                        </button>
-                    ` : ''}
-                </div>
-                
-                <div style="flex: 1; min-width: 300px;">
-                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-                        <h2 style="font-size: 2rem; margin: 0;">${user.username || user.email}</h2>
-                        ${user.role === 'owner' ? '<span style="background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #000; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: bold;">👑 OWNER</span>' : ''}
-                        ${user.role === 'mod' ? '<span style="background: #3b82f6; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: bold;">🛡️ MOD</span>' : ''}
-                    </div>
-                    
-                    ${user.customTitle ? `<p style="font-size: 1rem; color: #fbbf24; font-style: italic; margin-bottom: 0.5rem;">${user.customTitle}</p>` : ''}
-                    ${user.badges && user.badges.length > 0 ? `<p style="font-size: 1.25rem; margin-bottom: 0.5rem;">${user.badges.join(' ')}</p>` : ''}
-                    
-                    <div style="display: flex; gap: 2rem; margin: 1rem 0; flex-wrap: wrap;">
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${userPosts.length}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Posts</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${friendsList.length}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Friends</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${followers.length}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Followers</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${following.length}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Following</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #fbbf24;">${user.points || 0}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Points</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${totalLikes}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">Likes</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Bio -->
-                    <div style="background: rgba(138, 43, 226, 0.1); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid rgba(138, 43, 226, 0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <h3 style="font-size: 1rem; color: #a855f7; margin: 0;">Bio</h3>
-                            ${isOwnProfile ? `
-                                <button onclick="editBio()" style="background: none; border: none; color: #a855f7; cursor: pointer; font-size: 0.875rem;">
-                                    ✏️ Edit
-                                </button>
-                            ` : ''}
-                        </div>
-                        <p style="color: #d1d5db; margin: 0;">${user.bio || 'No bio yet.'}</p>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    ${!isOwnProfile && currentUser ? `
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0;">
-                            ${receivedRequest ? `
-                                <button onclick="acceptFriendRequest('${receivedRequest.id}', '${viewingProfile}')" style="background: #10b981; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer; font-weight: bold;">
-                                    ✓ Accept Friend Request
-                                </button>
-                                <button onclick="rejectFriendRequest('${receivedRequest.id}')" style="background: #dc2626; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                    ✗ Reject
-                                </button>
-                            ` : isFriend ? `
-                                <button onclick="removeFriend('${viewingProfile}')" style="background: #6b7280; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                    ✓ Friends
-                                </button>
-                            ` : pendingRequest ? `
-                                <button disabled style="background: #6b7280; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; opacity: 0.5; cursor: not-allowed;">
-                                    Friend Request Sent
-                                </button>
-                            ` : `
-                                <button onclick="sendFriendRequest('${viewingProfile}')" style="background: #8b5cf6; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer; font-weight: bold;">
-                                    + Add Friend
-                                </button>
-                            `}
-                            <button onclick="toggleFollow('${viewingProfile}')" style="background: ${isFollowing ? '#10b981' : '#6b7280'}; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                ${isFollowing ? '✓ Following' : 'Follow'}
-                            </button>
-                            <button onclick="openDM('${viewingProfile}')" style="background: #ec4899; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                💬 Message
-                            </button>
-                        </div>
-                    ` : ''}
-                    
-                    ${isOwnProfile && myPendingRequests.length > 0 ? `
-                        <div style="background: rgba(138, 43, 226, 0.2); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid rgba(138, 43, 226, 0.4);">
-                            <h3 style="color: #fbbf24; margin-bottom: 0.75rem;">🔔 Friend Requests (${myPendingRequests.length})</h3>
-                            ${myPendingRequests.map(req => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0, 0, 0, 0.3); border-radius: 0.5rem; margin-bottom: 0.5rem;">
-                                    <span>${req.fromName}</span>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <button onclick="acceptFriendRequest('${req.id}', '${req.from}')" style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                            Accept
-                                        </button>
-                                        <button onclick="rejectFriendRequest('${req.id}')" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer;">
-                                            Reject
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Friends List -->
-                    ${friendsList.length > 0 ? `
-                        <div style="margin: 2rem 0;">
-                            <h3 style="color: #a855f7; margin-bottom: 1rem;">Friends (${friendsList.length})</h3>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
-                                ${friendsList.map(friend => `
-                                    <div onclick="viewUserProfile('${friend.id}')" style="background: rgba(138, 43, 226, 0.1); padding: 1rem; border-radius: 0.5rem; border: 1px solid rgba(138, 43, 226, 0.3); cursor: pointer; text-align: center; transition: all 0.3s;" onmouseover="this.style.background='rgba(138, 43, 226, 0.2)'" onmouseout="this.style.background='rgba(138, 43, 226, 0.1)'">
-                                        ${getProfilePictureHTML(friend, '3rem')}
-                                        <p style="margin-top: 0.5rem; font-size: 0.875rem;">${friend.username || friend.email}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <!-- User's Posts -->
-            <div style="margin-top: 2rem;">
-                <h3 style="color: #a855f7; margin-bottom: 1rem;">📝 Posts (${userPosts.length})</h3>
-                ${userPosts.length > 0 ? `
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        ${userPosts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 5).map(post => `
-                            <div class="post-card">
-                                <p class="post-content">${post.content}</p>
-                                <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: #9ca3af; margin-top: 0.5rem;">
-                                    <span>❤️ ${post.likes || 0}</span>
-                                    <span>💬 ${post.replies || 0}</span>
-                                    <span>${getTimeAgo(post.createdAt)}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : '<p style="color: #9ca3af; text-align: center; padding: 2rem;">No posts yet</p>'}
-            </div>
-        </div>
-    `;
-}// Firebase Configuration
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
     authDomain: "toasty-89f07.firebaseapp.com",
@@ -413,11 +30,9 @@ let allUpdates = [];
 let allLeaderboard = [];
 let allDMs = [];
 let allComments = [];
-let allFriendRequests = [];
 let selectedDMUser = null;
 let expandedComments = new Set(); // Track which posts have comments expanded
 let selectedPost = null; // For viewing full post details
-let viewingProfile = null; // For viewing user profiles
 
 // Filter States
 let searchTerm = '';
@@ -659,27 +274,6 @@ function setupFirestoreListeners() {
         }
     );
     unsubscribers.push(unsubComments);
-    
-    // Friend requests listener
-    if (currentUser) {
-        try {
-            const unsubFriendRequests = db.collection('friendRequests').onSnapshot(
-                (snapshot) => {
-                    allFriendRequests = [];
-                    snapshot.forEach((doc) => {
-                        allFriendRequests.push({ id: doc.id, ...doc.data() });
-                    });
-                    if (currentView === 'profile') renderView();
-                },
-                (error) => {
-                    console.log('Friend requests listener error:', error);
-                }
-            );
-            unsubscribers.push(unsubFriendRequests);
-        } catch (error) {
-            console.log('Could not setup friend requests listener:', error.message);
-        }
-    }
 }
 
 // Call this after user logs in
@@ -864,9 +458,6 @@ function renderView() {
             break;
         case 'dms':
             renderDMs();
-            break;
-        case 'profile':
-            renderProfile();
             break;
     }
 }
@@ -1179,42 +770,6 @@ function getCommentsForPost(postId) {
         .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
 }
 
-// Get time ago string
-function getTimeAgo(timestamp) {
-    if (!timestamp || !timestamp.seconds) return 'Just now';
-    
-    const now = Date.now();
-    const postTime = timestamp.seconds * 1000;
-    const diff = now - postTime;
-    
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    const weeks = Math.floor(days / 7);
-    const months = Math.floor(days / 30);
-    const years = Math.floor(days / 365);
-    
-    if (seconds < 60) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    if (weeks < 4) return `${weeks}w ago`;
-    if (months < 12) return `${months}mo ago`;
-    return `${years}y ago`;
-}
-
-// Get reaction counts for a post
-function getReactionCounts(post) {
-    if (!post || !post.reactions) return {};
-    
-    const counts = {};
-    Object.values(post.reactions).forEach(emoji => {
-        counts[emoji] = (counts[emoji] || 0) + 1;
-    });
-    return counts;
-}
-
 // Render Posts
 function renderPosts() {
     const filteredPosts = getFilteredPosts();
@@ -1276,8 +831,8 @@ function renderPosts() {
                             ${post.edited ? '<div style="display: inline-block; background: rgba(138, 43, 226, 0.3); color: #d8b4fe; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem;">✏️ Edited</div>' : ''}
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                            <div onclick="viewUserProfile('${post.authorId}')" style="cursor: pointer;">
-                                ${getProfilePictureHTML(allUsers.find(u => u.id === post.authorId) || {username: post.author}, '2.5rem')}
+                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem; cursor: pointer;" onclick="viewUserProfile('${post.authorId}')">
+                                ${(post.author || 'U')[0].toUpperCase()}
                             </div>
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1637,8 +1192,8 @@ function renderUsers() {
                     return `
                         <div class="user-item" style="${isBanned ? 'opacity: 0.5; border-color: #dc2626;' : ''}">
                             <div class="user-info">
-                                <div onclick="viewUserProfile('${user.id}')" style="cursor: pointer;">
-                                    ${getProfilePictureHTML(user, '3rem')}
+                                <div class="user-avatar" style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
+                                    ${(user.username || user.email || 'U')[0].toUpperCase()}
                                 </div>
                                 <div class="user-details">
                                     <p style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
