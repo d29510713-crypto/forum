@@ -1,4 +1,387 @@
-// Firebase Configuration
+// View User Profile - Enhanced with full profile page
+function viewUserProfile(userId) {
+    viewingProfile = userId;
+    currentView = 'profile';
+    
+    // Update navigation
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    
+    renderProfile();
+}
+
+// Edit Own Bio
+async function editBio() {
+    if (!currentUser) return;
+    
+    const newBio = prompt('Enter your bio:', currentUser.bio || '');
+    if (newBio === null) return;
+    
+    try {
+        await db.collection('users').doc(currentUser.uid).update({
+            bio: newBio.trim()
+        });
+        currentUser.bio = newBio.trim();
+        renderProfile();
+    } catch (error) {
+        console.error('Error updating bio:', error);
+        alert('Error updating bio');
+    }
+}
+
+// Change Profile Picture (file upload)
+async function changeProfilePicture() {
+    if (!currentUser) return;
+    
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image must be less than 5MB');
+            return;
+        }
+        
+        try {
+            // Show uploading message
+            alert('Uploading image...');
+            
+            // Upload to Firebase Storage
+            const storageRef = storage.ref();
+            const imageRef = storageRef.child(`profilePictures/${currentUser.uid}/${Date.now()}_${file.name}`);
+            
+            await imageRef.put(file);
+            const downloadURL = await imageRef.getDownloadURL();
+            
+            // Update user document
+            await db.collection('users').doc(currentUser.uid).update({
+                profilePicture: downloadURL
+            });
+            
+            currentUser.profilePicture = downloadURL;
+            alert('Profile picture updated!');
+            renderProfile();
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            alert('Error uploading image: ' + error.message);
+        }
+    };
+    
+    input.click();
+}
+
+// Get profile picture HTML
+function getProfilePictureHTML(user, size = '2.5rem') {
+    if (user.profilePicture) {
+        return `<img src="${user.profilePicture}" style="width: ${size}; height: ${size}; border-radius: 50%; object-fit: cover; box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);" alt="Profile">`;
+    } else {
+        return `<div style="width: ${size}; height: ${size}; background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: calc(${size} / 2); box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); font-weight: bold;">
+            ${(user.username || user.email || 'U')[0].toUpperCase()}
+        </div>`;
+    }
+}
+
+// Send Friend Request
+async function sendFriendRequest(userId) {
+    if (!currentUser || userId === currentUser.uid) return;
+    
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    
+    // Check if already friends
+    if (currentUser.friends && currentUser.friends.includes(userId)) {
+        alert('You are already friends!');
+        return;
+    }
+    
+    // Check if request already sent
+    const existingRequest = allFriendRequests.find(r => 
+        r.from === currentUser.uid && r.to === userId && r.status === 'pending'
+    );
+    
+    if (existingRequest) {
+        alert('Friend request already sent!');
+        return;
+    }
+    
+    try {
+        await db.collection('friendRequests').add({
+            from: currentUser.uid,
+            fromName: currentUser.username || currentUser.email,
+            to: userId,
+            toName: user.username || user.email,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('Friend request sent!');
+        renderProfile();
+    } catch (error) {
+        console.error('Error sending friend request:', error);
+        alert('Error sending friend request');
+    }
+}
+
+// Accept Friend Request
+async function acceptFriendRequest(requestId, fromUserId) {
+    if (!currentUser) return;
+    
+    try {
+        // Update request status
+        await db.collection('friendRequests').doc(requestId).update({
+            status: 'accepted'
+        });
+        
+        // Add to friends list for both users
+        await db.collection('users').doc(currentUser.uid).update({
+            friends: firebase.firestore.FieldValue.arrayUnion(fromUserId)
+        });
+        
+        await db.collection('users').doc(fromUserId).update({
+            friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+        });
+        
+        alert('Friend request accepted!');
+        renderProfile();
+    } catch (error) {
+        console.error('Error accepting friend request:', error);
+        alert('Error accepting friend request');
+    }
+}
+
+// Reject Friend Request
+async function rejectFriendRequest(requestId) {
+    if (!currentUser) return;
+    
+    try {
+        await db.collection('friendRequests').doc(requestId).update({
+            status: 'rejected'
+        });
+        alert('Friend request rejected');
+        renderProfile();
+    } catch (error) {
+        console.error('Error rejecting friend request:', error);
+    }
+}
+
+// Remove Friend
+async function removeFriend(userId) {
+    if (!currentUser) return;
+    
+    if (!confirm('Remove this friend?')) return;
+    
+    try {
+        await db.collection('users').doc(currentUser.uid).update({
+            friends: firebase.firestore.FieldValue.arrayRemove(userId)
+        });
+        
+        await db.collection('users').doc(userId).update({
+            friends: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+        });
+        
+        alert('Friend removed');
+        renderProfile();
+    } catch (error) {
+        console.error('Error removing friend:', error);
+    }
+}
+
+// Render Profile Page
+function renderProfile() {
+    if (!viewingProfile) {
+        viewingProfile = currentUser?.uid;
+    }
+    
+    const user = allUsers.find(u => u.id === viewingProfile);
+    if (!user) {
+        mainContent.innerHTML = '<div class="empty-state">User not found</div>';
+        return;
+    }
+    
+    const isOwnProfile = currentUser && currentUser.uid === viewingProfile;
+    const userPosts = allPosts.filter(p => p.authorId === viewingProfile);
+    const totalLikes = userPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+    const isFriend = currentUser && currentUser.friends && currentUser.friends.includes(viewingProfile);
+    const pendingRequest = allFriendRequests.find(r => 
+        r.from === currentUser?.uid && r.to === viewingProfile && r.status === 'pending'
+    );
+    const receivedRequest = allFriendRequests.find(r => 
+        r.from === viewingProfile && r.to === currentUser?.uid && r.status === 'pending'
+    );
+    
+    // Get friend requests for own profile
+    const myPendingRequests = isOwnProfile ? allFriendRequests.filter(r => 
+        r.to === currentUser.uid && r.status === 'pending'
+    ) : [];
+    
+    // Get friends list
+    const friendsList = user.friends ? allUsers.filter(u => user.friends.includes(u.id)) : [];
+    
+    // Get followers (people who follow this user)
+    const followers = allUsers.filter(u => u.following && u.following.includes(viewingProfile));
+    const following = user.following ? allUsers.filter(u => user.following.includes(u.id)) : [];
+    const isFollowing = currentUser && currentUser.following && currentUser.following.includes(viewingProfile);
+    
+    mainContent.innerHTML = `
+        <div class="content-card">
+            <button onclick="viewingProfile = null; currentView = 'users'; renderUsers();" style="background: #475569; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; margin-bottom: 1rem;">
+                ← Back to Users
+            </button>
+            
+            <!-- Profile Header -->
+            <div style="display: flex; gap: 2rem; margin-bottom: 2rem; align-items: start; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    ${getProfilePictureHTML(user, '8rem')}
+                    ${isOwnProfile ? `
+                        <button onclick="changeProfilePicture()" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem; margin-top: 1rem;">
+                            📷 Change Picture
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div style="flex: 1; min-width: 300px;">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                        <h2 style="font-size: 2rem; margin: 0;">${user.username || user.email}</h2>
+                        ${user.role === 'owner' ? '<span style="background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #000; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: bold;">👑 OWNER</span>' : ''}
+                        ${user.role === 'mod' ? '<span style="background: #3b82f6; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: bold;">🛡️ MOD</span>' : ''}
+                    </div>
+                    
+                    ${user.customTitle ? `<p style="font-size: 1rem; color: #fbbf24; font-style: italic; margin-bottom: 0.5rem;">${user.customTitle}</p>` : ''}
+                    ${user.badges && user.badges.length > 0 ? `<p style="font-size: 1.25rem; margin-bottom: 0.5rem;">${user.badges.join(' ')}</p>` : ''}
+                    
+                    <div style="display: flex; gap: 2rem; margin: 1rem 0; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${userPosts.length}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Posts</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${friendsList.length}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Friends</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${followers.length}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Followers</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;">${following.length}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Following</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #fbbf24;">${user.points || 0}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Points</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${totalLikes}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">Likes</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bio -->
+                    <div style="background: rgba(138, 43, 226, 0.1); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid rgba(138, 43, 226, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h3 style="font-size: 1rem; color: #a855f7; margin: 0;">Bio</h3>
+                            ${isOwnProfile ? `
+                                <button onclick="editBio()" style="background: none; border: none; color: #a855f7; cursor: pointer; font-size: 0.875rem;">
+                                    ✏️ Edit
+                                </button>
+                            ` : ''}
+                        </div>
+                        <p style="color: #d1d5db; margin: 0;">${user.bio || 'No bio yet.'}</p>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    ${!isOwnProfile && currentUser ? `
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0;">
+                            ${receivedRequest ? `
+                                <button onclick="acceptFriendRequest('${receivedRequest.id}', '${viewingProfile}')" style="background: #10b981; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer; font-weight: bold;">
+                                    ✓ Accept Friend Request
+                                </button>
+                                <button onclick="rejectFriendRequest('${receivedRequest.id}')" style="background: #dc2626; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                    ✗ Reject
+                                </button>
+                            ` : isFriend ? `
+                                <button onclick="removeFriend('${viewingProfile}')" style="background: #6b7280; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                    ✓ Friends
+                                </button>
+                            ` : pendingRequest ? `
+                                <button disabled style="background: #6b7280; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; opacity: 0.5; cursor: not-allowed;">
+                                    Friend Request Sent
+                                </button>
+                            ` : `
+                                <button onclick="sendFriendRequest('${viewingProfile}')" style="background: #8b5cf6; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer; font-weight: bold;">
+                                    + Add Friend
+                                </button>
+                            `}
+                            <button onclick="toggleFollow('${viewingProfile}')" style="background: ${isFollowing ? '#10b981' : '#6b7280'}; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                ${isFollowing ? '✓ Following' : 'Follow'}
+                            </button>
+                            <button onclick="openDM('${viewingProfile}')" style="background: #ec4899; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                💬 Message
+                            </button>
+                        </div>
+                    ` : ''}
+                    
+                    ${isOwnProfile && myPendingRequests.length > 0 ? `
+                        <div style="background: rgba(138, 43, 226, 0.2); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 1px solid rgba(138, 43, 226, 0.4);">
+                            <h3 style="color: #fbbf24; margin-bottom: 0.75rem;">🔔 Friend Requests (${myPendingRequests.length})</h3>
+                            ${myPendingRequests.map(req => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0, 0, 0, 0.3); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                                    <span>${req.fromName}</span>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button onclick="acceptFriendRequest('${req.id}', '${req.from}')" style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                            Accept
+                                        </button>
+                                        <button onclick="rejectFriendRequest('${req.id}')" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer;">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Friends List -->
+                    ${friendsList.length > 0 ? `
+                        <div style="margin: 2rem 0;">
+                            <h3 style="color: #a855f7; margin-bottom: 1rem;">Friends (${friendsList.length})</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                                ${friendsList.map(friend => `
+                                    <div onclick="viewUserProfile('${friend.id}')" style="background: rgba(138, 43, 226, 0.1); padding: 1rem; border-radius: 0.5rem; border: 1px solid rgba(138, 43, 226, 0.3); cursor: pointer; text-align: center; transition: all 0.3s;" onmouseover="this.style.background='rgba(138, 43, 226, 0.2)'" onmouseout="this.style.background='rgba(138, 43, 226, 0.1)'">
+                                        ${getProfilePictureHTML(friend, '3rem')}
+                                        <p style="margin-top: 0.5rem; font-size: 0.875rem;">${friend.username || friend.email}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <!-- User's Posts -->
+            <div style="margin-top: 2rem;">
+                <h3 style="color: #a855f7; margin-bottom: 1rem;">📝 Posts (${userPosts.length})</h3>
+                ${userPosts.length > 0 ? `
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        ${userPosts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 5).map(post => `
+                            <div class="post-card">
+                                <p class="post-content">${post.content}</p>
+                                <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: #9ca3af; margin-top: 0.5rem;">
+                                    <span>❤️ ${post.likes || 0}</span>
+                                    <span>💬 ${post.replies || 0}</span>
+                                    <span>${getTimeAgo(post.createdAt)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p style="color: #9ca3af; text-align: center; padding: 2rem;">No posts yet</p>'}
+            </div>
+        </div>
+    `;
+}// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyA1FwweYw4MOz5My0aCfbRv-xrduCTl8z0",
     authDomain: "toasty-89f07.firebaseapp.com",
@@ -30,9 +413,11 @@ let allUpdates = [];
 let allLeaderboard = [];
 let allDMs = [];
 let allComments = [];
+let allFriendRequests = [];
 let selectedDMUser = null;
 let expandedComments = new Set(); // Track which posts have comments expanded
 let selectedPost = null; // For viewing full post details
+let viewingProfile = null; // For viewing user profiles
 
 // Filter States
 let searchTerm = '';
@@ -274,6 +659,27 @@ function setupFirestoreListeners() {
         }
     );
     unsubscribers.push(unsubComments);
+    
+    // Friend requests listener
+    if (currentUser) {
+        try {
+            const unsubFriendRequests = db.collection('friendRequests').onSnapshot(
+                (snapshot) => {
+                    allFriendRequests = [];
+                    snapshot.forEach((doc) => {
+                        allFriendRequests.push({ id: doc.id, ...doc.data() });
+                    });
+                    if (currentView === 'profile') renderView();
+                },
+                (error) => {
+                    console.log('Friend requests listener error:', error);
+                }
+            );
+            unsubscribers.push(unsubFriendRequests);
+        } catch (error) {
+            console.log('Could not setup friend requests listener:', error.message);
+        }
+    }
 }
 
 // Call this after user logs in
@@ -459,6 +865,9 @@ function renderView() {
         case 'dms':
             renderDMs();
             break;
+        case 'profile':
+            renderProfile();
+            break;
     }
 }
 
@@ -622,7 +1031,7 @@ async function deleteComment(commentId, postId) {
 async function giveBadge(userId) {
     if (!isOwner()) return;
     
-    const badges = ['Star Member', ' Contributor', ' Diamond User', ' VIP', 'Sore Loser'];
+    const badges = ['⭐ Star Member', '🔥 Hot Contributor', '💎 Diamond User', '👑 VIP', '🚀 Astronaut'];
     const badge = prompt(`Choose a badge:\n${badges.map((b, i) => `${i + 1}. ${b}`).join('\n')}`);
     
     if (!badge) return;
@@ -812,19 +1221,27 @@ function renderPosts() {
             ${filteredPosts.length > 0 ? filteredPosts.map(post => {
                 const isLiked = currentUser && post.likedBy && post.likedBy.includes(currentUser.uid);
                 const isPinned = post.pinned || false;
+                const isFeatured = post.featured || false;
+                const isLocked = post.locked || false;
                 const postComments = getCommentsForPost(post.id);
                 const commentsExpanded = expandedComments.has(post.id);
                 const timeAgo = getTimeAgo(post.createdAt);
                 const isSaved = currentUser && currentUser.savedPosts && currentUser.savedPosts.includes(post.id);
                 const isOwnPost = currentUser && post.authorId === currentUser.uid;
+                const reactionCounts = getReactionCounts(post);
+                const userReaction = currentUser && post.reactions && post.reactions[currentUser.uid];
                 
                 return `
-                    <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : ''}">
-                        ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">📌 PINNED</div>' : ''}
-                        ${post.edited ? '<div style="display: inline-block; background: rgba(138, 43, 226, 0.3); color: #d8b4fe; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; margin-bottom: 0.5rem;">✏️ Edited</div>' : ''}
+                    <div class="post-card" style="${isPinned ? 'border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1);' : isFeatured ? 'border: 2px solid #8b5cf6; background: rgba(138, 43, 226, 0.1);' : ''}">
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                            ${isPinned ? '<div style="display: inline-block; background: #fbbf24; color: #000; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold;">📌 PINNED</div>' : ''}
+                            ${isFeatured ? '<div style="display: inline-block; background: #8b5cf6; color: #fff; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold;">⭐ FEATURED</div>' : ''}
+                            ${isLocked ? '<div style="display: inline-block; background: #dc2626; color: #fff; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold;">🔒 LOCKED</div>' : ''}
+                            ${post.edited ? '<div style="display: inline-block; background: rgba(138, 43, 226, 0.3); color: #d8b4fe; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem;">✏️ Edited</div>' : ''}
+                        </div>
                         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem; cursor: pointer;" onclick="viewUserProfile('${post.authorId}')">
-                                ${(post.author || 'U')[0].toUpperCase()}
+                            <div onclick="viewUserProfile('${post.authorId}')" style="cursor: pointer;">
+                                ${getProfilePictureHTML(allUsers.find(u => u.id === post.authorId) || {username: post.author}, '2.5rem')}
                             </div>
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -835,6 +1252,18 @@ function renderPosts() {
                             </div>
                         </div>
                         <p class="post-content">${post.content}</p>
+                        
+                        <!-- Reactions -->
+                        ${Object.keys(reactionCounts).length > 0 ? `
+                            <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
+                                ${Object.entries(reactionCounts).map(([emoji, count]) => `
+                                    <span style="background: rgba(138, 43, 226, 0.2); padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.875rem; border: 1px solid rgba(138, 43, 226, 0.3);">
+                                        ${emoji} ${count}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
                         <div class="post-meta">
                             <button onclick="likePost('${post.id}')" class="like-btn ${isLiked ? 'liked' : ''}" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#9ca3af'}; transition: all 0.3s;" title="Like">
                                 <svg viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
@@ -842,13 +1271,28 @@ function renderPosts() {
                                 </svg>
                                 ${post.likes || 0}
                             </button>
-                            <button onclick="addComment('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: #9ca3af; transition: all 0.3s;" title="Comment">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                </svg>
-                                ${post.replies || 0}
-                            </button>
+                            ${!isLocked ? `
+                                <button onclick="addComment('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: #9ca3af; transition: all 0.3s;" title="Comment">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    ${post.replies || 0}
+                                </button>
+                            ` : `
+                                <span style="display: flex; align-items: center; gap: 0.25rem; color: #6b7280;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    ${post.replies || 0}
+                                </span>
+                            `}
                             ${currentUser ? `
+                                <!-- Quick Reactions -->
+                                <button onclick="reactToPost('${post.id}', '👍')" style="background: none; border: none; cursor: pointer; font-size: 1.125rem; ${userReaction === '👍' ? 'transform: scale(1.3);' : ''}" title="Like">👍</button>
+                                <button onclick="reactToPost('${post.id}', '❤️')" style="background: none; border: none; cursor: pointer; font-size: 1.125rem; ${userReaction === '❤️' ? 'transform: scale(1.3);' : ''}" title="Love">❤️</button>
+                                <button onclick="reactToPost('${post.id}', '😂')" style="background: none; border: none; cursor: pointer; font-size: 1.125rem; ${userReaction === '😂' ? 'transform: scale(1.3);' : ''}" title="Haha">😂</button>
+                                <button onclick="reactToPost('${post.id}', '🔥')" style="background: none; border: none; cursor: pointer; font-size: 1.125rem; ${userReaction === '🔥' ? 'transform: scale(1.3);' : ''}" title="Fire">🔥</button>
+                                
                                 <button onclick="toggleSavePost('${post.id}')" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isSaved ? '#fbbf24' : '#9ca3af'}; transition: all 0.3s;" title="${isSaved ? 'Unsave' : 'Save'}">
                                     <svg viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" style="width: 1rem; height: 1rem;">
                                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
@@ -870,6 +1314,12 @@ function renderPosts() {
                                 </button>
                             ` : ''}
                             ${isMod() ? `
+                                <button onclick="featurePost('${post.id}')" style="background: ${isFeatured ? '#8b5cf6' : '#6b7280'}; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
+                                    ${isFeatured ? 'Unfeature' : 'Feature'}
+                                </button>
+                                <button onclick="toggleLockPost('${post.id}')" style="background: ${isLocked ? '#f59e0b' : '#6b7280'}; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
+                                    ${isLocked ? 'Unlock' : 'Lock'}
+                                </button>
                                 <button onclick="togglePinPost('${post.id}')" style="background: ${isPinned ? '#f59e0b' : '#6b7280'}; border: none; cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 0.25rem; color: white; font-size: 0.875rem;">
                                     ${isPinned ? 'Unpin' : 'Pin'}
                                 </button>
@@ -1136,28 +1586,39 @@ function renderUsers() {
                 </svg>
                 <h2>Community Members</h2>
             </div>
+            ${isOwner() ? `
+                <button onclick="makeAnnouncement()" class="btn-primary" style="margin-bottom: 1rem;">
+                    📢 Make Announcement
+                </button>
+            ` : ''}
             <div class="users-grid">
                 ${allUsers.map(user => {
                     const roleBadge = user.role === 'owner' ? '👑' : user.role === 'mod' ? '🛡️' : '';
                     const isBanned = user.banned || false;
+                    const isMuted = user.muted || false;
                     const isFollowing = currentUser && currentUser.following && currentUser.following.includes(user.id);
                     
                     return `
                         <div class="user-item" style="${isBanned ? 'opacity: 0.5; border-color: #dc2626;' : ''}">
                             <div class="user-info">
-                                <div class="user-avatar" style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
-                                    ${(user.username || user.email || 'U')[0].toUpperCase()}
+                                <div onclick="viewUserProfile('${user.id}')" style="cursor: pointer;">
+                                    ${getProfilePictureHTML(user, '3rem')}
                                 </div>
                                 <div class="user-details">
-                                    <p style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">${roleBadge} ${user.username || user.email} ${isBanned ? '(Banned)' : ''}</p>
+                                    <p style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
+                                        ${roleBadge} ${user.username || user.email} 
+                                        ${isBanned ? '(Banned)' : ''} 
+                                        ${isMuted ? '🔇' : ''}
+                                    </p>
+                                    ${user.customTitle ? `<p style="font-size: 0.75rem; color: #fbbf24; font-style: italic;">${user.customTitle}</p>` : ''}
                                     <p>${user.points || 0} points</p>
-                                    ${user.badges ? `<p style="font-size: 0.75rem; color: #fbbf24;">${user.badges.join(' ')}</p>` : ''}
+                                    ${user.badges && user.badges.length > 0 ? `<p style="font-size: 0.875rem; margin-top: 0.25rem;">${user.badges.join(' ')}</p>` : ''}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 ${currentUser && currentUser.uid !== user.id ? `
                                     <button onclick="toggleFollow('${user.id}')" class="action-btn" style="background: ${isFollowing ? '#10b981' : '#6b7280'}; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
-                                        ${isFollowing ? 'Following' : 'Follow'}
+                                        ${isFollowing ? '✓ Following' : 'Follow'}
                                     </button>
                                 ` : ''}
                                 ${isOwner() && user.role !== 'mod' && user.email !== OWNER_EMAIL ? `
@@ -1180,6 +1641,15 @@ function renderUsers() {
                                             Unban
                                         </button>
                                     `}
+                                    ${!isMuted ? `
+                                        <button onclick="muteUser('${user.id}')" class="action-btn" style="background: #6b7280; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Mute
+                                        </button>
+                                    ` : `
+                                        <button onclick="unmuteUser('${user.id}')" class="action-btn" style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Unmute
+                                        </button>
+                                    `}
                                     <button onclick="awardPoints('${user.id}')" class="action-btn" style="background: #fbbf24; color: #000; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
                                         Award Points
                                     </button>
@@ -1187,6 +1657,14 @@ function renderUsers() {
                                 ${isOwner() && user.email !== OWNER_EMAIL ? `
                                     <button onclick="giveBadge('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
                                         Give Badge
+                                    </button>
+                                    ${user.badges && user.badges.length > 0 ? `
+                                        <button onclick="removeBadge('${user.id}')" class="action-btn" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Remove Badge
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="setUserTitle('${user.id}')" class="action-btn" style="background: #ec4899; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Set Title
                                     </button>
                                 ` : ''}
                                 ${currentUser && currentUser.uid !== user.id ? `
@@ -1671,12 +2149,13 @@ function playPlinko() {
     const height = canvas.height;
     
     // Ball properties
-    let ballX = width / 2;
+    let ballX = width / 2 + (Math.random() - 0.5) * 20; // Random start position
     let ballY = 20;
     const ballRadius = 8;
     let velocityY = 0;
     let velocityX = 0;
-    const gravity = 0.4;
+    const gravity = 0.5;
+    const bounce = 0.6;
     
     // Peg positions
     const rows = 10;
@@ -1701,6 +2180,8 @@ function playPlinko() {
     const zones = [10, 20, 50, 100, 50, 20, 10];
     const zoneWidth = width / zones.length;
     
+    let lastCollision = 0;
+    
     function animate() {
         // Redraw board
         initPlinkoBoard();
@@ -1710,33 +2191,47 @@ function playPlinko() {
         ballY += velocityY;
         ballX += velocityX;
         
-        // Friction
-        velocityX *= 0.98;
+        // Apply air resistance
+        velocityX *= 0.99;
         
         // Check collision with pegs
+        const now = Date.now();
         pegs.forEach(peg => {
             const dx = ballX - peg.x;
             const dy = ballY - peg.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < ballRadius + pegRadius) {
-                // Bounce off peg
+            if (distance < ballRadius + pegRadius && now - lastCollision > 50) {
+                lastCollision = now;
+                
+                // Calculate bounce angle
                 const angle = Math.atan2(dy, dx);
-                velocityX = Math.cos(angle) * 3;
-                velocityY = Math.abs(velocityY) * 0.7;
-                ballX = peg.x + Math.cos(angle) * (ballRadius + pegRadius + 1);
-                ballY = peg.y + Math.sin(angle) * (ballRadius + pegRadius + 1);
+                
+                // Separate the ball from the peg
+                const overlap = (ballRadius + pegRadius) - distance;
+                ballX += Math.cos(angle) * overlap;
+                ballY += Math.sin(angle) * overlap;
+                
+                // Bounce with randomness
+                const bounceAngle = angle + (Math.random() - 0.5) * 0.5;
+                const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY) * bounce;
+                
+                velocityX = Math.cos(bounceAngle) * speed * 1.2;
+                velocityY = Math.abs(Math.sin(bounceAngle) * speed * 0.8);
+                
+                // Add random horizontal push
+                velocityX += (Math.random() - 0.5) * 2;
             }
         });
         
         // Wall collision
         if (ballX - ballRadius < 0) {
             ballX = ballRadius;
-            velocityX *= -0.5;
+            velocityX = Math.abs(velocityX) * bounce;
         }
         if (ballX + ballRadius > width) {
             ballX = width - ballRadius;
-            velocityX *= -0.5;
+            velocityX = -Math.abs(velocityX) * bounce;
         }
         
         // Draw ball
@@ -1749,36 +2244,44 @@ function playPlinko() {
         
         // Check if ball reached bottom
         if (ballY + ballRadius >= height - 45) {
-            // Calculate which zone
-            const zoneIndex = Math.floor(ballX / zoneWidth);
-            const reward = zones[Math.max(0, Math.min(zoneIndex, zones.length - 1))];
+            velocityY = 0;
+            velocityX *= 0.9;
+            ballY = height - 45 - ballRadius;
             
-            // Show result
-            resultDiv.innerHTML = `<div class="plinko-score">+${reward} Points!</div>`;
-            
-            // Update Firestore
-            db.collection('leaderboard').doc(currentUser.uid).update({
-                points: firebase.firestore.FieldValue.increment(reward)
-            }).catch(() => {
-                db.collection('leaderboard').doc(currentUser.uid).set({
-                    username: currentUser.username || currentUser.email,
-                    points: reward
+            // If ball has settled (very low velocity)
+            if (Math.abs(velocityX) < 0.5 && Math.abs(velocityY) < 0.5) {
+                // Calculate which zone
+                const zoneIndex = Math.floor(ballX / zoneWidth);
+                const reward = zones[Math.max(0, Math.min(zoneIndex, zones.length - 1))];
+                
+                // Show result
+                resultDiv.innerHTML = `<div class="plinko-score">+${reward} Points!</div>`;
+                
+                // Update Firestore
+                db.collection('leaderboard').doc(currentUser.uid).update({
+                    points: firebase.firestore.FieldValue.increment(reward)
+                }).catch(() => {
+                    db.collection('leaderboard').doc(currentUser.uid).set({
+                        username: currentUser.username || currentUser.email,
+                        points: reward
+                    });
                 });
-            });
 
-            db.collection('users').doc(currentUser.uid).update({
-                points: firebase.firestore.FieldValue.increment(reward)
-            });
-            
-            // Re-enable button
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = 'Drop Ball';
-                resultDiv.innerHTML = '';
-            }, 3000);
-        } else {
-            requestAnimationFrame(animate);
+                db.collection('users').doc(currentUser.uid).update({
+                    points: firebase.firestore.FieldValue.increment(reward)
+                });
+                
+                // Re-enable button
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Drop Ball';
+                    resultDiv.innerHTML = '';
+                }, 3000);
+                return;
+            }
         }
+        
+        requestAnimationFrame(animate);
     }
     
     animate();
