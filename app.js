@@ -1,88 +1,58 @@
-// View User Profile - Enhanced with full profile page
+// View User Profile - Simplified without profile pictures
 function viewUserProfile(userId) {
-    viewingProfile = userId;
-    currentView = 'profile';
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
     
-    // Update navigation
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const userPosts = allPosts.filter(p => p.authorId === userId);
+    const totalLikes = userPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+    const totalComments = userPosts.reduce((sum, post) => sum + (post.replies || 0), 0);
     
-    renderProfile();
+    // Calculate user stats
+    const joinDate = user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : 'Unknown';
+    const daysSinceJoin = user.createdAt ? Math.floor((Date.now() - user.createdAt.seconds * 1000) / (1000 * 60 * 60 * 24)) : 0;
+    const avgLikesPerPost = userPosts.length > 0 ? (totalLikes / userPosts.length).toFixed(1) : 0;
+    
+    alert(`
+👤 USER PROFILE
+━━━━━━━━━━━━━━━━━━━━
+Name: ${user.username || user.email}
+${user.role === 'owner' ? '👑 OWNER' : user.role === 'mod' ? '🛡️ MODERATOR' : ''}
+${user.customTitle ? `"${user.customTitle}"` : ''}
+${user.badges ? user.badges.join(' ') : ''}
+
+📊 STATISTICS
+━━━━━━━━━━━━━━━━━━━━
+⭐ Points: ${user.points || 0}
+📝 Total Posts: ${userPosts.length}
+❤️ Total Likes: ${totalLikes}
+💬 Total Comments: ${totalComments}
+📈 Avg Likes/Post: ${avgLikesPerPost}
+📅 Member Since: ${joinDate}
+⏱️ Days Active: ${daysSinceJoin}
+
+${user.bio ? `\n💭 BIO\n━━━━━━━━━━━━━━━━━━━━\n${user.bio}` : ''}
+    `);
 }
 
-// Edit Own Bio
+// Edit Bio
 async function editBio() {
     if (!currentUser) return;
     
-    const newBio = prompt('Enter your bio:', currentUser.bio || '');
+    const newBio = prompt('Enter your bio (max 200 characters):', currentUser.bio || '');
     if (newBio === null) return;
+    
+    const trimmedBio = newBio.trim().substring(0, 200);
     
     try {
         await db.collection('users').doc(currentUser.uid).update({
-            bio: newBio.trim()
+            bio: trimmedBio
         });
-        currentUser.bio = newBio.trim();
-        renderProfile();
+        currentUser.bio = trimmedBio;
+        alert('Bio updated!');
     } catch (error) {
         console.error('Error updating bio:', error);
         alert('Error updating bio');
     }
-}
-
-// Change Profile Picture (base64 encoding - no storage needed)
-async function changeProfilePicture() {
-    if (!currentUser) return;
-    
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        // Check file size (max 1MB for base64)
-        if (file.size > 1 * 1024 * 1024) {
-            alert('Image must be less than 1MB');
-            return;
-        }
-        
-        try {
-            // Show uploading message
-            const reader = new FileReader();
-            
-            reader.onload = async (event) => {
-                const base64Image = event.target.result;
-                
-                try {
-                    // Update user document with base64 image
-                    await db.collection('users').doc(currentUser.uid).update({
-                        profilePicture: base64Image
-                    });
-                    
-                    currentUser.profilePicture = base64Image;
-                    alert('Profile picture updated!');
-                    renderProfile();
-                } catch (error) {
-                    console.error('Error updating profile picture:', error);
-                    alert('Error updating profile picture: ' + error.message);
-                }
-            };
-            
-            reader.onerror = () => {
-                alert('Error reading file');
-            };
-            
-            // Read file as base64
-            reader.readAsDataURL(file);
-            
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            alert('Error uploading image: ' + error.message);
-        }
-    };
-    
-    input.click();
 }
 
 // Get profile picture HTML
@@ -96,107 +66,241 @@ function getProfilePictureHTML(user, size = '2.5rem') {
     }
 }
 
-// Send Friend Request
-async function sendFriendRequest(userId) {
-    if (!currentUser || userId === currentUser.uid) return;
+// OWNER ONLY FUNCTIONS
+// =====================
+
+// View All Reports (Owner only)
+function viewReports() {
+    if (!isOwner()) return;
     
-    const user = allUsers.find(u => u.id === userId);
-    if (!user) return;
+    db.collection('reports').where('resolved', '==', false).get().then((snapshot) => {
+        const reports = [];
+        snapshot.forEach(doc => {
+            reports.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (reports.length === 0) {
+            alert('No pending reports');
+            return;
+        }
+        
+        const reportList = reports.map((r, i) => 
+            `${i + 1}. Post reported by ${r.reporterName}\n   Reason: ${r.reason}\n   Post ID: ${r.postId}`
+        ).join('\n\n');
+        
+        alert(`📋 PENDING REPORTS (${reports.length})\n━━━━━━━━━━━━━━━━━━━━\n\n${reportList}`);
+    });
+}
+
+// View Platform Statistics (Owner only)
+function viewPlatformStats() {
+    if (!isOwner()) return;
     
-    // Check if already friends
-    if (currentUser.friends && currentUser.friends.includes(userId)) {
-        alert('You are already friends!');
+    const totalUsers = allUsers.length;
+    const totalPosts = allPosts.length;
+    const totalComments = allComments.length;
+    const totalLikes = allPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
+    const mods = allUsers.filter(u => u.role === 'mod').length;
+    const bannedUsers = allUsers.filter(u => u.banned).length;
+    
+    // Get active users (posted in last 7 days)
+    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const activeUsers = allPosts.filter(p => p.createdAt && p.createdAt.seconds * 1000 > weekAgo)
+        .map(p => p.authorId)
+        .filter((v, i, a) => a.indexOf(v) === i).length;
+    
+    // Top contributor
+    const postCounts = {};
+    allPosts.forEach(p => {
+        postCounts[p.authorId] = (postCounts[p.authorId] || 0) + 1;
+    });
+    const topContributor = Object.entries(postCounts).sort((a, b) => b[1] - a[1])[0];
+    const topUser = topContributor ? allUsers.find(u => u.id === topContributor[0]) : null;
+    
+    alert(`
+📊 PLATFORM STATISTICS
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+👥 USERS
+━━━━━━━━━━━━━━━━━━━━━━━━
+Total Users: ${totalUsers}
+Active (7 days): ${activeUsers}
+Moderators: ${mods}
+Banned: ${bannedUsers}
+
+📝 CONTENT
+━━━━━━━━━━━━━━━━━━━━━━━━
+Total Posts: ${totalPosts}
+Total Comments: ${totalComments}
+Total Likes: ${totalLikes}
+Avg Likes/Post: ${totalPosts > 0 ? (totalLikes / totalPosts).toFixed(1) : 0}
+
+🏆 TOP CONTRIBUTOR
+━━━━━━━━━━━━━━━━━━━━━━━━
+${topUser ? `${topUser.username || topUser.email}: ${topContributor[1]} posts` : 'N/A'}
+    `);
+}
+
+// Mass Award Points (Owner only)
+async function massAwardPoints() {
+    if (!isOwner()) return;
+    
+    const points = prompt('Award how many points to ALL users?');
+    if (!points || isNaN(points)) return;
+    
+    const amount = parseInt(points);
+    
+    if (!confirm(`Award ${amount} points to ALL ${allUsers.length} users?`)) return;
+    
+    try {
+        const batch = db.batch();
+        
+        allUsers.forEach(user => {
+            const userRef = db.collection('users').doc(user.id);
+            batch.update(userRef, {
+                points: firebase.firestore.FieldValue.increment(amount)
+            });
+            
+            const leaderboardRef = db.collection('leaderboard').doc(user.id);
+            batch.update(leaderboardRef, {
+                points: firebase.firestore.FieldValue.increment(amount)
+            });
+        });
+        
+        await batch.commit();
+        alert(`Awarded ${amount} points to all users!`);
+    } catch (error) {
+        console.error('Error awarding points:', error);
+        alert('Error awarding points');
+    }
+}
+
+// Reset Leaderboard (Owner only)
+async function resetLeaderboard() {
+    if (!isOwner()) return;
+    
+    if (!confirm('⚠️ RESET ALL USER POINTS TO ZERO?\n\nThis cannot be undone!')) return;
+    if (!confirm('Are you ABSOLUTELY sure?')) return;
+    
+    try {
+        const batch = db.batch();
+        
+        allUsers.forEach(user => {
+            const userRef = db.collection('users').doc(user.id);
+            batch.update(userRef, { points: 0 });
+            
+            const leaderboardRef = db.collection('leaderboard').doc(user.id);
+            batch.update(leaderboardRef, { points: 0 });
+        });
+        
+        await batch.commit();
+        alert('Leaderboard reset complete!');
+    } catch (error) {
+        console.error('Error resetting leaderboard:', error);
+        alert('Error resetting leaderboard');
+    }
+}
+
+// Purge Inactive Users (Owner only)
+async function purgeInactiveUsers() {
+    if (!isOwner()) return;
+    
+    const days = prompt('Delete users inactive for how many days?');
+    if (!days || isNaN(days)) return;
+    
+    const cutoff = Date.now() - (parseInt(days) * 24 * 60 * 60 * 1000);
+    const inactiveUsers = allUsers.filter(u => {
+        const lastActive = u.createdAt ? u.createdAt.seconds * 1000 : 0;
+        const hasNoPosts = allPosts.filter(p => p.authorId === u.id).length === 0;
+        return lastActive < cutoff && hasNoPosts && u.role !== 'owner' && u.role !== 'mod';
+    });
+    
+    if (inactiveUsers.length === 0) {
+        alert('No inactive users found');
         return;
     }
     
-    // Check if request already sent
-    const existingRequest = allFriendRequests.find(r => 
-        r.from === currentUser.uid && r.to === userId && r.status === 'pending'
-    );
-    
-    if (existingRequest) {
-        alert('Friend request already sent!');
-        return;
-    }
+    if (!confirm(`Delete ${inactiveUsers.length} inactive users?`)) return;
     
     try {
-        await db.collection('friendRequests').add({
-            from: currentUser.uid,
-            fromName: currentUser.username || currentUser.email,
-            to: userId,
-            toName: user.username || user.email,
-            status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        const batch = db.batch();
+        
+        inactiveUsers.forEach(user => {
+            batch.delete(db.collection('users').doc(user.id));
+            batch.delete(db.collection('leaderboard').doc(user.id));
         });
-        alert('Friend request sent!');
-        renderProfile();
+        
+        await batch.commit();
+        alert(`Deleted ${inactiveUsers.length} inactive users`);
     } catch (error) {
-        console.error('Error sending friend request:', error);
-        alert('Error sending friend request');
+        console.error('Error purging users:', error);
+        alert('Error purging users');
     }
 }
 
-// Accept Friend Request
-async function acceptFriendRequest(requestId, fromUserId) {
-    if (!currentUser) return;
+// Export Data (Owner only)
+function exportForumData() {
+    if (!isOwner()) return;
     
-    try {
-        // Update request status
-        await db.collection('friendRequests').doc(requestId).update({
-            status: 'accepted'
-        });
-        
-        // Add to friends list for both users
-        await db.collection('users').doc(currentUser.uid).update({
-            friends: firebase.firestore.FieldValue.arrayUnion(fromUserId)
-        });
-        
-        await db.collection('users').doc(fromUserId).update({
-            friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-        });
-        
-        alert('Friend request accepted!');
-        renderProfile();
-    } catch (error) {
-        console.error('Error accepting friend request:', error);
-        alert('Error accepting friend request');
-    }
+    const data = {
+        exportDate: new Date().toISOString(),
+        users: allUsers.length,
+        posts: allPosts.length,
+        comments: allComments.length,
+        userData: allUsers,
+        postData: allPosts,
+        commentData: allComments
+    };
+    
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `forum-export-${Date.now()}.json`;
+    link.click();
+    
+    alert('Forum data exported!');
 }
 
-// Reject Friend Request
-async function rejectFriendRequest(requestId) {
-    if (!currentUser) return;
+// Send Mass DM (Owner only)
+async function sendMassDM() {
+    if (!isOwner()) return;
+    
+    const message = prompt('Enter message to send to ALL users:');
+    if (!message) return;
+    
+    if (!confirm(`Send this message to ALL ${allUsers.length} users?`)) return;
     
     try {
-        await db.collection('friendRequests').doc(requestId).update({
-            status: 'rejected'
-        });
-        alert('Friend request rejected');
-        renderProfile();
-    } catch (error) {
-        console.error('Error rejecting friend request:', error);
-    }
-}
-
-// Remove Friend
-async function removeFriend(userId) {
-    if (!currentUser) return;
-    
-    if (!confirm('Remove this friend?')) return;
-    
-    try {
-        await db.collection('users').doc(currentUser.uid).update({
-            friends: firebase.firestore.FieldValue.arrayRemove(userId)
+        const batch = db.batch();
+        let count = 0;
+        
+        allUsers.forEach(user => {
+            if (user.id !== currentUser.uid) {
+                const participants = [currentUser.uid, user.id].sort();
+                const conversationId = participants.join('_');
+                
+                const dmRef = db.collection('dms').doc();
+                batch.set(dmRef, {
+                    conversationId: conversationId,
+                    from: currentUser.uid,
+                    fromName: '👑 SYSTEM ANNOUNCEMENT',
+                    to: user.id,
+                    toName: user.username || user.email,
+                    message: message,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    read: false
+                });
+                count++;
+            }
         });
         
-        await db.collection('users').doc(userId).update({
-            friends: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
-        });
-        
-        alert('Friend removed');
-        renderProfile();
+        await batch.commit();
+        alert(`Mass DM sent to ${count} users!`);
     } catch (error) {
-        console.error('Error removing friend:', error);
+        console.error('Error sending mass DM:', error);
+        alert('Error sending mass DM');
     }
 }
 
@@ -403,10 +507,23 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+console.log('Initializing Firebase...');
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
+
+console.log('Firebase initialized successfully');
+console.log('Auth:', auth);
+console.log('Firestore:', db);
+
+// Test Firestore connection
+db.collection('_test_').doc('test').set({ test: true }).then(() => {
+    console.log('✅ Firestore write test successful');
+}).catch((error) => {
+    console.error('❌ Firestore write test failed:', error);
+    console.error('This usually means your Firestore rules are not set correctly');
+});
 
 // Owner Email
 const OWNER_EMAIL = 'd29510713@gmail.com';
@@ -480,10 +597,15 @@ function isMod() {
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         try {
+            console.log('User authenticated:', user.uid);
             const userDoc = await db.collection('users').doc(user.uid).get();
+            console.log('User doc exists:', userDoc.exists);
+            
             if (userDoc.exists) {
                 currentUser = { uid: user.uid, email: user.email, ...userDoc.data() };
+                console.log('Current user loaded:', currentUser);
             } else {
+                console.log('Creating new user document...');
                 // Create user document
                 const userData = {
                     username: user.email.split('@')[0],
@@ -493,13 +615,16 @@ auth.onAuthStateChanged(async (user) => {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     banned: false
                 };
+                
                 await db.collection('users').doc(user.uid).set(userData);
+                console.log('User document created');
                 
                 // Create leaderboard entry
                 await db.collection('leaderboard').doc(user.uid).set({
                     username: userData.username,
                     points: 0
                 });
+                console.log('Leaderboard entry created');
                 
                 currentUser = { uid: user.uid, ...userData };
             }
@@ -526,8 +651,10 @@ auth.onAuthStateChanged(async (user) => {
             renderHeader();
             renderView();
         } catch (error) {
-            console.error('Auth error:', error);
-            alert('Error loading user data. Please check Firebase rules.');
+            console.error('Auth error details:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            alert('Error loading user data: ' + error.message + '\n\nPlease check:\n1. Firestore Rules are published\n2. Email/Password auth is enabled\n3. Browser console for details');
         }
     } else {
         currentUser = null;
@@ -874,9 +1001,6 @@ function renderView() {
             break;
         case 'dms':
             renderDMs();
-            break;
-        case 'profile':
-            renderProfile();
             break;
     }
 }
@@ -1286,8 +1410,8 @@ function renderPosts() {
                             ${post.edited ? '<div style="display: inline-block; background: rgba(138, 43, 226, 0.3); color: #d8b4fe; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.75rem;">✏️ Edited</div>' : ''}
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                            <div onclick="viewUserProfile('${post.authorId}')" style="cursor: pointer;">
-                                ${getProfilePictureHTML(allUsers.find(u => u.id === post.authorId) || {username: post.author}, '2.5rem')}
+                            <div class="user-avatar" style="width: 2.5rem; height: 2.5rem; font-size: 1rem; cursor: pointer;" onclick="viewUserProfile('${post.authorId}')">
+                                ${(post.author || 'U')[0].toUpperCase()}
                             </div>
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1632,27 +1756,134 @@ function renderUsers() {
                 </svg>
                 <h2>Community Members</h2>
             </div>
+            
             ${isOwner() ? `
-                <button onclick="makeAnnouncement()" class="btn-primary" style="margin-bottom: 1rem;">
-                    📢 Make Announcement
-                </button>
+                <div style="background: rgba(251, 191, 36, 0.2); padding: 1.5rem; border-radius: 0.5rem; border: 2px solid rgba(251, 191, 36, 0.5); margin-bottom: 1.5rem;">
+                    <h3 style="color: #fbbf24; margin-bottom: 1rem;">👑 OWNER CONTROLS</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+                        <button onclick="makeAnnouncement()" class="btn-primary" style="background: linear-gradient(90deg, #fbbf24, #f59e0b);">
+                            📢 Announcement
+                        </button>
+                        <button onclick="viewPlatformStats()" class="btn-primary" style="background: linear-gradient(90deg, #8b5cf6, #6b21a8);">
+                            📊 Statistics
+                        </button>
+                        <button onclick="viewReports()" class="btn-primary" style="background: linear-gradient(90deg, #ef4444, #dc2626);">
+                            📋 View Reports
+                        </button>
+                        <button onclick="massAwardPoints()" class="btn-primary" style="background: linear-gradient(90deg, #10b981, #059669);">
+                            ⭐ Mass Award Points
+                        </button>
+                        <button onclick="resetLeaderboard()" class="btn-primary" style="background: linear-gradient(90deg, #f59e0b, #d97706);">
+                            🔄 Reset Leaderboard
+                        </button>
+                        <button onclick="purgeInactiveUsers()" class="btn-primary" style="background: linear-gradient(90deg, #6b7280, #4b5563);">
+                            🗑️ Purge Inactive
+                        </button>
+                        <button onclick="exportForumData()" class="btn-primary" style="background: linear-gradient(90deg, #3b82f6, #2563eb);">
+                            💾 Export Data
+                        </button>
+                        <button onclick="sendMassDM()" class="btn-primary" style="background: linear-gradient(90deg, #ec4899, #db2777);">
+                            📨 Mass DM
+                        </button>
+                    </div>
+                </div>
             ` : ''}
+            
             <div class="users-grid">
                 ${allUsers.map(user => {
                     const roleBadge = user.role === 'owner' ? '👑' : user.role === 'mod' ? '🛡️' : '';
                     const isBanned = user.banned || false;
                     const isMuted = user.muted || false;
                     const isFollowing = currentUser && currentUser.following && currentUser.following.includes(user.id);
+                    const userPosts = allPosts.filter(p => p.authorId === user.id).length;
                     
                     return `
                         <div class="user-item" style="${isBanned ? 'opacity: 0.5; border-color: #dc2626;' : ''}">
                             <div class="user-info">
-                                <div onclick="viewUserProfile('${user.id}')" style="cursor: pointer;">
-                                    ${getProfilePictureHTML(user, '3rem')}
+                                <div class="user-avatar" onclick="viewUserProfile('${user.id}')" style="cursor: pointer;">
+                                    ${(user.username || user.email || 'U')[0].toUpperCase()}
                                 </div>
                                 <div class="user-details">
                                     <p style="cursor: pointer;" onclick="viewUserProfile('${user.id}')">
                                         ${roleBadge} ${user.username || user.email} 
+                                        ${isBanned ? '(Banned)' : ''} 
+                                        ${isMuted ? '🔇' : ''}
+                                    </p>
+                                    ${user.customTitle ? `<p style="font-size: 0.75rem; color: #fbbf24; font-style: italic;">${user.customTitle}</p>` : ''}
+                                    <p style="font-size: 0.875rem; color: #9ca3af;">${user.points || 0} pts • ${userPosts} posts</p>
+                                    ${user.badges && user.badges.length > 0 ? `<p style="font-size: 0.875rem; margin-top: 0.25rem;">${user.badges.join(' ')}</p>` : ''}
+                                    ${user.bio ? `<p style="font-size: 0.75rem; color: #d1d5db; margin-top: 0.5rem; font-style: italic;">"${user.bio.substring(0, 50)}${user.bio.length > 50 ? '...' : ''}"</p>` : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                ${currentUser && currentUser.uid !== user.id ? `
+                                    <button onclick="toggleFollow('${user.id}')" class="action-btn" style="background: ${isFollowing ? '#10b981' : '#6b7280'}; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        ${isFollowing ? '✓ Following' : 'Follow'}
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.role !== 'mod' && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="makeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #3b82f6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Make Mod
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.role === 'mod' && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="removeMod('${user.id}', '${user.email}')" class="action-btn" style="background: #f59e0b; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Remove Mod
+                                    </button>
+                                ` : ''}
+                                ${isMod() && user.email !== OWNER_EMAIL ? `
+                                    ${!isBanned ? `
+                                        <button onclick="banUser('${user.id}', '${user.email}')" class="action-btn" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Ban
+                                        </button>
+                                    ` : `
+                                        <button onclick="unbanUser('${user.id}')" class="action-btn" style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Unban
+                                        </button>
+                                    `}
+                                    ${!isMuted ? `
+                                        <button onclick="muteUser('${user.id}')" class="action-btn" style="background: #6b7280; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Mute
+                                        </button>
+                                    ` : `
+                                        <button onclick="unmuteUser('${user.id}')" class="action-btn" style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Unmute
+                                        </button>
+                                    `}
+                                    <button onclick="awardPoints('${user.id}')" class="action-btn" style="background: #fbbf24; color: #000; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                                        Award Points
+                                    </button>
+                                ` : ''}
+                                ${isOwner() && user.email !== OWNER_EMAIL ? `
+                                    <button onclick="giveBadge('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Give Badge
+                                    </button>
+                                    ${user.badges && user.badges.length > 0 ? `
+                                        <button onclick="removeBadge('${user.id}')" class="action-btn" style="background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                            Remove Badge
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="setUserTitle('${user.id}')" class="action-btn" style="background: #ec4899; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        Set Title
+                                    </button>
+                                ` : ''}
+                                ${currentUser && currentUser.uid !== user.id ? `
+                                    <button onclick="openDM('${user.id}')" class="action-btn" style="background: #8b5cf6; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        DM
+                                    </button>
+                                ` : currentUser && currentUser.uid === user.id ? `
+                                    <button onclick="editBio()" class="action-btn" style="background: #6b7280; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 0.875rem;">
+                                        ✏️ Edit Bio
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+} 
                                         ${isBanned ? '(Banned)' : ''} 
                                         ${isMuted ? '🔇' : ''}
                                     </p>
